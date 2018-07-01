@@ -301,7 +301,7 @@ restart:
 		pending >>= softirq_bit;
 	}
 
-	rcu_bh_qs();
+	__this_cpu_write(active_softirqs, 0);
 	if (__this_cpu_read(ksoftirqd) == current)
 		rcu_softirq_qs();
 	local_irq_disable();

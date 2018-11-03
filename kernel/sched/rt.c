@@ -1965,10 +1965,8 @@ retry:
 #ifdef CONFIG_RT_GROUP_SCHED
 	rt_rq = next_task->rt.rt_rq;
 #endif
-	if (unlikely(next_task == rq->curr)) {
-		WARN_ON(1);
+	if (WARN_ON(next_task == rq->curr))
 		return 0;
-	}
 
 	/*
 	 * It's possible that the next_task slipped in of

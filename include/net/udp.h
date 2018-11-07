@@ -406,16 +406,23 @@ static inline int copy_linear_skb(struct sk_buff *skb, int len, int off,
 } while(0)
 
 #if IS_ENABLED(CONFIG_IPV6)
-#define __UDPX_INC_STATS(sk, field)					\
-do {									\
-	if ((sk)->sk_family == AF_INET)					\
-		__UDP_INC_STATS(sock_net(sk), field, 0);		\
-	else								\
-		__UDP6_INC_STATS(sock_net(sk), field, 0);		\
-} while (0)
+#define __UDPX_MIB(sk, ipv4)						\
+({									\
+	ipv4 ? (IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_statistics :	\
+				 sock_net(sk)->mib.udp_statistics) :	\
+		(IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_stats_in6 :	\
+				 sock_net(sk)->mib.udp_stats_in6);	\
+})
 #else
-#define __UDPX_INC_STATS(sk, field) __UDP_INC_STATS(sock_net(sk), field, 0)
+#define __UDPX_MIB(sk, ipv4)						\
+({									\
+	IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_statistics :		\
+			 sock_net(sk)->mib.udp_statistics;		\
+})
 #endif
+
+#define __UDPX_INC_STATS(sk, field) \
+	__SNMP_INC_STATS(__UDPX_MIB(sk, (sk)->sk_family == AF_INET), field)
 
 #ifdef CONFIG_PROC_FS
 struct udp_seq_afinfo {

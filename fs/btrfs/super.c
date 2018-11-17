@@ -1468,6 +1468,43 @@ out:
 	return root;
 }
 
+static int parse_security_options(char *orig_opts,
+				  struct security_mnt_opts *sec_opts)
+{
+	return security_sb_eat_lsm_opts(orig_opts, sec_opts);
+}
+
+static int setup_security_options(struct btrfs_fs_info *fs_info,
+				  struct super_block *sb,
+				  struct security_mnt_opts *sec_opts)
+{
+	int ret = 0;
+
+	/*
+	 * Call security_sb_set_mnt_opts() to check whether new sec_opts
+	 * is valid.
+	 */
+	ret = security_sb_set_mnt_opts(sb, sec_opts, 0, NULL);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_SECURITY
+	if (!fs_info->security_opts.num_mnt_opts) {
+		/* first time security setup, copy sec_opts to fs_info */
+		memcpy(&fs_info->security_opts, sec_opts, sizeof(*sec_opts));
+	} else {
+		/*
+		 * Since SELinux (the only one supporting security_mnt_opts)
+		 * does NOT support changing context during remount/mount of
+		 * the same sb, this must be the same or part of the same
+		 * security options, just free it.
+		 */
+		security_free_mnt_opts(sec_opts);
+	}
+#endif
+	return ret;
+}
+
 /*
  * Find a superblock for the given device / mount point.
  *

@@ -1538,18 +1538,7 @@ int vfs_get_tree(struct fs_context *fc)
 	security_init_mnt_opts(&opts);
 
 	if (data && !(type->fs_flags & FS_BINARY_MOUNTDATA)) {
-		char *secdata = alloc_secdata();
-		if (!secdata)
-			return ERR_PTR(-ENOMEM);
-
-		error = security_sb_copy_data(data, secdata);
-		if (error) {
-			free_secdata(secdata);
-			return ERR_PTR(error);
-		}
-
-		error = security_sb_parse_opts_str(secdata, &opts);
-		free_secdata(secdata);
+		error = security_sb_eat_lsm_opts(data, &opts);
 		if (error)
 			return ERR_PTR(error);
 	}

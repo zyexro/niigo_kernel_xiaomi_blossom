@@ -727,7 +727,7 @@ out_err:
 	kfree(fshat);
 	kfree(fsroot);
 	kfree(fstransmute);
-	security_free_mnt_opts(mnt_opts);
+	security_free_mnt_opts(opts);
 	return rc;
 }
 

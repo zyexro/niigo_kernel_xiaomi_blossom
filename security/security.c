@@ -814,16 +814,10 @@ int security_sb_eat_lsm_opts(char *options, void **mnt_opts)
 }
 EXPORT_SYMBOL(security_sb_eat_lsm_opts);
 
-int security_sb_remount(struct super_block *sb,
-			void *mnt_opts)
+int security_sb_kern_mount(struct super_block *sb, int flags,
+			   struct security_mnt_opts *opts)
 {
-	return call_int_hook(sb_remount, 0, sb, mnt_opts);
-}
-EXPORT_SYMBOL(security_sb_remount);
-
-int security_sb_kern_mount(struct super_block *sb)
-{
-	return call_int_hook(sb_kern_mount, 0, sb);
+	return call_int_hook(sb_kern_mount, 0, sb, flags, opts);
 }
 
 int security_sb_show_options(struct seq_file *m, struct super_block *sb)

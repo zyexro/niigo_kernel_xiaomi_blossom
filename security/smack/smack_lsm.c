@@ -861,6 +861,20 @@ static int smack_set_mnt_opts(struct super_block *sb,
 }
 
 /**
+ * smack_sb_kern_mount - Smack specific mount processing
+ * @sb: the file system superblock
+ * @flags: the mount flags
+ * @data: the smack mount options
+ *
+ * Returns 0 on success, an error code on failure
+ */
+static int smack_sb_kern_mount(struct super_block *sb, int flags,
+			       struct security_mnt_opts *opts)
+{
+	return smack_set_mnt_opts(sb, opts, 0, NULL);
+}
+
+/**
  * smack_sb_statfs - Smack check on statfs
  * @dentry: identifies the file system in question
  *

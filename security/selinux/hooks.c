@@ -2611,48 +2611,58 @@ static inline int match_prefix(char *prefix, int plen, char *option, int olen)
 	return len;
 }
 
-static int selinux_sb_eat_lsm_opts(char *options, void **mnt_opts)
+static int selinux_sb_remount(struct super_block *sb,
+			      struct security_mnt_opts *opts)
 {
-	int rc, i, *flags;
-	struct security_mnt_opts opts;
-	char *secdata, **mount_options;
+	int i, *flags;
+	char **mount_options;
 	struct superblock_security_struct *sbsec = sb->s_security;
 
 	if (!(sbsec->flags & SE_SBINITIALIZED))
 		return 0;
 
-	if (!opts)
-		return 0;
+	mount_options = opts->mnt_opts;
+	flags = opts->mnt_opts_flags;
 
-	if (opts->fscontext) {
-		rc = parse_sid(sb, opts->fscontext, &sid);
-		if (rc)
+	for (i = 0; i < opts->num_mnt_opts; i++) {
+		u32 sid;
+		int rc;
+
+		if (flags[i] == SBLABEL_MNT)
+			continue;
+		rc = security_context_str_to_sid(&selinux_state,
+						 mount_options[i], &sid,
+						 GFP_KERNEL);
+		if (rc) {
+			pr_warn("SELinux: security_context_str_to_sid"
+			       "(%s) failed for (dev %s, type %s) errno=%d\n",
+			       mount_options[i], sb->s_id, sb->s_type->name, rc);
 			return rc;
-		if (bad_option(sbsec, FSCONTEXT_MNT, sbsec->sid, sid))
-			goto out_bad_option;
-	}
-	if (opts->context) {
-		rc = parse_sid(sb, opts->context, &sid);
-		if (rc)
-			return rc;
-		if (bad_option(sbsec, CONTEXT_MNT, sbsec->mntpoint_sid, sid))
-			goto out_bad_option;
-	}
-	if (opts->rootcontext) {
-		struct inode_security_struct *root_isec;
-		root_isec = backing_inode_security(sb->s_root);
-		rc = parse_sid(sb, opts->rootcontext, &sid);
-		if (rc)
-			return rc;
-		if (bad_option(sbsec, ROOTCONTEXT_MNT, root_isec->sid, sid))
-			goto out_bad_option;
-	}
-	if (opts->defcontext) {
-		rc = parse_sid(sb, opts->defcontext, &sid);
-		if (rc)
-			return rc;
-		if (bad_option(sbsec, DEFCONTEXT_MNT, sbsec->def_sid, sid))
-			goto out_bad_option;
+		}
+		switch (flags[i]) {
+		case FSCONTEXT_MNT:
+			if (bad_option(sbsec, FSCONTEXT_MNT, sbsec->sid, sid))
+				goto out_bad_option;
+			break;
+		case CONTEXT_MNT:
+			if (bad_option(sbsec, CONTEXT_MNT, sbsec->mntpoint_sid, sid))
+				goto out_bad_option;
+			break;
+		case ROOTCONTEXT_MNT: {
+			struct inode_security_struct *root_isec;
+			root_isec = backing_inode_security(sb->s_root);
+
+			if (bad_option(sbsec, ROOTCONTEXT_MNT, root_isec->sid, sid))
+				goto out_bad_option;
+			break;
+		}
+		case DEFCONTEXT_MNT:
+			if (bad_option(sbsec, DEFCONTEXT_MNT, sbsec->def_sid, sid))
+				goto out_bad_option;
+			break;
+		default:
+			return -EINVAL;
+		}
 	}
 	return 0;
 

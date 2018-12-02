@@ -808,9 +808,10 @@ void security_free_mnt_opts(void **mnt_opts)
 }
 EXPORT_SYMBOL(security_free_mnt_opts);
 
-int security_sb_eat_lsm_opts(char *options, void **mnt_opts)
+int security_sb_remount(struct super_block *sb,
+			struct security_mnt_opts *opts)
 {
-	return call_int_hook(sb_eat_lsm_opts, 0, options, mnt_opts);
+	return call_int_hook(sb_remount, 0, sb, opts);
 }
 EXPORT_SYMBOL(security_sb_eat_lsm_opts);
 

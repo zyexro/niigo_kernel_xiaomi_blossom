@@ -1555,9 +1555,15 @@ int vfs_get_tree(struct fs_context *fc)
 	smp_wmb();
 	sb->s_flags |= SB_BORN;
 
-	error = security_sb_kern_mount(sb, flags, &opts);
+	error = security_sb_set_mnt_opts(sb, &opts, 0, NULL);
 	if (error)
 		goto out_sb;
+
+	if (!(flags & MS_KERNMOUNT)) {
+		error = security_sb_kern_mount(sb);
+		if (error)
+			goto out_sb;
+	}
 
 	/*
 	 * filesystems should never set s_maxbytes larger than MAX_LFS_FILESIZE

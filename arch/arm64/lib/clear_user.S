@@ -18,6 +18,7 @@
 #include <linux/linkage.h>
 
 #include <asm/asm-uaccess.h>
+#include <asm/assembler.h>
 
 	.text
 
@@ -52,6 +53,7 @@ uao_user_alternative 9f, strb, sttrb, wzr, x0, 0
 5:	mov	x0, #0
 	ret
 ENDPROC(__arch_clear_user)
+EXPORT_SYMBOL(__arch_clear_user)
 
 	.section .fixup,"ax"
 	.align	2

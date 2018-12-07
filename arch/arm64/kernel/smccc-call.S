@@ -13,7 +13,9 @@
  */
 #include <linux/linkage.h>
 #include <linux/arm-smccc.h>
+
 #include <asm/asm-offsets.h>
+#include <asm/assembler.h>
 
 	.macro SMCCC instr
 	\instr	#0
@@ -38,6 +40,7 @@
 ENTRY(__arm_smccc_smc)
 	SMCCC	smc
 ENDPROC(__arm_smccc_smc)
+EXPORT_SYMBOL(__arm_smccc_smc)
 
 /*
  * void arm_smccc_hvc(unsigned long a0, unsigned long a1, unsigned long a2,
@@ -48,3 +51,4 @@ ENDPROC(__arm_smccc_smc)
 ENTRY(__arm_smccc_hvc)
 	SMCCC	hvc
 ENDPROC(__arm_smccc_hvc)
+EXPORT_SYMBOL(__arm_smccc_hvc)

@@ -269,8 +269,9 @@ void security_bprm_committed_creds(struct linux_binprm *bprm);
 int security_fs_context_parse_param(struct fs_context *fc, struct fs_parameter *param);
 int security_sb_alloc(struct super_block *sb);
 void security_sb_free(struct super_block *sb);
-int security_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts);
-int security_sb_remount(struct super_block *sb, struct security_mnt_opts *opts);
+void security_free_mnt_opts(void **mnt_opts);
+int security_sb_eat_lsm_opts(char *options, void **mnt_opts);
+int security_sb_remount(struct super_block *sb, void *mnt_opts);
 int security_sb_kern_mount(struct super_block *sb);
 int security_sb_show_options(struct seq_file *m, struct super_block *sb);
 int security_sb_statfs(struct dentry *dentry);
@@ -286,8 +287,7 @@ int security_sb_clone_mnt_opts(const struct super_block *oldsb,
 				struct super_block *newsb,
 				unsigned long kern_flags,
 				unsigned long *set_kern_flags);
-int security_add_mnt_opt(const char *option, const char *val,
-				int len, void **mnt_opts);
+int security_sb_parse_opts_str(char *options, void **mnt_opts);
 int security_dentry_init_security(struct dentry *dentry, int mode,
 					const struct qstr *name, void **ctx,
 					u32 *ctxlen);
@@ -587,13 +587,13 @@ static inline void security_sb_free(struct super_block *sb)
 { }
 
 static inline int security_sb_eat_lsm_opts(char *options,
-					   struct security_mnt_opts *opts)
+					   void **mnt_opts)
 {
 	return 0;
 }
 
 static inline int security_sb_remount(struct super_block *sb,
-				      struct security_mnt_opts *opts)
+				      void *mnt_opts)
 {
 	return 0;
 }
@@ -648,8 +648,7 @@ static inline int security_sb_clone_mnt_opts(const struct super_block *oldsb,
 	return 0;
 }
 
-static inline int security_add_mnt_opt(const char *option, const char *val,
-					int len, void **mnt_opts)
+static inline int security_sb_parse_opts_str(char *options, void **mnt_opts)
 {
 	return 0;
 }

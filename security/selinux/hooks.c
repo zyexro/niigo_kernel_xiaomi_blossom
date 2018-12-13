@@ -343,6 +343,19 @@ static void superblock_free_security(struct super_block *sb)
 	kfree(sbsec);
 }
 
+static void selinux_free_mnt_opts(void *mnt_opts)
+{
+	struct security_mnt_opts *opts = mnt_opts;
+	int i;
+
+	if (opts->mnt_opts)
+		for (i = 0; i < opts->num_mnt_opts; i++)
+			kfree(opts->mnt_opts[i]);
+	kfree(opts->mnt_opts);
+	kfree(opts->mnt_opts_flags);
+	kfree(opts);
+}
+
 enum {
 	Opt_error = -1,
 	Opt_context = 0,
@@ -616,7 +629,10 @@ static int selinux_set_mnt_opts(struct super_block *sb,
 	struct inode_security_struct *root_isec;
 	u32 fscontext_sid = 0, context_sid = 0, rootcontext_sid = 0;
 	u32 defcontext_sid = 0;
-	int rc = 0;
+	struct security_mnt_opts *opts = mnt_opts;
+	char **mount_options = opts ? opts->mnt_opts : NULL;
+	int *flags = opts ? opts->mnt_opts_flags : NULL;
+	int num_opts = opts ? opts->num_mnt_opts : 0;
 
 	mutex_lock(&sbsec->lock);
 
@@ -955,9 +971,21 @@ out:
 	return rc;
 }
 
-static int selinux_add_opt(int token, const char *s, void **mnt_opts)
+static int selinux_parse_opts_str(char *options,
+				  void **mnt_opts)
 {
-	struct selinux_mnt_opts *opts = *mnt_opts;
+	char *p;
+	char *context = NULL, *defcontext = NULL;
+	char *fscontext = NULL, *rootcontext = NULL;
+	int rc, num_mnt_opts = 0;
+	struct security_mnt_opts *opts = *mnt_opts;
+
+	if (!opts) {
+		opts = kzalloc(sizeof(struct security_mnt_opts), GFP_KERNEL);
+		*mnt_opts = opts;
+		if (!opts)
+			return -ENOMEM;
+	}
 
 	if (token == Opt_seclabel)	/* eaten and completely ignored */
 		return 0;
@@ -1024,6 +1052,28 @@ static int selinux_add_mnt_opt(const char *option, const char *val, int len,
 			*mnt_opts = NULL;
 		}
 	}
+	if (context) {
+		opts->mnt_opts[num_mnt_opts] = context;
+		opts->mnt_opts_flags[num_mnt_opts++] = CONTEXT_MNT;
+	}
+	if (rootcontext) {
+		opts->mnt_opts[num_mnt_opts] = rootcontext;
+		opts->mnt_opts_flags[num_mnt_opts++] = ROOTCONTEXT_MNT;
+	}
+	if (defcontext) {
+		opts->mnt_opts[num_mnt_opts] = defcontext;
+		opts->mnt_opts_flags[num_mnt_opts++] = DEFCONTEXT_MNT;
+	}
+
+	opts->num_mnt_opts = num_mnt_opts;
+	return 0;
+
+out_err:
+	security_free_mnt_opts(mnt_opts);
+	kfree(context);
+	kfree(defcontext);
+	kfree(fscontext);
+	kfree(rootcontext);
 	return rc;
 }
 
@@ -2611,7 +2661,7 @@ static inline int match_prefix(char *prefix, int plen, char *option, int olen)
 	return len;
 }
 
-static int selinux_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts)
+static int selinux_sb_eat_lsm_opts(char *options, void **mnt_opts)
 {
 	char *s = (char *)get_zeroed_page(GFP_KERNEL);
 	int err;
@@ -2620,19 +2670,22 @@ static int selinux_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts
 		return -ENOMEM;
 	err = selinux_sb_copy_data(options, s);
 	if (!err)
-		err = selinux_parse_opts_str(s, opts);
+		err = selinux_parse_opts_str(s, mnt_opts);
 	free_page((unsigned long)s);
 	return err;
 }
 
-static int selinux_sb_remount(struct super_block *sb,
-			      struct security_mnt_opts *opts)
+static int selinux_sb_remount(struct super_block *sb, void *mnt_opts)
 {
+	struct security_mnt_opts *opts = mnt_opts;
 	int i, *flags;
 	char **mount_options;
 	struct superblock_security_struct *sbsec = sb->s_security;
 
 	if (!(sbsec->flags & SE_SBINITIALIZED))
+		return 0;
+
+	if (!opts)
 		return 0;
 
 	mount_options = opts->mnt_opts;
@@ -6877,6 +6930,7 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
 
 	LSM_HOOK_INIT(sb_free_security, selinux_sb_free_security),
 	LSM_HOOK_INIT(sb_eat_lsm_opts, selinux_sb_eat_lsm_opts),
+	LSM_HOOK_INIT(sb_free_mnt_opts, selinux_free_mnt_opts),
 	LSM_HOOK_INIT(sb_remount, selinux_sb_remount),
 	LSM_HOOK_INIT(sb_kern_mount, selinux_sb_kern_mount),
 	LSM_HOOK_INIT(sb_show_options, selinux_sb_show_options),

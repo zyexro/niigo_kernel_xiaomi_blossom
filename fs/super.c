@@ -1533,12 +1533,10 @@ int vfs_get_tree(struct fs_context *fc)
 {
 	struct super_block *sb;
 	int error = -ENOMEM;
-	struct security_mnt_opts opts;
-
-	security_init_mnt_opts(&opts);
+	void *sec_opts = NULL;
 
 	if (data && !(type->fs_flags & FS_BINARY_MOUNTDATA)) {
-		error = security_sb_eat_lsm_opts(data, &opts);
+		error = security_sb_eat_lsm_opts(data, &sec_opts);
 		if (error)
 			return ERR_PTR(error);
 	}
@@ -1555,7 +1553,7 @@ int vfs_get_tree(struct fs_context *fc)
 	smp_wmb();
 	sb->s_flags |= SB_BORN;
 
-	error = security_sb_set_mnt_opts(sb, &opts, 0, NULL);
+	error = security_sb_set_mnt_opts(sb, sec_opts, 0, NULL);
 	if (error)
 		goto out_sb;
 
@@ -1575,13 +1573,13 @@ int vfs_get_tree(struct fs_context *fc)
 		"negative value (%lld)\n", fc->fs_type->name, sb->s_maxbytes);
 
 	up_write(&sb->s_umount);
-	security_free_mnt_opts(&opts);
+	security_free_mnt_opts(&sec_opts);
 	return root;
 out_sb:
 	dput(root);
 	deactivate_locked_super(sb);
 out_free_secdata:
-	security_free_mnt_opts(&opts);
+	security_free_mnt_opts(&sec_opts);
 	return ERR_PTR(error);
 }
 EXPORT_SYMBOL(vfs_get_tree);

@@ -799,16 +799,25 @@ void security_sb_free(struct super_block *sb)
 	call_void_hook(sb_free_security, sb);
 }
 
-int security_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts)
+void security_free_mnt_opts(void **mnt_opts)
 {
-	return call_int_hook(sb_eat_lsm_opts, 0, options, opts);
+	if (!*mnt_opts)
+		return;
+	call_void_hook(sb_free_mnt_opts, *mnt_opts);
+	*mnt_opts = NULL;
+}
+EXPORT_SYMBOL(security_free_mnt_opts);
+
+int security_sb_eat_lsm_opts(char *options, void **mnt_opts)
+{
+	return call_int_hook(sb_eat_lsm_opts, 0, options, mnt_opts);
 }
 EXPORT_SYMBOL(security_sb_eat_lsm_opts);
 
 int security_sb_remount(struct super_block *sb,
-			struct security_mnt_opts *opts)
+			void *mnt_opts)
 {
-	return call_int_hook(sb_remount, 0, sb, opts);
+	return call_int_hook(sb_remount, 0, sb, mnt_opts);
 }
 EXPORT_SYMBOL(security_sb_remount);
 
@@ -864,11 +873,9 @@ int security_sb_clone_mnt_opts(const struct super_block *oldsb,
 }
 EXPORT_SYMBOL(security_sb_clone_mnt_opts);
 
-int security_add_mnt_opt(const char *option, const char *val, int len,
-			 void **mnt_opts)
+int security_sb_parse_opts_str(char *options, void **mnt_opts)
 {
-	return call_int_hook(sb_add_mnt_opt, -EINVAL,
-					option, val, len, mnt_opts);
+	return call_int_hook(sb_parse_opts_str, 0, options, mnt_opts);
 }
 EXPORT_SYMBOL(security_add_mnt_opt);
 

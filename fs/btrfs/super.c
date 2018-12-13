@@ -1560,7 +1560,7 @@ static struct dentry *btrfs_mount_root(struct file_system_type *fs_type,
 		error = btrfs_fill_super(s, fs_devices, data);
 	}
 	if (!error)
-		error = security_sb_set_mnt_opts(s, &new_sec_opts, 0, NULL);
+		error = security_sb_set_mnt_opts(s, new_sec_opts, 0, NULL);
 	security_free_mnt_opts(&new_sec_opts);
 	if (error) {
 		deactivate_locked_super(s);
@@ -1738,10 +1738,9 @@ static int btrfs_remount(struct super_block *sb, int *flags, char *data)
 	if (data) {
 		void *new_sec_opts = NULL;
 
-		security_init_mnt_opts(&new_sec_opts);
 		ret = security_sb_eat_lsm_opts(data, &new_sec_opts);
 		if (!ret)
-			ret = security_sb_remount(sb, &new_sec_opts);
+			ret = security_sb_remount(sb, new_sec_opts);
 		security_free_mnt_opts(&new_sec_opts);
 		if (ret)
 			goto restore;

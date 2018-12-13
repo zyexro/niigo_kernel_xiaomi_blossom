@@ -552,6 +552,19 @@ static void smack_sb_free_security(struct super_block *sb)
 	sb->s_security = NULL;
 }
 
+static void smack_free_mnt_opts(void *mnt_opts)
+{
+	struct security_mnt_opts *opts = mnt_opts;
+	int i;
+
+	if (opts->mnt_opts)
+		for (i = 0; i < opts->num_mnt_opts; i++)
+			kfree(opts->mnt_opts[i]);
+	kfree(opts->mnt_opts);
+	kfree(opts->mnt_opts_flags);
+	kfree(opts);
+}
+
 /**
  * smack_sb_copy_data - copy mount options data for processing
  * @orig: where to start
@@ -727,11 +740,11 @@ out_err:
 	kfree(fshat);
 	kfree(fsroot);
 	kfree(fstransmute);
-	security_free_mnt_opts(opts);
+	security_free_mnt_opts(mnt_opts);
 	return rc;
 }
 
-static int smack_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts)
+static int smack_sb_eat_lsm_opts(char *options, void **mnt_opts)
 {
 	char *s = (char *)get_zeroed_page(GFP_KERNEL);
 	int err;
@@ -740,7 +753,7 @@ static int smack_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts)
 		return -ENOMEM;
 	err = smack_sb_copy_data(options, s);
 	if (!err)
-		err = smack_parse_opts_str(s, opts);
+		err = smack_parse_opts_str(s, mnt_opts);
 	free_page((unsigned long)s);
 	return err;
 }
@@ -4627,6 +4640,7 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
 
 	LSM_HOOK_INIT(sb_alloc_security, smack_sb_alloc_security),
 	LSM_HOOK_INIT(sb_free_security, smack_sb_free_security),
+	LSM_HOOK_INIT(sb_free_mnt_opts, smack_free_mnt_opts),
 	LSM_HOOK_INIT(sb_eat_lsm_opts, smack_sb_eat_lsm_opts),
 	LSM_HOOK_INIT(sb_statfs, smack_sb_statfs),
 	LSM_HOOK_INIT(sb_set_mnt_opts, smack_set_mnt_opts),

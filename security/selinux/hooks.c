@@ -343,16 +343,17 @@ static void superblock_free_security(struct super_block *sb)
 	kfree(sbsec);
 }
 
+struct selinux_mnt_opts {
+	const char *fscontext, *context, *rootcontext, *defcontext;
+};
+
 static void selinux_free_mnt_opts(void *mnt_opts)
 {
-	struct security_mnt_opts *opts = mnt_opts;
-	int i;
-
-	if (opts->mnt_opts)
-		for (i = 0; i < opts->num_mnt_opts; i++)
-			kfree(opts->mnt_opts[i]);
-	kfree(opts->mnt_opts);
-	kfree(opts->mnt_opts_flags);
+	struct selinux_mnt_opts *opts = mnt_opts;
+	kfree(opts->fscontext);
+	kfree(opts->context);
+	kfree(opts->rootcontext);
+	kfree(opts->defcontext);
 	kfree(opts);
 }
 
@@ -621,18 +622,13 @@ static int selinux_set_mnt_opts(struct super_block *sb,
 				unsigned long *set_kern_flags)
 {
 	const struct cred *cred = current_cred();
-	int rc = 0, i;
 	struct superblock_security_struct *sbsec = sb->s_security;
-	const char *name = sb->s_type->name;
 	struct dentry *root = sbsec->sb->s_root;
 	struct selinux_mnt_opts *opts = mnt_opts;
 	struct inode_security_struct *root_isec;
 	u32 fscontext_sid = 0, context_sid = 0, rootcontext_sid = 0;
 	u32 defcontext_sid = 0;
-	struct security_mnt_opts *opts = mnt_opts;
-	char **mount_options = opts ? opts->mnt_opts : NULL;
-	int *flags = opts ? opts->mnt_opts_flags : NULL;
-	int num_opts = opts ? opts->num_mnt_opts : 0;
+	int rc = 0;
 
 	mutex_lock(&sbsec->lock);
 
@@ -974,21 +970,9 @@ out:
 static int selinux_parse_opts_str(char *options,
 				  void **mnt_opts)
 {
+	struct selinux_mnt_opts *opts = *mnt_opts;
 	char *p;
-	char *context = NULL, *defcontext = NULL;
-	char *fscontext = NULL, *rootcontext = NULL;
-	int rc, num_mnt_opts = 0;
-	struct security_mnt_opts *opts = *mnt_opts;
-
-	if (!opts) {
-		opts = kzalloc(sizeof(struct security_mnt_opts), GFP_KERNEL);
-		*mnt_opts = opts;
-		if (!opts)
-			return -ENOMEM;
-	}
-
-	if (token == Opt_seclabel)	/* eaten and completely ignored */
-		return 0;
+	int rc;
 
 	if (!opts) {
 		opts = kzalloc(sizeof(struct selinux_mnt_opts), GFP_KERNEL);
@@ -1032,48 +1016,81 @@ static int selinux_add_mnt_opt(const char *option, const char *val, int len,
 	int token = Opt_error;
 	int rc, i;
 
-	for (i = 0; i < ARRAY_SIZE(tokens); i++) {
-		if (strcmp(option, tokens[i].name) == 0) {
-			token = tokens[i].opt;
+		token = match_token(p, tokens, args);
+
+		if (!opts) {
+			opts = kzalloc(sizeof(struct selinux_mnt_opts), GFP_KERNEL);
+			if (!opts)
+				return -ENOMEM;
+		}
+
+		switch (token) {
+		case Opt_context:
+			if (opts->context || opts->defcontext) {
+				rc = -EINVAL;
+				pr_warn(SEL_MOUNT_FAIL_MSG);
+				goto out_err;
+			}
+			opts->context = match_strdup(&args[0]);
+			if (!opts->context) {
+				rc = -ENOMEM;
+				goto out_err;
+			}
 			break;
+
+		case Opt_fscontext:
+			if (opts->fscontext) {
+				rc = -EINVAL;
+				pr_warn(SEL_MOUNT_FAIL_MSG);
+				goto out_err;
+			}
+			opts->fscontext = match_strdup(&args[0]);
+			if (!opts->fscontext) {
+				rc = -ENOMEM;
+				goto out_err;
+			}
+			break;
+
+		case Opt_rootcontext:
+			if (opts->rootcontext) {
+				rc = -EINVAL;
+				pr_warn(SEL_MOUNT_FAIL_MSG);
+				goto out_err;
+			}
+			opts->rootcontext = match_strdup(&args[0]);
+			if (!opts->rootcontext) {
+				rc = -ENOMEM;
+				goto out_err;
+			}
+			break;
+
+		case Opt_defcontext:
+			if (opts->context || opts->defcontext) {
+				rc = -EINVAL;
+				pr_warn(SEL_MOUNT_FAIL_MSG);
+				goto out_err;
+			}
+			opts->defcontext = match_strdup(&args[0]);
+			if (!opts->defcontext) {
+				rc = -ENOMEM;
+				goto out_err;
+			}
+			break;
+		case Opt_labelsupport:
+			break;
+		default:
+			rc = -EINVAL;
+			pr_warn("SELinux:  unknown mount option\n");
+			goto out_err;
+
 		}
 	}
-
-	if (token == Opt_error)
-		return -EINVAL;
-
-	if (token != Opt_seclabel)
-		val = kmemdup_nul(val, len, GFP_KERNEL);
-	rc = selinux_add_opt(token, val, mnt_opts);
-	if (unlikely(rc)) {
-		kfree(val);
-		if (*mnt_opts) {
-			selinux_free_mnt_opts(*mnt_opts);
-			*mnt_opts = NULL;
-		}
-	}
-	if (context) {
-		opts->mnt_opts[num_mnt_opts] = context;
-		opts->mnt_opts_flags[num_mnt_opts++] = CONTEXT_MNT;
-	}
-	if (rootcontext) {
-		opts->mnt_opts[num_mnt_opts] = rootcontext;
-		opts->mnt_opts_flags[num_mnt_opts++] = ROOTCONTEXT_MNT;
-	}
-	if (defcontext) {
-		opts->mnt_opts[num_mnt_opts] = defcontext;
-		opts->mnt_opts_flags[num_mnt_opts++] = DEFCONTEXT_MNT;
-	}
-
-	opts->num_mnt_opts = num_mnt_opts;
+	*mnt_opts = opts;
 	return 0;
 
 out_err:
-	security_free_mnt_opts(mnt_opts);
-	kfree(context);
-	kfree(defcontext);
-	kfree(fscontext);
-	kfree(rootcontext);
+	if (opts)
+		selinux_free_mnt_opts(opts);
 	return rc;
 }
 
@@ -2677,10 +2694,10 @@ static int selinux_sb_eat_lsm_opts(char *options, void **mnt_opts)
 
 static int selinux_sb_remount(struct super_block *sb, void *mnt_opts)
 {
-	struct security_mnt_opts *opts = mnt_opts;
-	int i, *flags;
-	char **mount_options;
+	struct selinux_mnt_opts *opts = mnt_opts;
 	struct superblock_security_struct *sbsec = sb->s_security;
+	u32 sid;
+	int rc;
 
 	if (!(sbsec->flags & SE_SBINITIALIZED))
 		return 0;
@@ -2688,48 +2705,35 @@ static int selinux_sb_remount(struct super_block *sb, void *mnt_opts)
 	if (!opts)
 		return 0;
 
-	mount_options = opts->mnt_opts;
-	flags = opts->mnt_opts_flags;
-
-	for (i = 0; i < opts->num_mnt_opts; i++) {
-		u32 sid;
-		int rc;
-
-		if (flags[i] == SBLABEL_MNT)
-			continue;
-		rc = security_context_str_to_sid(&selinux_state,
-						 mount_options[i], &sid,
-						 GFP_KERNEL);
-		if (rc) {
-			pr_warn("SELinux: security_context_str_to_sid"
-			       "(%s) failed for (dev %s, type %s) errno=%d\n",
-			       mount_options[i], sb->s_id, sb->s_type->name, rc);
+	if (opts->fscontext) {
+		rc = parse_sid(sb, opts->fscontext, &sid);
+		if (rc)
 			return rc;
-		}
-		switch (flags[i]) {
-		case FSCONTEXT_MNT:
-			if (bad_option(sbsec, FSCONTEXT_MNT, sbsec->sid, sid))
-				goto out_bad_option;
-			break;
-		case CONTEXT_MNT:
-			if (bad_option(sbsec, CONTEXT_MNT, sbsec->mntpoint_sid, sid))
-				goto out_bad_option;
-			break;
-		case ROOTCONTEXT_MNT: {
-			struct inode_security_struct *root_isec;
-			root_isec = backing_inode_security(sb->s_root);
-
-			if (bad_option(sbsec, ROOTCONTEXT_MNT, root_isec->sid, sid))
-				goto out_bad_option;
-			break;
-		}
-		case DEFCONTEXT_MNT:
-			if (bad_option(sbsec, DEFCONTEXT_MNT, sbsec->def_sid, sid))
-				goto out_bad_option;
-			break;
-		default:
-			return -EINVAL;
-		}
+		if (bad_option(sbsec, FSCONTEXT_MNT, sbsec->sid, sid))
+			goto out_bad_option;
+	}
+	if (opts->context) {
+		rc = parse_sid(sb, opts->context, &sid);
+		if (rc)
+			return rc;
+		if (bad_option(sbsec, CONTEXT_MNT, sbsec->mntpoint_sid, sid))
+			goto out_bad_option;
+	}
+	if (opts->rootcontext) {
+		struct inode_security_struct *root_isec;
+		root_isec = backing_inode_security(sb->s_root);
+		rc = parse_sid(sb, opts->rootcontext, &sid);
+		if (rc)
+			return rc;
+		if (bad_option(sbsec, ROOTCONTEXT_MNT, root_isec->sid, sid))
+			goto out_bad_option;
+	}
+	if (opts->defcontext) {
+		rc = parse_sid(sb, opts->defcontext, &sid);
+		if (rc)
+			return rc;
+		if (bad_option(sbsec, DEFCONTEXT_MNT, sbsec->def_sid, sid))
+			goto out_bad_option;
 	}
 	return 0;
 

@@ -967,12 +967,9 @@ out:
 	return rc;
 }
 
-static int selinux_parse_opts_str(char *options,
-				  void **mnt_opts)
+static int selinux_add_opt(int token, const char *s, void **mnt_opts)
 {
 	struct selinux_mnt_opts *opts = *mnt_opts;
-	char *p;
-	int rc;
 
 	if (!opts) {
 		opts = kzalloc(sizeof(struct selinux_mnt_opts), GFP_KERNEL);
@@ -1007,8 +1004,20 @@ static int selinux_parse_opts_str(char *options,
 	return 0;
 Einval:
 	pr_warn(SEL_MOUNT_FAIL_MSG);
+	kfree(s);
 	return -EINVAL;
 }
+
+static int selinux_parse_opts_str(char *options,
+				  void **mnt_opts)
+{
+	char *p;
+
+	/* Standard string-based options. */
+	while ((p = strsep(&options, "|")) != NULL) {
+		int token, rc;
+		substring_t args[MAX_OPT_ARGS];
+		const char *arg;
 
 static int selinux_add_mnt_opt(const char *option, const char *val, int len,
 			       void **mnt_opts)
@@ -1018,80 +1027,20 @@ static int selinux_add_mnt_opt(const char *option, const char *val, int len,
 
 		token = match_token(p, tokens, args);
 
-		if (!opts) {
-			opts = kzalloc(sizeof(struct selinux_mnt_opts), GFP_KERNEL);
-			if (!opts)
-				return -ENOMEM;
-		}
-
-		switch (token) {
-		case Opt_context:
-			if (opts->context || opts->defcontext) {
-				rc = -EINVAL;
-				pr_warn(SEL_MOUNT_FAIL_MSG);
-				goto out_err;
+		if (token == Opt_labelsupport)	/* eaten and completely ignored */
+			continue;
+		arg = match_strdup(&args[0]);
+		rc = selinux_add_opt(token, arg, mnt_opts);
+		if (unlikely(rc)) {
+			kfree(arg);
+			if (*mnt_opts) {
+				selinux_free_mnt_opts(*mnt_opts);
+				*mnt_opts = NULL;
 			}
-			opts->context = match_strdup(&args[0]);
-			if (!opts->context) {
-				rc = -ENOMEM;
-				goto out_err;
-			}
-			break;
-
-		case Opt_fscontext:
-			if (opts->fscontext) {
-				rc = -EINVAL;
-				pr_warn(SEL_MOUNT_FAIL_MSG);
-				goto out_err;
-			}
-			opts->fscontext = match_strdup(&args[0]);
-			if (!opts->fscontext) {
-				rc = -ENOMEM;
-				goto out_err;
-			}
-			break;
-
-		case Opt_rootcontext:
-			if (opts->rootcontext) {
-				rc = -EINVAL;
-				pr_warn(SEL_MOUNT_FAIL_MSG);
-				goto out_err;
-			}
-			opts->rootcontext = match_strdup(&args[0]);
-			if (!opts->rootcontext) {
-				rc = -ENOMEM;
-				goto out_err;
-			}
-			break;
-
-		case Opt_defcontext:
-			if (opts->context || opts->defcontext) {
-				rc = -EINVAL;
-				pr_warn(SEL_MOUNT_FAIL_MSG);
-				goto out_err;
-			}
-			opts->defcontext = match_strdup(&args[0]);
-			if (!opts->defcontext) {
-				rc = -ENOMEM;
-				goto out_err;
-			}
-			break;
-		case Opt_labelsupport:
-			break;
-		default:
-			rc = -EINVAL;
-			pr_warn("SELinux:  unknown mount option\n");
-			goto out_err;
-
+			return rc;
 		}
 	}
-	*mnt_opts = opts;
 	return 0;
-
-out_err:
-	if (opts)
-		selinux_free_mnt_opts(opts);
-	return rc;
 }
 
 static int show_sid(struct seq_file *m, u32 sid)

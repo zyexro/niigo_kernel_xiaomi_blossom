@@ -362,22 +362,23 @@ enum {
 	Opt_context = 0,
 	Opt_defcontext = 1,
 	Opt_fscontext = 2,
-	Opt_rootcontext = 3,
-	Opt_seclabel = 4,
+	Opt_defcontext = 3,
+	Opt_rootcontext = 4,
+	Opt_labelsupport = 5,
 };
 
-#define A(s, has_arg) {#s, sizeof(#s) - 1, Opt_##s, has_arg}
+#define A(s, opt, has_arg) {s, sizeof(s) - 1, opt, has_arg}
 static struct {
 	const char *name;
 	int len;
 	int opt;
 	bool has_arg;
 } tokens[] = {
-	A(context, true),
-	A(fscontext, true),
-	A(defcontext, true),
-	A(rootcontext, true),
-	A(seclabel, false),
+	A("context", Opt_context, true),
+	A("fscontext", Opt_fscontext, true),
+	A("defcontext", Opt_defcontext, true),
+	A("rootcontext", Opt_rootcontext, true),
+	A("seclabel", Opt_labelsupport, false),
 };
 #undef A
 
@@ -971,6 +972,9 @@ static int selinux_add_opt(int token, const char *s, void **mnt_opts)
 {
 	struct selinux_mnt_opts *opts = *mnt_opts;
 
+	if (token == Opt_labelsupport)	/* eaten and completely ignored */
+		return 0;
+
 	if (!opts) {
 		opts = kzalloc(sizeof(struct selinux_mnt_opts), GFP_KERNEL);
 		if (!opts)
@@ -1004,39 +1008,39 @@ static int selinux_add_opt(int token, const char *s, void **mnt_opts)
 	return 0;
 Einval:
 	pr_warn(SEL_MOUNT_FAIL_MSG);
-	kfree(s);
 	return -EINVAL;
 }
 
 static int selinux_parse_opts_str(char *options,
 				  void **mnt_opts)
 {
-	char *p;
+	char *p = options, *next;
+	int rc;
 
 	/* Standard string-based options. */
-	while ((p = strsep(&options, "|")) != NULL) {
-		int token, rc;
-		substring_t args[MAX_OPT_ARGS];
-		const char *arg;
+	for (p = options; *p; p = next) {
+		int token, len;
+		char *arg = NULL;
 
-static int selinux_add_mnt_opt(const char *option, const char *val, int len,
-			       void **mnt_opts)
-{
-	int token = Opt_error;
-	int rc, i;
+		next = strchr(p, '|');
+		if (next) {
+			len = next++ - p;
+		} else {
+			len = strlen(p);
+			next = p + len;
+		}
 
-		token = match_token(p, tokens, args);
-
-		if (token == Opt_labelsupport)	/* eaten and completely ignored */
+		if (!len)
 			continue;
-		arg = match_strdup(&args[0]);
+
+		token = match_opt_prefix(p, len, &arg);
+		if (arg)
+			arg = kmemdup_nul(arg, p + len - arg, GFP_KERNEL);
 		rc = selinux_add_opt(token, arg, mnt_opts);
-		if (unlikely(rc)) {
+		if (rc) {
 			kfree(arg);
-			if (*mnt_opts) {
-				selinux_free_mnt_opts(*mnt_opts);
-				*mnt_opts = NULL;
-			}
+			selinux_free_mnt_opts(*mnt_opts);
+			*mnt_opts = NULL;
 			return rc;
 		}
 	}

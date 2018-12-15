@@ -2616,7 +2616,7 @@ static void selinux_sb_free_security(struct super_block *sb)
 	superblock_free_security(sb);
 }
 
-static inline int match_prefix(char *prefix, int plen, char *option, int olen)
+static inline int opt_len(const char *s)
 {
 	bool open_quote = false;
 	int len;
@@ -2633,16 +2633,54 @@ static inline int match_prefix(char *prefix, int plen, char *option, int olen)
 
 static int selinux_sb_eat_lsm_opts(char *options, void **mnt_opts)
 {
-	char *s = (char *)get_zeroed_page(GFP_KERNEL);
-	int err;
+	char *from = options;
+	char *to = options;
+	bool first = true;
 
-	if (!s)
-		return -ENOMEM;
-	err = selinux_sb_copy_data(options, s);
-	if (!err)
-		err = selinux_parse_opts_str(s, mnt_opts);
-	free_page((unsigned long)s);
-	return err;
+	while (1) {
+		int len = opt_len(from);
+		int token, rc;
+		char *arg = NULL;
+
+		token = match_opt_prefix(from, len, &arg);
+
+		if (token != Opt_error) {
+			char *p, *q;
+
+			/* strip quotes */
+			if (arg) {
+				for (p = q = arg; p < from + len; p++) {
+					char c = *p;
+					if (c != '"')
+						*q++ = c;
+				}
+				arg = kmemdup_nul(arg, q - arg, GFP_KERNEL);
+			}
+			rc = selinux_add_opt(token, arg, mnt_opts);
+			if (unlikely(rc)) {
+				kfree(arg);
+				if (*mnt_opts) {
+					selinux_free_mnt_opts(*mnt_opts);
+					*mnt_opts = NULL;
+				}
+				return rc;
+			}
+		} else {
+			if (!first) {	// copy with preceding comma
+				from--;
+				len++;
+			}
+			if (to != from)
+				memmove(to, from, len);
+			to += len;
+			first = false;
+		}
+		if (!from[len])
+			break;
+		from += len + 1;
+	}
+	*to = '\0';
+	return 0;
 }
 
 static int selinux_sb_remount(struct super_block *sb, void *mnt_opts)

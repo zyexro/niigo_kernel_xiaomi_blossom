@@ -531,6 +531,8 @@ static void bbr_set_cwnd(struct sock *sk, const struct rate_sample *rs,
 	target_cwnd = bbr_quantization_budget(sk, target_cwnd, gain);
 
 	/* If we're below target cwnd, slow start cwnd toward target cwnd. */
+	target_cwnd = bbr_bdp(sk, bw, gain);
+	target_cwnd = bbr_quantization_budget(sk, target_cwnd, gain);
 	if (bbr_full_bw_reached(sk))  /* only cut cwnd if we filled the pipe */
 		cwnd = min(cwnd + acked, target_cwnd);
 	else if (cwnd < target_cwnd || tp->delivered < TCP_INIT_CWND)
@@ -894,7 +896,7 @@ static void bbr_check_drain(struct sock *sk, const struct rate_sample *rs)
 	}	/* fall through to check if in-flight is already small: */
 	if (bbr->mode == BBR_DRAIN &&
 	    bbr_packets_in_net_at_edt(sk, tcp_packets_in_flight(tcp_sk(sk))) <=
-	    bbr_target_cwnd(sk, bbr_max_bw(sk), BBR_UNIT))
+	    bbr_inflight(sk, bbr_max_bw(sk), BBR_UNIT))
 		bbr_reset_probe_bw_mode(sk);  /* we estimate queue is drained */
 }
 

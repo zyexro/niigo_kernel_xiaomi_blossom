@@ -6,8 +6,8 @@
 # Rewritten to use lists instead of if-statements.
 #
 
-ccflags-y := -Idrivers/scsi
-ccflags-y += -I$(srctree)/drivers/misc/mediatek/usb_boost/
+ccflags-y := -I $(srctree)/drivers/scsi
+ccflags-y += -I $(srctree)/drivers/misc/mediatek/usb_boost/
 
 obj-$(CONFIG_USB_UAS)		+= uas.o
 obj-$(CONFIG_USB_STORAGE)	+= usb-storage.o

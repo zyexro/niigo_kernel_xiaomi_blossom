@@ -3195,6 +3195,10 @@ static ssize_t __fuse_copy_file_range(struct file *file_in, loff_t pos_in,
 
 	inode_lock(inode_out);
 
+	err = file_modified(file_out);
+	if (err)
+		goto out;
+
 	if (fc->writeback_cache) {
 		err = fuse_writeback_range(inode_out, pos_out, pos_out + len);
 		if (err)
@@ -3233,6 +3237,7 @@ out:
 		clear_bit(FUSE_I_SIZE_UNSTABLE, &fi_out->state);
 
 	inode_unlock(inode_out);
+	file_accessed(file_in);
 
 	return err;
 }

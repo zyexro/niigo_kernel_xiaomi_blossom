@@ -115,12 +115,10 @@ static bool rcu_read_lock_held_common(bool *ret)
 
 int rcu_read_lock_sched_held(void)
 {
-	if (!debug_lockdep_rcu_enabled())
-		return 1;
-	if (!rcu_is_watching())
-		return 0;
-	if (!rcu_lockdep_current_cpu_online())
-		return 0;
+	bool ret;
+
+	if (rcu_read_lock_held_common(&ret))
+		return ret;
 	return lock_is_held(&rcu_sched_lock_map) || !preemptible();
 }
 EXPORT_SYMBOL(rcu_read_lock_sched_held);

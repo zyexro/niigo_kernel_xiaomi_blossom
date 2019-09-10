@@ -306,23 +306,14 @@ struct fuse_page_desc {
 };
 
 struct fuse_args {
-	struct {
-		struct {
-			uint32_t opcode;
-			uint64_t nodeid;
-		} h;
-		unsigned numargs;
-		struct fuse_in_arg args[3];
-
-	} in;
-	struct {
-		unsigned argvar:1;
-		unsigned numargs;
-		struct fuse_arg args[2];
-
-		/* Path used for completing d_canonical_path */
-		struct path *canonical_path;
-	} out;
+	uint64_t nodeid;
+	uint32_t opcode;
+	unsigned short in_numargs;
+	unsigned short out_numargs;
+	bool out_argvar:1;
+	struct fuse_in_arg in_args[3];
+	struct fuse_arg out_args[2];
+	struct path *canonical_path;
 };
 
 #define FUSE_ARGS(args) struct fuse_args args = {}

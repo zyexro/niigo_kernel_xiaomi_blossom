@@ -583,17 +583,19 @@ ssize_t fuse_simple_request(struct fuse_conn *fc, struct fuse_args *args)
 	/* Needs to be done after fuse_get_req() so that fc->minor is valid */
 	fuse_adjust_compat(fc, args);
 
-	req->in.h.opcode = args->in.h.opcode;
-	req->in.h.nodeid = args->in.h.nodeid;
-	req->in.numargs = args->in.numargs;
-	memcpy(req->in.args, args->in.args,
-	       args->in.numargs * sizeof(struct fuse_in_arg));
-	req->out.argvar = args->out.argvar;
-	req->out.numargs = args->out.numargs;
-	memcpy(req->out.args, args->out.args,
-	       args->out.numargs * sizeof(struct fuse_arg));
-	req->out.canonical_path = args->out.canonical_path;
-	fuse_request_send(fc, req);
+	req->in.h.opcode = args->opcode;
+	req->in.h.nodeid = args->nodeid;
+	req->in.numargs = args->in_numargs;
+	memcpy(req->in.args, args->in_args,
+	       args->in_numargs * sizeof(struct fuse_in_arg));
+	req->out.argvar = args->out_argvar;
+	req->out.numargs = args->out_numargs;
+	memcpy(req->out.args, args->out_args,
+	       args->out_numargs * sizeof(struct fuse_arg));
+	req->out.canonical_path = args->canonical_path;
+	if (!args->noreply)
+		__set_bit(FR_ISREPLY, &req->flags);
+	__fuse_request_send(fc, req);
 	ret = req->out.h.error;
 	if (!ret && args->out.argvar) {
 		BUG_ON(args->out.numargs != 1);

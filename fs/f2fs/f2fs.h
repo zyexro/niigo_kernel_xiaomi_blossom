@@ -1585,6 +1585,9 @@ struct f2fs_sb_info {
 	/* to attach REQ_META|REQ_FUA flags */
 	unsigned int data_io_flag;
 
+	/* to attach REQ_META|REQ_FUA flags */
+	unsigned int data_io_flag;
+
 	/* For sysfs suppport */
 	struct kobject s_kobj;
 	struct completion s_kobj_unregister;

@@ -14,11 +14,11 @@
 
 import re
 import string
-import ConfigParser
+import configparser
 
 import xml.dom.minidom
 
-from ModuleObj import ModuleObj
+from . ModuleObj import ModuleObj
 from data.ClkData import ClkData
 from data.ClkData import OldClkData
 from data.ClkData import NewClkData
@@ -27,6 +27,10 @@ from utility.util import LogLevel
 from utility.util import sorted_key
 
 DEFAULT_AUTOK = 'AutoK'
+
+def cmp(a, b):
+    return (a > b) - (a < b) 
+
 class ClkObj(ModuleObj):
     def __init__(self):
         ModuleObj.__init__(self, 'cust_clk_buf.h', 'cust_clk_buf.dtsi')
@@ -62,17 +66,17 @@ class ClkObj(ModuleObj):
         return True
 
     def get_cfgInfo(self):
-        cp = ConfigParser.ConfigParser(allow_no_value=True)
+        cp = configparser.ConfigParser(allow_no_value=True)
         cp.read(ModuleObj.get_figPath())
 
-        count = string.atoi(cp.get('CLK_BUF', 'CLK_BUF_COUNT'))
+        count = int(cp.get('CLK_BUF', 'CLK_BUF_COUNT'))
         self.__count = count
 
         ops = cp.options('CLK_BUF')
         for op in ops:
             if op == 'clk_buf_count':
-                self.__count = string.atoi(cp.get('CLK_BUF', op))
-                ClkData._count = string.atoi(cp.get('CLK_BUF', op))
+                self.__count = int(cp.get('CLK_BUF', op))
+                ClkData._count = int(cp.get('CLK_BUF', op))
                 continue
 
             value = cp.get('CLK_BUF', op)
@@ -80,8 +84,8 @@ class ClkObj(ModuleObj):
 
             data = OldClkData()
             data.set_curList(var_list[2:])
-            data.set_defVarName(string.atoi(var_list[0]))
-            data.set_defCurrent(string.atoi(var_list[1]))
+            data.set_defVarName(int(var_list[0]))
+            data.set_defCurrent(int(var_list[1]))
 
             key = op[16:].upper()
             ModuleObj.set_data(self, key, data)
@@ -358,10 +362,10 @@ class ClkObj_Rushmore(ClkObj):
         ClkObj.parse(self, node)
 
     def get_cfgInfo(self):
-        cp = ConfigParser.ConfigParser(allow_no_value=True)
+        cp = configparser.ConfigParser(allow_no_value=True)
         cp.read(ModuleObj.get_figPath())
 
-        count = string.atoi(cp.get('CLK_BUF', 'CLK_BUF_COUNT'))
+        count = int(cp.get('CLK_BUF', 'CLK_BUF_COUNT'))
         self.__count = count
 
     def read(self, node):
@@ -483,7 +487,7 @@ class ClkObj_MT6779(ClkObj):
         return True
 
     def get_cfgInfo(self):
-        cp = ConfigParser.ConfigParser(allow_no_value=True)
+        cp = configparser.ConfigParser(allow_no_value=True)
         cp.read(ModuleObj.get_figPath())
 
         max_count = self.get_max_count(cp)
@@ -499,19 +503,19 @@ class ClkObj_MT6779(ClkObj):
             var_list = value.split(r'/')
 
             data = NewClkData()
-            data.set_defVarName(string.atoi(var_list[0]))
+            data.set_defVarName(int(var_list[0]))
 
             buf_output_list = var_list[1].split(r":")
             # only -1 means no data
             if len(buf_output_list) > 1:
                 data.cur_buf_output_list = buf_output_list[1:]
-                data.set_def_buf_output(string.atoi(buf_output_list[0]))
+                data.set_def_buf_output(int(buf_output_list[0]))
 
             driving_control_list = var_list[2].split(r":")
             # only -1 means no data
             if len(driving_control_list) > 1:
                 data.cur_driving_control_list = driving_control_list[1:]
-                data.set_def_driving_control(string.atoi(driving_control_list[0]))
+                data.set_def_driving_control(int(driving_control_list[0]))
 
             key = op[16:].upper()
             ModuleObj.set_data(self, key, data)

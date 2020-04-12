@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2016 MediaTek Inc.
@@ -43,16 +43,17 @@ from utility.util import LogLevel
 from utility.util import log
 
 def usage():
-    print '''
-usage: DrvGen [dws_path] [file_path] [log_path] [paras]...
+    print('usage: DrvGen [dws_path] [file_path] [log_path] [paras]...\n\n'+
 
-options and arguments:
+          'options and arguments:\n\n'+
 
-dws_path    :    dws file path
-file_path   :    where you want to put generated files
-log_path    :    where to store the log files
-paras        :    parameter for generate wanted file
-'''
+          'dws_path    :    dws file path\n'+
+          'file_path   :    where you want to put generated files\n'+
+          'log_path    :    where to store the log files\n'+
+          'paras        :    parameter for generate wanted file\n'
+    )
+def cmp(a, b):
+    return (a > b) - (a < b) 
 
 def is_oldDws(path, gen_spec):
     if not os.path.exists(path):
@@ -61,7 +62,7 @@ def is_oldDws(path, gen_spec):
 
     try:
         root = xml.dom.minidom.parse(dws_path)
-    except Exception, e:
+    except Exception:
         log(LogLevel.warn, '%s is not xml format, try to use old DCT!' %(dws_path))
         if len(gen_spec) == 0:
             log(LogLevel.warn, 'Please use old DCT UI to gen all files!')

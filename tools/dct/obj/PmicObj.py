@@ -14,10 +14,10 @@
 
 import sys, os
 import re
-import ConfigParser
+import configparser
 import xml.dom.minidom
 
-from ModuleObj import ModuleObj
+from . ModuleObj import ModuleObj
 from data.PmicData import PmicData
 
 from utility.util import log
@@ -25,6 +25,8 @@ from utility.util import LogLevel
 from utility.util import compare
 from utility.util import sorted_key
 
+def cmp(a, b):
+    return (a > b) - (a < b) 
 
 class PmicObj(ModuleObj):
     def __init__(self):
@@ -39,7 +41,7 @@ class PmicObj(ModuleObj):
 
 
     def get_cfgInfo(self):
-        cp = ConfigParser.ConfigParser(allow_no_value=True)
+        cp = configparser.ConfigParser(allow_no_value=True)
         cp.read(ModuleObj.get_cmpPath())
 
         PmicData._var_list = cp.options('APPLICATION')

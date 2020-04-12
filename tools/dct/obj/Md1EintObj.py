@@ -12,7 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See http://www.gnu.org/licenses/gpl-2.0.html for more details.
 
-import ConfigParser
+import configparser
 import string
 import xml.dom.minidom
 from itertools import dropwhile
@@ -20,7 +20,7 @@ import re
 
 from utility import util
 from utility.util import sorted_key
-from ModuleObj import ModuleObj
+from . ModuleObj import ModuleObj
 from data.Md1EintData import Md1EintData
 from utility.util import LogLevel
 
@@ -32,7 +32,7 @@ class Md1EintObj(ModuleObj):
 
     def get_cfgInfo(self):
         # ConfigParser accept ":" and "=", so SRC_PIN will be treated specially
-        cp = ConfigParser.ConfigParser(allow_no_value=True)
+        cp = configparser.ConfigParser(allow_no_value=True)
         cp.read(ModuleObj.get_figPath())
 
         if cp.has_option('Chip Type', 'MD1_EINT_SRC_PIN'):

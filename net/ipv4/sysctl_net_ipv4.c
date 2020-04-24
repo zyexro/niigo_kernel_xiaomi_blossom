@@ -73,8 +73,7 @@ static void set_local_port_range(struct net *net, int range[2])
 
 /* Validate changes from /proc interface. */
 static int ipv4_local_port_range(struct ctl_table *table, int write,
-				 void __user *buffer,
-				 size_t *lenp, loff_t *ppos)
+				 void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net =
 		container_of(table->data, struct net, ipv4.ip_local_ports.range);
@@ -109,7 +108,7 @@ static int ipv4_local_port_range(struct ctl_table *table, int write,
 
 /* Validate changes from /proc interface. */
 static int ipv4_privileged_ports(struct ctl_table *table, int write,
-				void __user *buffer, size_t *lenp, loff_t *ppos)
+				void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(table->data, struct net,
 	    ipv4.sysctl_ip_prot_sock);
@@ -170,8 +169,7 @@ static void set_ping_group_range(struct ctl_table *table, kgid_t low, kgid_t hig
 
 /* Validate changes from /proc interface. */
 static int ipv4_ping_group_range(struct ctl_table *table, int write,
-				 void __user *buffer,
-				 size_t *lenp, loff_t *ppos)
+				 void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct user_namespace *user_ns = current_user_ns();
 	int ret;
@@ -206,8 +204,7 @@ static int ipv4_ping_group_range(struct ctl_table *table, int write,
 }
 
 static int ipv4_fwd_update_priority(struct ctl_table *table, int write,
-				    void __user *buffer,
-				    size_t *lenp, loff_t *ppos)
+				    void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net;
 	int ret;
@@ -223,7 +220,7 @@ static int ipv4_fwd_update_priority(struct ctl_table *table, int write,
 }
 
 static int proc_tcp_congestion_control(struct ctl_table *ctl, int write,
-				       void __user *buffer, size_t *lenp, loff_t *ppos)
+				       void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(ctl->data, struct net,
 				       ipv4.tcp_congestion_control);
@@ -243,9 +240,8 @@ static int proc_tcp_congestion_control(struct ctl_table *ctl, int write,
 }
 
 static int proc_tcp_available_congestion_control(struct ctl_table *ctl,
-						 int write,
-						 void __user *buffer, size_t *lenp,
-						 loff_t *ppos)
+						 int write, void *buffer,
+						 size_t *lenp, loff_t *ppos)
 {
 	struct ctl_table tbl = { .maxlen = TCP_CA_BUF_MAX, };
 	int ret;
@@ -260,9 +256,8 @@ static int proc_tcp_available_congestion_control(struct ctl_table *ctl,
 }
 
 static int proc_allowed_congestion_control(struct ctl_table *ctl,
-					   int write,
-					   void __user *buffer, size_t *lenp,
-					   loff_t *ppos)
+					   int write, void *buffer,
+					   size_t *lenp, loff_t *ppos)
 {
 	struct ctl_table tbl = { .maxlen = TCP_CA_BUF_MAX };
 	int ret;
@@ -280,8 +275,7 @@ static int proc_allowed_congestion_control(struct ctl_table *ctl,
 }
 
 static int proc_tcp_fastopen_key(struct ctl_table *table, int write,
-				 void __user *buffer, size_t *lenp,
-				 loff_t *ppos)
+				 void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(table->data, struct net,
 	    ipv4.sysctl_tcp_fastopen);
@@ -332,9 +326,63 @@ bad_key:
 	return ret;
 }
 
+static void proc_configure_early_demux(int enabled, int protocol)
+{
+	struct net_protocol *ipprot;
+#if IS_ENABLED(CONFIG_IPV6)
+	struct inet6_protocol *ip6prot;
+#endif
+
+	rcu_read_lock();
+
+	ipprot = rcu_dereference(inet_protos[protocol]);
+	if (ipprot)
+		ipprot->early_demux = enabled ? ipprot->early_demux_handler :
+						NULL;
+
+#if IS_ENABLED(CONFIG_IPV6)
+	ip6prot = rcu_dereference(inet6_protos[protocol]);
+	if (ip6prot)
+		ip6prot->early_demux = enabled ? ip6prot->early_demux_handler :
+						 NULL;
+#endif
+	rcu_read_unlock();
+}
+
+static int proc_tcp_early_demux(struct ctl_table *table, int write,
+				void *buffer, size_t *lenp, loff_t *ppos)
+{
+	int ret = 0;
+
+	ret = proc_dointvec(table, write, buffer, lenp, ppos);
+
+	if (write && !ret) {
+		int enabled = init_net.ipv4.sysctl_tcp_early_demux;
+
+		proc_configure_early_demux(enabled, IPPROTO_TCP);
+	}
+
+	return ret;
+}
+
+static int proc_udp_early_demux(struct ctl_table *table, int write,
+				void *buffer, size_t *lenp, loff_t *ppos)
+{
+	int ret = 0;
+
+	ret = proc_dointvec(table, write, buffer, lenp, ppos);
+
+	if (write && !ret) {
+		int enabled = init_net.ipv4.sysctl_udp_early_demux;
+
+		proc_configure_early_demux(enabled, IPPROTO_UDP);
+	}
+
+	return ret;
+}
+
 static int proc_tfo_blackhole_detect_timeout(struct ctl_table *table,
-					     int write,
-					     void __user *buffer,
+					     int write, void *buffer,
 					     size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(table->data, struct net,
@@ -349,8 +397,7 @@ static int proc_tfo_blackhole_detect_timeout(struct ctl_table *table,
 }
 
 static int proc_tcp_available_ulp(struct ctl_table *ctl,
-				  int write,
-				  void __user *buffer, size_t *lenp,
+				  int write, void *buffer, size_t *lenp,
 				  loff_t *ppos)
 {
 	struct ctl_table tbl = { .maxlen = TCP_ULP_BUF_MAX, };
@@ -368,7 +415,7 @@ static int proc_tcp_available_ulp(struct ctl_table *ctl,
 
 #ifdef CONFIG_IP_ROUTE_MULTIPATH
 static int proc_fib_multipath_hash_policy(struct ctl_table *table, int write,
-					  void __user *buffer, size_t *lenp,
+					  void *buffer, size_t *lenp,
 					  loff_t *ppos)
 {
 	struct net *net = container_of(table->data, struct net,

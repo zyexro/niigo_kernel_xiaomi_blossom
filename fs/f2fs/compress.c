@@ -389,6 +389,8 @@ static int zstd_init_decompress_ctx(struct decompress_io_ctx *dic)
 	zstd_dstream *stream;
 	void *workspace;
 	unsigned int workspace_size;
+	unsigned int max_window_size =
+			MAX_COMPRESS_WINDOW_SIZE(dic->log_cluster_size);
 
 	workspace_size = zstd_dstream_workspace_bound(MAX_COMPRESS_WINDOW_SIZE);
 

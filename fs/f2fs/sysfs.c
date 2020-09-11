@@ -399,7 +399,9 @@ out:
 		return -EINVAL;
 
 	if (!strcmp(a->attr.name, "gc_urgent")) {
-		if (t == 1) {
+		if (t == 0) {
+			sbi->gc_mode = GC_NORMAL;
+		} else if (t == 1) {
 			sbi->gc_mode = GC_URGENT_HIGH;
 			if (sbi->gc_thread) {
 				sbi->gc_thread->gc_wake = 1;
@@ -410,7 +412,7 @@ out:
 		} else if (t == 2) {
 			sbi->gc_mode = GC_URGENT_LOW;
 		} else {
-			sbi->gc_mode = GC_NORMAL;
+			return -EINVAL;
 		}
 		return count;
 	}

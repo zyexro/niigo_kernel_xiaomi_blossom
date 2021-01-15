@@ -716,6 +716,11 @@ KBUILD_CFLAGS += -ffp-contract=fast
 # Enable hot cold split optimization
 KBUILD_CFLAGS += -mllvm -hot-cold-split=true
 
+ifdef CONFIG_INLINE_OPTIMIZATION
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=600
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
+endif
+
 KBUILD_CFLAGS	+= $(OPT_FLAGS)
 KBUILD_AFLAGS	+= $(OPT_FLAGS)
 

@@ -615,7 +615,7 @@ static int init_teei_framework(void)
 	TEEI_BOOT_FOOTPRINT("TEEI BOOT Keymaster Unlocked");
 
 	/* android notify the uTdriver that the TAs is ready !*/
-	wait_for_completion(&boot_decryto_lock);
+	//wait_for_completion(&boot_decryto_lock);
 	TEEI_BOOT_FOOTPRINT("TEEI BOOT Decrypt Unlocked");
 
 	cpus_read_lock();

@@ -253,7 +253,6 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 			goto err_page_ptr_cleared;
 
 		page->page_ptr = alloc_page(GFP_KERNEL |
-					    __GFP_HIGHMEM |
 					    __GFP_ZERO);
 		if (!page->page_ptr) {
 			pr_err("%d: binder_alloc_buf failed for page at %pK\n",

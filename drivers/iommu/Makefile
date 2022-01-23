@@ -3,8 +3,8 @@ ccflags-$(CONFIG_MTK_AEE_FEATURE) += -I$(srctree)/drivers/misc/mediatek/include/
 ccflags-$(CONFIG_MTK_IOMMU_MISC_DBG) += -I$(srctree)/drivers/misc/mediatek/iommu/
 
 obj-$(CONFIG_IOMMU_API) += iommu.o
-obj-$(CONFIG_IOMMU_API) += iommu-traces.o
 obj-$(CONFIG_IOMMU_API) += iommu-sysfs.o
+obj-$(CONFIG_DEBUG_KERNEL) += iommu-traces.o
 obj-$(CONFIG_IOMMU_DEBUGFS) += iommu-debugfs.o
 obj-$(CONFIG_IOMMU_DMA) += dma-iommu.o
 obj-$(CONFIG_IOMMU_IO_PGTABLE) += io-pgtable.o

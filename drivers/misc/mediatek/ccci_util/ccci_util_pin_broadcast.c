@@ -46,8 +46,9 @@ static struct list_head user_list;
 void inject_pin_status_event(int pin_value, const char pin_name[])
 {
 	struct pin_event_user_ctrl *user_ctrl;
+	unsigned long flags;
 
-	spin_lock(&pin_event_update_lock);
+	spin_lock_irqsave(&pin_event_update_lock,flags);
 	if (pin_name != NULL)
 		snprintf(pin_event->pin_name, 32, "%s", pin_name);
 	else
@@ -56,12 +57,13 @@ void inject_pin_status_event(int pin_value, const char pin_name[])
 	list_for_each_entry(user_ctrl, &user_list, entry)
 		user_ctrl->pin_update = 1;
 	wake_up_interruptible(&pin_event_wait);
-	spin_unlock(&pin_event_update_lock);
+	spin_unlock_irqrestore(&pin_event_update_lock,flags);
 }
 
 static int ccci_util_pin_bc_open(struct inode *inode, struct file *filp)
 {
 	struct pin_event_user_ctrl *user_ctrl;
+        unsigned long flags;
 
 	user_ctrl = kzalloc(sizeof(struct pin_event_user_ctrl), GFP_KERNEL);
 	if (user_ctrl == NULL)
@@ -69,9 +71,9 @@ static int ccci_util_pin_bc_open(struct inode *inode, struct file *filp)
 
 	INIT_LIST_HEAD(&user_ctrl->entry);
 	filp->private_data = user_ctrl;
-	spin_lock(&pin_event_update_lock);
+	spin_lock_irqsave(&pin_event_update_lock,flags);
 	list_add_tail(&user_ctrl->entry, &user_list);
-	spin_unlock(&pin_event_update_lock);
+	spin_unlock_irqrestore(&pin_event_update_lock,flags);
 
 	return 0;
 }
@@ -79,12 +81,13 @@ static int ccci_util_pin_bc_open(struct inode *inode, struct file *filp)
 static int ccci_util_pin_bc_release(struct inode *inode, struct file *filp)
 {
 	struct pin_event_user_ctrl *user_ctrl;
+	unsigned long flags;
 
 	user_ctrl = filp->private_data;
-	spin_lock(&pin_event_update_lock);
+	spin_lock_irqsave(&pin_event_update_lock,flags);
 	user_ctrl->pin_update = 0;
 	list_del(&user_ctrl->entry);
-	spin_unlock(&pin_event_update_lock);
+	spin_unlock_irqrestore(&pin_event_update_lock,flags);
 	kfree(user_ctrl);
 
 	return 0;
@@ -93,24 +96,25 @@ static int ccci_util_pin_bc_release(struct inode *inode, struct file *filp)
 static ssize_t ccci_util_pin_bc_read(struct file *filp, char __user *buf, size_t size, loff_t *ppos)
 {
 	struct pin_event_user_ctrl *user_ctrl;
+	unsigned long flags;
 
 	user_ctrl = filp->private_data;
 	if (filp->f_flags & O_NONBLOCK) {
-		spin_lock(&pin_event_update_lock);
+		spin_lock_irqsave(&pin_event_update_lock,flags);
 		if (user_ctrl->pin_update == 0) {
-			spin_unlock(&pin_event_update_lock);
+			spin_unlock_irqrestore(&pin_event_update_lock,flags);
 			return 0;
 		}
 		memcpy(&user_ctrl->pin_event, pin_event, sizeof(struct pin_status_event));
-		spin_unlock(&pin_event_update_lock);
+		spin_unlock_irqrestore(&pin_event_update_lock,flags);
 		if (copy_to_user(buf, &user_ctrl->pin_event, sizeof(struct pin_status_event)))
 			return -EFAULT;
 	} else {
 		wait_event_interruptible(pin_event_wait, user_ctrl->pin_update == 1);
-		spin_lock(&pin_event_update_lock);
+		spin_lock_irqsave(&pin_event_update_lock,flags);
 		user_ctrl->pin_update = 0;
 		memcpy(&user_ctrl->pin_event, pin_event, sizeof(struct pin_status_event));
-		spin_unlock(&pin_event_update_lock);
+		spin_unlock_irqrestore(&pin_event_update_lock,flags);
 		if (copy_to_user(buf, &user_ctrl->pin_event, sizeof(struct pin_status_event)))
 			return -EFAULT;
 	}

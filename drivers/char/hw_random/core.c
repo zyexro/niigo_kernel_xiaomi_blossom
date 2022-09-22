@@ -55,7 +55,7 @@ MODULE_PARM_DESC(default_quality,
 
 static void drop_current_rng(void);
 static int hwrng_init(struct hwrng *rng);
-static void hwrng_manage_rngd(struct hwrng *rng);
+static int hwrng_fillfn(void *unused);
 
 static inline int rng_get_data(struct hwrng *rng, u8 *buffer, size_t size,
 			       int wait);
@@ -98,6 +98,15 @@ static int set_current_rng(struct hwrng *rng)
 
 	drop_current_rng();
 	current_rng = rng;
+
+	/* if necessary, start hwrng thread */
+	if (!hwrng_fill) {
+		hwrng_fill = kthread_run(hwrng_fillfn, NULL, "hwrng");
+		if (IS_ERR(hwrng_fill)) {
+			pr_err("hwrng_fill thread creation failed\n");
+			hwrng_fill = NULL;
+		}
+	}
 
 	return 0;
 }
@@ -169,8 +178,6 @@ skip_init:
 	if (rng->quality > 1024)
 		rng->quality = 1024;
 	current_quality = rng->quality; /* obsolete */
-
-	hwrng_manage_rngd(rng);
 
 	return 0;
 }
@@ -462,10 +469,6 @@ static ssize_t rng_quality_store(struct device *dev,
 	/* the best available RNG may have changed */
 	ret = enable_best_rng();
 
-	/* start/stop rngd if necessary */
-	if (current_rng)
-		hwrng_manage_rngd(current_rng);
-
 out:
 	mutex_unlock(&rng_mutex);
 	return ret ? ret : len;
@@ -517,9 +520,6 @@ static int hwrng_fillfn(void *unused)
 		mutex_unlock(&reading_mutex);
 		put_rng(rng);
 
-		if (!quality)
-			break;
-
 		if (rc <= 0) {
 			pr_warn("hwrng: no data available\n");
 			msleep_interruptible(10000);
@@ -539,22 +539,6 @@ static int hwrng_fillfn(void *unused)
 	}
 	hwrng_fill = NULL;
 	return 0;
-}
-
-static void hwrng_manage_rngd(struct hwrng *rng)
-{
-	if (WARN_ON(!mutex_is_locked(&rng_mutex)))
-		return;
-
-	if (rng->quality == 0 && hwrng_fill)
-		kthread_stop(hwrng_fill);
-	if (rng->quality > 0 && !hwrng_fill) {
-		hwrng_fill = kthread_run(hwrng_fillfn, NULL, "hwrng");
-		if (IS_ERR(hwrng_fill)) {
-			pr_err("hwrng_fill thread creation failed\n");
-			hwrng_fill = NULL;
-		}
-	}
 }
 
 int hwrng_register(struct hwrng *rng)

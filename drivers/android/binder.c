@@ -5108,6 +5108,7 @@ static __poll_t binder_poll(struct file *filp,
 
 	return 0;
 }
+
 static int binder_ioctl_write_read(struct file *filp, unsigned long arg,
 				struct binder_thread *thread)
 {
@@ -5115,6 +5116,7 @@ static int binder_ioctl_write_read(struct file *filp, unsigned long arg,
 	struct binder_proc *proc = filp->private_data;
 	void __user *ubuf = (void __user *)arg;
 	struct binder_write_read bwr;
+
 	if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
 		ret = -EFAULT;
 		goto out;
@@ -5344,6 +5346,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	case BINDER_VERSION: {
 		struct binder_version __user *ver = ubuf;
+
 		if (put_user(BINDER_CURRENT_PROTOCOL_VERSION,
 			     &ver->protocol_version)) {
 			ret = -EINVAL;

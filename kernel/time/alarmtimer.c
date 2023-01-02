@@ -300,12 +300,6 @@ static int alarmtimer_suspend(struct device *dev)
 	now = ktime_add(now, min);
 
 	time = rtc_ktime_to_tm(now);
-	pr_notice_ratelimited("%s convert %lld to %04d/%02d/%02d %02d:%02d:%02d (now = %04d/%02d/%02d %02d:%02d:%02d)\n",
-			__func__, expires,
-			time.tm_year+1900, time.tm_mon+1, time.tm_mday,
-			time.tm_hour, time.tm_min, time.tm_sec,
-			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec);
 
 	/* Set alarm, if in the past reject suspend briefly to handle */
 	ret = rtc_timer_start(rtc, &rtctimer, now, 0);

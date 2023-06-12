@@ -2338,12 +2338,13 @@ bool tcp_check_oom(struct sock *sk, int shift)
 	return too_many_orphans || out_of_socket_memory;
 }
 
-void __tcp_close(struct sock *sk, long timeout)
+void tcp_close(struct sock *sk, long timeout)
 {
 	bool data_was_unread = false;
 	struct sk_buff *skb;
 	int state;
 
+	lock_sock(sk);
 	WRITE_ONCE(sk->sk_shutdown, SHUTDOWN_MASK);
 
 	if (sk->sk_state == TCP_LISTEN) {
@@ -2508,12 +2509,6 @@ adjudge_to_death:
 out:
 	bh_unlock_sock(sk);
 	local_bh_enable();
-}
-
-void tcp_close(struct sock *sk, long timeout)
-{
-	lock_sock(sk);
-	__tcp_close(sk, timeout);
 	release_sock(sk);
 	if (!sk->sk_net_refcnt)
 		inet_csk_clear_xmit_timers_sync(sk);

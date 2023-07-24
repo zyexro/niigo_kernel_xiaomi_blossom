@@ -9,7 +9,7 @@ RGX_TOP := $(dir $(lastword $(MAKEFILE_LIST)))
 ccflags-y += -include $(RGX_TOP)/include/config_kernel_user_$(MTK_PLATFORM)$(ECO).h
 
 ccflags-y += \
-	-D__linux__ $(OPTIM) -g \
+	-D__linux__ $(OPTIM) \
 	-fno-strict-aliasing \
 	-W -Wall \
 	-Wno-missing-field-initializers \

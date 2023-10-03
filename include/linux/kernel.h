@@ -2,6 +2,7 @@
 #ifndef _LINUX_KERNEL_H
 #define _LINUX_KERNEL_H
 
+#include <linux/array_size.h>
 #include <stdarg.h>
 
 #include <linux/array_size.h>

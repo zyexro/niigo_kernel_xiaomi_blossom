@@ -125,7 +125,9 @@ struct dpmaif_bat_page_t {
 };
 
 #define MAX_BD_NUM (MAX_SKB_FRAGS + 1)
+#ifdef CONFIG_TRACING
 #define DPMAIF_TRAFFIC_MONITOR_INTERVAL 10
+#endif
 #define SKB_RX_LIST_MAX_LEN 0xFFFFFFFF
 
 struct dpmaif_bat_request {

@@ -3136,7 +3136,9 @@ int dpmaif_stop(unsigned char hif_id)
 	/* rx rx clear */
 	dpmaif_stop_rx_sw(hif_id);
 	/* stop debug mechnism */
+#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	del_timer(&dpmaif_ctrl->traffic_monitor);
+#endif
 
 	/* 3. todo: reset IP */
 	dpmaif_hw_reset(dpmaif_ctrl->md_id);

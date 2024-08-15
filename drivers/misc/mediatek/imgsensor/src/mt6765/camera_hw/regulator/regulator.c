@@ -70,18 +70,11 @@ static struct regulator *regVCAMAF;
 static int regulator_oc_notify(
 	struct notifier_block *nb, unsigned long event, void *data)
 {
-		struct reg_oc_debug_t *reg_oc_dbg =
-			container_of(nb, struct reg_oc_debug_t, nb);
-
 		if (event != REGULATOR_EVENT_OVER_CURRENT)
 			return NOTIFY_OK;
 
 		/* Do OC handling */
-		pr_info("Imgsensor OC notify regulator: %s OC pid %ld\n",
-			reg_oc_dbg->name, (long)reg_instance.pid);
-
 		gimgsensor.status.oc = 1;
-		aee_kernel_warning("Imgsensor OC", "Over current");
 		if (reg_instance.pid != -1 &&
 		pid_task(find_get_pid(reg_instance.pid), PIDTYPE_PID) != NULL) {
 			force_sig(SIGKILL,
@@ -96,7 +89,6 @@ enum IMGSENSOR_RETURN imgsensor_oc_interrupt(
 	enum IMGSENSOR_SENSOR_IDX sensor_idxU, bool enable)
 {
 	int i = 0;
-	int ret = 0;
 	unsigned int sensor_idx = 0;
 
 	sensor_idx = sensor_idxU;
@@ -116,21 +108,10 @@ enum IMGSENSOR_RETURN imgsensor_oc_interrupt(
 					preg_own->pregulator[sensor_idx][i];
 				reg_oc_debug[sensor_idx][i].nb.notifier_call =
 					regulator_oc_notify;
-				ret = devm_regulator_register_notifier(
+				devm_regulator_register_notifier(
 					preg_own->pregulator[sensor_idx][i],
 					&reg_oc_debug[sensor_idx][i].nb);
 				Is_Notify_call[sensor_idx][i] = true;
-
-				if (ret) {
-					pr_info(
-					"regulator notifier request error\n");
-				}
-				pr_debug(
-					"[regulator] %s idx=%d %s enable=%d oc enabled\n",
-					__func__,
-					sensor_idx,
-					regulator_control[i].pregulator_type,
-					enable);
 			}
 		}
 		rcu_read_lock();

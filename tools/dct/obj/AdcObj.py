@@ -90,7 +90,7 @@ class AdcObj(ModuleObj):
         if value == "IO_CHANNELS":
             gen_str += '''\tio-channels = <&auxadc 0>;\n'''
         elif value.startswith("IO_CHANNELS") and len(value) == 12 and int(value[-1] )in range(10):
-            gen_str += '''\tio-channels = <&auxadc %d>;\n''' % string.atoi(value[-1])
+            gen_str += '''\tio-channels = <&auxadc %d>;\n''' % int(value[-1])
 
         gen_str += '''};\n'''
 

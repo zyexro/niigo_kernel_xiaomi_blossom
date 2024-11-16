@@ -47,6 +47,10 @@ ifeq ($(MTK_COMBO_CHIP),)
 MTK_COMBO_CHIP = MT6632
 endif
 
+MTK_WLAN_SERVICE=yes
+MTK_ANDROID_EMI=y
+MODULE_NAME=wlan_drv_gen4m
+
 $(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 $(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])

@@ -91,8 +91,6 @@
 #if CFG_MTK_MCIF_WIFI_SUPPORT
 #include "mddp.h"
 #endif
-#include "mgmt/rlm_domain.h"
-#include "mot_config.h"
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -3303,8 +3301,6 @@ void wlanGetParseConfig(struct ADAPTER *prAdapter)
 {
 	uint8_t *pucConfigBuf;
 	uint32_t u4ConfigReadLen;
-	char motoConfigName[ARRAY_VALUE_MAX] = {0}; // IKSWR-130356
-	int motoRet = 1;// IKSWR-130356
 
 	wlanCfgInit(prAdapter, NULL, 0, 0);
 	pucConfigBuf = (uint8_t *) kalMemAlloc(
@@ -3312,18 +3308,6 @@ void wlanGetParseConfig(struct ADAPTER *prAdapter)
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
 	u4ConfigReadLen = 0;
 	if (pucConfigBuf) {
-		// IKSWR-130356
-		DBGLOG(INIT, ERROR, "wlanGetParseConfig.\n");
-		get_moto_config_file_name(motoConfigName, WIFI_CFG_INDEX);
-		if (strlen(motoConfigName)) {
-			motoRet = kalRequestFirmware(motoConfigName, pucConfigBuf,
-				WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
-				prAdapter->prGlueInfo->prDev);
-		}
-		// END IKSWR-130356
-		if (motoRet == 0) {
-			/* ToDo:: Nothing */
-		} else
 		if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
 			   WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
 			   prAdapter->prGlueInfo->prDev) == 0) {
@@ -3368,27 +3352,12 @@ void wlanGetConfig(struct ADAPTER *prAdapter)
 	uint8_t *pucConfigBuf;
 	uint32_t u4ConfigReadLen;
 
-    char motoConfigName[ARRAY_VALUE_MAX] = {0}; // IKSWR-130356
-	int motoRet = 1;// IKSWR-130356
-
 	wlanCfgInit(prAdapter, NULL, 0, 0);
 	pucConfigBuf = (uint8_t *) kalMemAlloc(
 			       WLAN_CFG_FILE_BUF_SIZE, VIR_MEM_TYPE);
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
 	u4ConfigReadLen = 0;
 	if (pucConfigBuf) {
-		// IKSWR-130356
-		DBGLOG(INIT, ERROR, "wlanGetConfig\n");
-		get_moto_config_file_name(motoConfigName, 0);
-		if (strlen(motoConfigName)) {
-			motoRet = kalRequestFirmware(motoConfigName, pucConfigBuf,
-				WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
-				prAdapter->prGlueInfo->prDev);
-		}
-		// END IKSWR-130356
-		if (motoRet == 0) {
-			/* ToDo:: Nothing */
-		} else
 		if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
 			   WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
 			   prAdapter->prGlueInfo->prDev) == 0) {

@@ -65,9 +65,6 @@ ifeq ($(WLAN_CHIP_ID),)
 WLAN_CHIP_ID=$(word 1, $(MTK_COMBO_CHIP))
 endif
 
-# Moto read MACs from boot params
-ccflags-y += -DMOTO_UTAGS_MAC=1
-
 ccflags-y += -DCFG_SUPPORT_DEBUG_FS=0
 ccflags-y += -DWLAN_INCLUDE_PROC
 ccflags-y += -DCFG_SUPPORT_AGPS_ASSIST=0

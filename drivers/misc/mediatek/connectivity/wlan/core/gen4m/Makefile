@@ -757,7 +757,7 @@ include $(src)/test/ut.make
 endif
 
 #IKSWR-110533 reduce the log for ellis user version.
-ifeq ($(TARGET_BUILD_VARIANT)$(findstring ellis, $(TARGET_PRODUCT)),userellis)
+ifeq ($(TARGET_BUILD_VARIANT),user)
 ccflags-y += -DDBG_LOG_LEVEL_LESS
 endif
 #IKSWR-110533 end.

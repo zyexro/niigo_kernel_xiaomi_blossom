@@ -69,8 +69,7 @@
 struct rtnl_debug_btrace_t {
 	struct task_struct *task;
 	int   pid;
-	unsigned long long start;
-	unsigned long long end;
+	unsigned long long when;
 	unsigned long addrs[RTNL_DEBUG_ADDRS_COUNT];
 	unsigned int entry_nr;
 	char flag;/*1 get rtnl_lock,0 : relase rtnl_lock*/
@@ -81,8 +80,7 @@ struct rtnl_debug_btrace_t {
 static struct rtnl_debug_btrace_t rtnl_instance = {
 	.task = NULL,
 	.pid = 0,
-	.start = 0,
-	.end = 0,
+	.when = 0,
 	.entry_nr = 0,
 	.flag = 0,
 	.rtnl_lock_owner = NULL,
@@ -101,8 +99,7 @@ void rtnl_get_btrace(struct task_struct *who)
 	debug_trace.skip = 0;
 	save_stack_trace(&debug_trace);
 	rtnl_instance.task = who;
-	rtnl_instance.start = sched_clock();
-	rtnl_instance.end = 0;
+	rtnl_instance.when = sched_clock();
 	rtnl_instance.flag = 1;
 	rtnl_instance.pid = current->pid;
 	rtnl_instance.rtnl_lock_owner  = current;
@@ -125,7 +122,7 @@ static void rtnl_print_btrace(struct timer_list *unused)
 			rtnl_instance.task->comm,
 			rtnl_instance.pid,
 			task_state_to_char(rtnl_instance.task),
-			rtnl_instance.start);
+			rtnl_instance.when);
 
 		print_stack_trace(&show_trace, 0);
 		show_stack(rtnl_instance.task, NULL);
@@ -178,12 +175,6 @@ void __rtnl_unlock(void)
 	struct sk_buff *head = defer_kfree_skb_list;
 
 	defer_kfree_skb_list = NULL;
-
-	rtnl_instance.end = sched_clock();
-	if (rtnl_instance.end - rtnl_instance.start > 4000000000ULL)//4 second
-		pr_info("[mtk_net][rtnl_unlock] rtnl_lock is held by [%d] from [%llu] to [%llu]\n",
-			rtnl_instance.pid,
-			rtnl_instance.start, rtnl_instance.end);
 
 	mutex_unlock(&rtnl_mutex);
 

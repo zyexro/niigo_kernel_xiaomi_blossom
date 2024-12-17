@@ -20,7 +20,7 @@
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 #include <linux/debugfs.h>
 #endif
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 #include <linux/proc_fs.h>
 #endif
 #include <linux/kthread.h>
@@ -38,7 +38,7 @@
 /* history record */
 /* ============================================== */
 
-#if IS_ENABLED(CONFIG_DEBUG_FS) || IS_ENABLED(CONFIG_PROC_FS)
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 struct history_record {
 	void *record;
 	unsigned int record_num;
@@ -50,7 +50,7 @@ struct history_record {
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 	struct dentry *debug_file;
 #endif
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	struct proc_dir_entry *proc_file;
 #endif
 	int (*show)(struct seq_file *seq, void *record, void *priv);
@@ -283,7 +283,7 @@ static const struct file_operations debug_history_rec_fops = {
 };
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 static int proc_history_rec_open(struct inode *inode, struct file *file)
 {
 	history_rec_open(PDE_DATA(inode), file);
@@ -357,7 +357,7 @@ struct history_record *history_rec_create(unsigned int record_num,
 				&debug_history_rec_fops);
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	history_record->proc_file = proc_create_data(name,
 						     S_IFREG | 0664,
 						     dev->proc_root,
@@ -378,7 +378,7 @@ void history_rec_destroy(struct history_record *history_record)
 	debugfs_remove(history_record->debug_file);
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	proc_remove(history_record->proc_file);
 #endif
 
@@ -531,7 +531,7 @@ static const struct file_operations string_hash_debug_fops = {
 };
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 static int string_hash_proc_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, string_hash_debug_show, PDE_DATA(inode));
@@ -802,7 +802,7 @@ int ion_history_init(void)
 			    &string_hash_debug_fops);
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	proc_create("string_hash", S_IFREG | 0644, g_ion_device->proc_root,
 		    &string_hash_proc_fops);
 #endif

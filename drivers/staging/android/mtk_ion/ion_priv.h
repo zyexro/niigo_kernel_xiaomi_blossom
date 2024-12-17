@@ -107,7 +107,7 @@ struct ion_device {
 	struct dentry *heaps_debug_root;
 	struct dentry *clients_debug_root;
 #endif
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	struct proc_dir_entry *proc_root;
 	struct proc_dir_entry *heaps_proc_root;
 	struct proc_dir_entry *clients_proc_root;
@@ -145,7 +145,7 @@ struct ion_client {
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 	struct dentry *debug_root;
 #endif
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	struct proc_dir_entry *proc_root;
 #endif
 	char dbg_name[ION_MM_DBG_NAME_LEN]; /* add by K for debug! */

@@ -22,7 +22,7 @@
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 #include <linux/debugfs.h>
 #endif
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 #include <linux/proc_fs.h>
 #endif
 #include <linux/seq_file.h>
@@ -784,7 +784,7 @@ int ion_device_destroy_heaps(struct ion_device *dev)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_DEBUG_FS) || IS_ENABLED(CONFIG_PROC_FS)
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 /*for clients ion mm heap summary size*/
 static int ion_clients_summary_show(struct seq_file *s, void *unused)
 {
@@ -848,7 +848,7 @@ static const struct file_operations debug_client_fops = {
 };
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 static int ion_proc_client_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, ion_clients_summary_show, PDE_DATA(inode));
@@ -929,7 +929,7 @@ static int ion_drv_probe(struct platform_device *pdev)
 			       "./heaps/ion_mm_heap");
 #endif
 
-#if IS_ENABLED(CONFIG_PROC_FS)
+#if 0
 	proc_create("clients_summary", S_IFREG | 0664,
 		    g_ion_device->clients_proc_root,
 		    &proc_client_fops);

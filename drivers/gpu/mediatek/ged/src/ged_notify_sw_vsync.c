@@ -489,6 +489,7 @@ void ged_sodi_stop(void)
 	}
 }
 
+#if 0
 #ifdef CONFIG_MTK_GPU_SUPPORT /* Only enable when GPU isn't kerenl module */
 #if defined(CONFIG_MACH_MT8167) || defined(CONFIG_MACH_MT8173)\
 || defined(CONFIG_MACH_MT6739) || defined(CONFIG_MACH_MT6761)\
@@ -519,6 +520,7 @@ void ged_dump_fw(void)
 EXPORT_SYMBOL(ged_dump_fw);
 #endif
 #endif /* CONFIG_MTK_GPU_SUPPORT */
+#endif
 
 GED_ERROR ged_notify_sw_vsync_system_init(void)
 {
@@ -527,6 +529,7 @@ GED_ERROR ged_notify_sw_vsync_system_init(void)
 	if (g_psNotifyWorkQueue == NULL)
 		return GED_ERROR_OOM;
 
+#if 0
 #if defined(CONFIG_MACH_MT8167) || defined(CONFIG_MACH_MT8173)\
 || defined(CONFIG_MACH_MT6739) || defined(CONFIG_MACH_MT6761)\
 || defined(CONFIG_MACH_MT6765)
@@ -535,6 +538,7 @@ GED_ERROR ged_notify_sw_vsync_system_init(void)
 
 	if (g_psDumpFW == NULL)
 		return GED_ERROR_OOM;
+#endif
 #endif
 
 	mutex_init(&gsVsyncStampLock);
@@ -557,6 +561,7 @@ void ged_notify_sw_vsync_system_exit(void)
 		g_psNotifyWorkQueue = NULL;
 	}
 
+#if 0
 #if defined(CONFIG_MACH_MT8167) || defined(CONFIG_MACH_MT8173)\
 || defined(CONFIG_MACH_MT6739) || defined(CONFIG_MACH_MT6761)\
 || defined(CONFIG_MACH_MT6765)
@@ -565,6 +570,7 @@ void ged_notify_sw_vsync_system_exit(void)
 		destroy_workqueue(g_psDumpFW);
 		g_psDumpFW = NULL;
 	}
+#endif
 #endif
 #ifdef ENABLE_COMMON_DVFS
 	hrtimer_cancel(&g_HT_hwvsync_emu);

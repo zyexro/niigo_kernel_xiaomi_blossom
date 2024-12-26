@@ -73,9 +73,6 @@
 *****************************************************************************/
 /*
 * gesture_id    - mean which gesture is recognised
-* point_num     - points number of this gesture
-* coordinate_x  - All gesture point x coordinate
-* coordinate_y  - All gesture point y coordinate
 * mode          - gesture enable/disable, need enable by host
 *               - 1:enable gesture function(default)  0:disable
 * active        - gesture work flag,
@@ -83,9 +80,6 @@
 */
 struct fts_gesture_st {
     u8 gesture_id;
-    u8 point_num;
-    u16 coordinate_x[FTS_GESTURE_POINTS_MAX];
-    u16 coordinate_y[FTS_GESTURE_POINTS_MAX];
 };
 
 /*****************************************************************************
@@ -136,41 +130,6 @@ static ssize_t fts_gesture_store(
     return count;
 }
 
-static ssize_t fts_gesture_buf_show(
-    struct device *dev, struct device_attribute *attr, char *buf)
-{
-    int count = 0;
-    int i = 0;
-    struct input_dev *input_dev = fts_data->input_dev;
-    struct fts_gesture_st *gesture = &fts_gesture_data;
-
-    mutex_lock(&input_dev->mutex);
-    count = snprintf(buf, PAGE_SIZE, "Gesture ID:%d\n", gesture->gesture_id);
-    count += snprintf(buf + count, PAGE_SIZE, "Gesture PointNum:%d\n",
-                      gesture->point_num);
-    count += snprintf(buf + count, PAGE_SIZE, "Gesture Points Buffer:\n");
-
-    /* save point data,max:6 */
-    for (i = 0; i < FTS_GESTURE_POINTS_MAX; i++) {
-        count += snprintf(buf + count, PAGE_SIZE, "%3d(%4d,%4d) ", i,
-                          gesture->coordinate_x[i], gesture->coordinate_y[i]);
-        if ((i + 1) % 4 == 0)
-            count += snprintf(buf + count, PAGE_SIZE, "\n");
-    }
-    count += snprintf(buf + count, PAGE_SIZE, "\n");
-    mutex_unlock(&input_dev->mutex);
-
-    return count;
-}
-
-static ssize_t fts_gesture_buf_store(
-    struct device *dev,
-    struct device_attribute *attr, const char *buf, size_t count)
-{
-    return -EPERM;
-}
-
-
 /* sysfs gesture node
  *   read example: cat  fts_gesture_mode       ---read gesture mode
  *   write example:echo 1 > fts_gesture_mode   --- write gesture mode to 1
@@ -178,15 +137,9 @@ static ssize_t fts_gesture_buf_store(
  */
 static DEVICE_ATTR(fts_gesture_mode, S_IRUGO | S_IWUSR, fts_gesture_show,
                    fts_gesture_store);
-/*
- *   read example: cat fts_gesture_buf        --- read gesture buf
- */
-static DEVICE_ATTR(fts_gesture_buf, S_IRUGO | S_IWUSR,
-                   fts_gesture_buf_show, fts_gesture_buf_store);
 
 static struct attribute *fts_gesture_mode_attrs[] = {
     &dev_attr_fts_gesture_mode.attr,
-    &dev_attr_fts_gesture_buf.attr,
     NULL,
 };
 
@@ -311,21 +264,7 @@ int fts_gesture_readdata(struct fts_ts_data *ts_data, u8 *data)
 
 
     /* init variable before read gesture point */
-    memset(gesture->coordinate_x, 0, FTS_GESTURE_POINTS_MAX * sizeof(u16));
-    memset(gesture->coordinate_y, 0, FTS_GESTURE_POINTS_MAX * sizeof(u16));
     gesture->gesture_id = buf[2];
-    gesture->point_num = buf[3];
-    FTS_DEBUG("gesture_id=%d, point_num=%d",
-              gesture->gesture_id, gesture->point_num);
-
-    /* save point data,max:6 */
-    for (i = 0; i < FTS_GESTURE_POINTS_MAX; i++) {
-        index = 4 * i + 4;
-        gesture->coordinate_x[i] = (u16)(((buf[0 + index] & 0x0F) << 8)
-                                         + buf[1 + index]);
-        gesture->coordinate_y[i] = (u16)(((buf[2 + index] & 0x0F) << 8)
-                                         + buf[3 + index]);
-    }
 
     /* report gesture to OS */
     fts_gesture_report(input_dev, gesture->gesture_id);

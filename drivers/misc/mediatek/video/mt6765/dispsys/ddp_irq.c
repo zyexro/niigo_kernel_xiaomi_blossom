@@ -29,10 +29,12 @@
 
 #include <asm/arch_timer.h>
 
+#if 0
 /* IRQ log print kthread */
 static struct task_struct *disp_irq_log_task;
 static wait_queue_head_t disp_irq_log_wq;
 static int disp_irq_log_module;
+#endif
 static int disp_irq_rdma_underflow;
 static int irq_init;
 
@@ -302,7 +304,7 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 		if (reg_val & (1 << 1)) {
 			DDPERR("IRQ: WDMA%d underrun! cnt=%d\n", index,
 			       cnt_wdma_underflow[index]++);
-			disp_irq_log_module |= 1 << module;
+			//disp_irq_log_module |= 1 << module;
 		}
 		/* clear intr */
 		DISP_CPU_REG_SET(DISP_REG_WDMA_INTSTA, ~reg_val);
@@ -361,7 +363,7 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 
 			DDPERR("IRQ: RDMA%d abnormal! cnt=%d\n",
 				index, cnt_rdma_abnormal[index]++);
-			disp_irq_log_module |= 1 << module;
+			//disp_irq_log_module |= 1 << module;
 
 		}
 		if (reg_val & (1 << 4)) {
@@ -382,7 +384,7 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 					    DISP_RDMA_INDEX_OFFSET * index),
 			       DISP_REG_GET(DISP_REG_RDMA_OUT_LINE_CNT +
 					    DISP_RDMA_INDEX_OFFSET * index));
-			disp_irq_log_module |= 1 << module;
+			//disp_irq_log_module |= 1 << module;
 			rdma_underflow_irq_cnt[index]++;
 			disp_irq_rdma_underflow = 1;
 		}
@@ -459,8 +461,10 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 	}
 
 	disp_invoke_irq_callbacks(module, reg_val);
+#if 0
 	if (disp_irq_log_module != 0)
 		wake_up_interruptible(&disp_irq_log_wq);
+#endif
 
 	mmprofile_log_ex(ddp_mmp_get_events()->DDP_IRQ,
 		MMPROFILE_FLAG_PULSE, module, reg_val);
@@ -510,6 +514,7 @@ static void disp_irq_rdma_underflow_aee_trigger(void)
 
 }
 
+#if 0
 static int disp_irq_log_kthread_func(void *data)
 {
 	unsigned int i = 0;
@@ -530,7 +535,7 @@ static int disp_irq_log_kthread_func(void *data)
 	}
 	return 0;
 }
-
+#endif
 
 int disp_init_irq(void)
 {
@@ -540,12 +545,14 @@ int disp_init_irq(void)
 	irq_init = 1;
 	DDPMSG("disp_init_irq\n");
 
+#if 0
 	/* create irq log thread */
 	init_waitqueue_head(&disp_irq_log_wq);
 	disp_irq_log_task = kthread_create(disp_irq_log_kthread_func,
 		NULL, "ddp_irq_log_kthread");
 	if (IS_ERR(disp_irq_log_task))
 		DDPERR(" can not create disp_irq_log_task kthread\n");
+#endif
 
 	/* wake_up_process(disp_irq_log_task); */
 	return 0;

@@ -165,57 +165,9 @@ static void fts_gesture_report(struct input_dev *input_dev, int gesture_id)
 {
     int gesture;
 
-    FTS_DEBUG("gesture_id:0x%x", gesture_id);
-    switch (gesture_id) {
-    case GESTURE_LEFT:
-        gesture = KEY_GESTURE_LEFT;
-        break;
-    case GESTURE_RIGHT:
-        gesture = KEY_GESTURE_RIGHT;
-        break;
-    case GESTURE_UP:
-        gesture = KEY_GESTURE_UP;
-        break;
-    case GESTURE_DOWN:
-        gesture = KEY_GESTURE_DOWN;
-        break;
-    case GESTURE_DOUBLECLICK:
-        gesture = KEY_GESTURE_U;
-        break;
-    case GESTURE_O:
-        gesture = KEY_GESTURE_O;
-        break;
-    case GESTURE_W:
-        gesture = KEY_GESTURE_W;
-        break;
-    case GESTURE_M:
-        gesture = KEY_GESTURE_M;
-        break;
-    case GESTURE_E:
-        gesture = KEY_GESTURE_E;
-        break;
-    case GESTURE_L:
-        gesture = KEY_GESTURE_L;
-        break;
-    case GESTURE_S:
-        gesture = KEY_GESTURE_S;
-        break;
-    case GESTURE_V:
-        gesture = KEY_GESTURE_V;
-        break;
-    case GESTURE_Z:
-        gesture = KEY_GESTURE_Z;
-        break;
-    case  GESTURE_C:
-        gesture = KEY_GESTURE_C;
-        break;
-    default:
-        gesture = -1;
-        break;
-    }
     /* report event key */
-    if (gesture != -1) {
-        FTS_DEBUG("Gesture Code=%d", gesture);
+    if (gesture_id == GESTURE_DOUBLECLICK) {
+        gesture = KEY_GESTURE_U;
         input_report_key(input_dev, gesture, 1);
         input_sync(input_dev);
         input_report_key(input_dev, gesture, 0);

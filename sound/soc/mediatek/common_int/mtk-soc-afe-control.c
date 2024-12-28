@@ -3275,6 +3275,7 @@ void AudDrv_checkDLISRStatus(void)
 			for (index = 0; index < localctl.u4UnderflowCnt &&
 					index < DL_ABNORMAL_CONTROL_MAX;
 			     index++) {
+#if 0
 				static DEFINE_RATELIMIT_STATE(_rs, HZ, 5);
 
 				if (__ratelimit(&_rs)) {
@@ -3291,6 +3292,7 @@ void AudDrv_checkDLISRStatus(void)
 						localctl.u4HwMemoryIndex[index],
 						localctl.pucPhysBufAddr[index]);
 				}
+#endif
 			}
 		}
 	}
@@ -4315,6 +4317,7 @@ get_dlmem_frame_index(struct snd_pcm_substream *substream,
 		Afe_Block->u4DMAReadIdx += Afe_consumed_bytes;
 		Afe_Block->u4DMAReadIdx %= Afe_Block->u4BufferSize;
 		if (Afe_Block->u4DataRemained < 0) {
+#if 0
 			static DEFINE_RATELIMIT_STATE(_rs, HZ, 5);
 
 			if (__ratelimit(&_rs)) {
@@ -4322,6 +4325,7 @@ get_dlmem_frame_index(struct snd_pcm_substream *substream,
 					"[AudioWarn] u4DataRemained=0x%x, mem_block %d\n",
 					Afe_Block->u4DataRemained, mem_block);
 			}
+#endif
 		};
 		Frameidx = bytes_to_frames(substream->runtime,
 					   Afe_Block->u4DMAReadIdx);

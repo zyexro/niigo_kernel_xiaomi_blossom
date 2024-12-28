@@ -260,7 +260,7 @@ struct dpmaif_tx_queue {
 
 	spinlock_t tx_lock;
 	atomic_t tx_processing;
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	unsigned int busy_count;
 #endif
 };
@@ -307,7 +307,7 @@ struct hif_dpmaif_ctrl {
 	atomic_t dpmaif_irq_enabled;
 
 	struct ccci_hif_ops *ops;
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	unsigned int tx_traffic_monitor[DPMAIF_TXQ_NUM];
 	unsigned int rx_traffic_monitor[DPMAIF_RXQ_NUM];
 	unsigned int tx_pre_traffic_monitor[DPMAIF_TXQ_NUM];

@@ -350,7 +350,7 @@ static int dpmaif_dump_status(unsigned char hif_id,
 	return 0;
 }
 
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 static void dpmaif_clear_traffic_data(unsigned char hif_id)
 {
 	struct hif_dpmaif_ctrl *hif_ctrl = dpmaif_ctrl;
@@ -387,7 +387,7 @@ static void dpmaif_clear_traffic_data(unsigned char hif_id)
 }
 #endif
 
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 static void dpmaif_traffic_monitor_func(struct timer_list *t)
 {
 	struct hif_dpmaif_ctrl *hif_ctrl =
@@ -1127,7 +1127,7 @@ static int dpmaif_send_skb_to_net(struct dpmaif_rx_queue *rxq,
 		skb_headlen(new_skb), new_skb->data_len,
 		new_skb->len, new_skb->truesize);
 #endif
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	dpmaif_ctrl->rx_traffic_monitor[rxq->index]++;
 #endif
 	ccci_md_add_log_history(&dpmaif_ctrl->traffic_info, IN,
@@ -1635,7 +1635,7 @@ static unsigned short dpmaif_relase_tx_buffer(unsigned char q_num,
 			}
 			ccci_free_skb(skb_free);
 			cur_drb_skb->skb = NULL;
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 			dpmaif_ctrl->tx_traffic_monitor[txq->index]++;
 #endif
 		} else if (cur_drb->dtyp == DES_DTYP_MSG) {
@@ -1699,7 +1699,7 @@ static int dpmaif_tx_release(unsigned char q_num, unsigned short budget)
 		real_rel_cnt = dpmaif_relase_tx_buffer(q_num, real_rel_cnt);
 	}
 	/* not need to know release idx hw, hw just update rd, and read wrt */
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	dpmaif_ctrl->tx_done_last_count[q_num] = real_rel_cnt;
 #endif
 
@@ -1719,7 +1719,7 @@ static void dpmaif_tx_done(struct work_struct *work)
 	int ret;
 	unsigned int L2TISAR0;
 
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	hif_ctrl->tx_done_last_start_time[txq->index] = local_clock();
 #endif
 
@@ -1913,7 +1913,7 @@ retry:
 				&MODEM_CAP_TXBUSY_STOP))
 			dpmaif_queue_broadcast_state(hif_ctrl, TX_FULL, OUT,
 					txq->index);
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 		txq->busy_count++;
 #endif
 		if (blocking) {
@@ -2010,7 +2010,7 @@ retry:
 	/* debug: tx on ccci_channel && HW Q */
 	ccci_channel_update_packet_counter(
 		dpmaif_ctrl->traffic_info.logic_ch_pkt_pre_cnt, &ccci_h);
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	dpmaif_ctrl->tx_pre_traffic_monitor[txq->index]++;
 #endif
 	atomic_sub(send_cnt, &txq->tx_budget);
@@ -2579,7 +2579,7 @@ static int dpmaif_txq_init(struct dpmaif_tx_queue *txq)
 		1, dpmaif_ctrl->md_id + 1, txq->index);
 	INIT_DELAYED_WORK(&txq->dpmaif_tx_work, dpmaif_tx_done);
 	spin_lock_init(&txq->tx_lock);
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	txq->busy_count = 0;
 #endif
 #ifdef DPMAIF_DEBUG_LOG
@@ -2781,7 +2781,7 @@ int dpmaif_start(unsigned char hif_id)
 		dpmaif_tx_hw_init(txq);
 	}
 	/* debug */
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	dpmaif_clear_traffic_data(DPMAIF_HIF_ID);
 	mod_timer(&dpmaif_ctrl->traffic_monitor,
 			jiffies + DPMAIF_TRAFFIC_MONITOR_INTERVAL * HZ);
@@ -3136,7 +3136,7 @@ int dpmaif_stop(unsigned char hif_id)
 	/* rx rx clear */
 	dpmaif_stop_rx_sw(hif_id);
 	/* stop debug mechnism */
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	del_timer(&dpmaif_ctrl->traffic_monitor);
 #endif
 
@@ -3400,7 +3400,7 @@ int ccci_dpmaif_hif_init(struct device *dev)
 	hif_ctrl->ops = &ccci_hif_dpmaif_ops;
 
 	/* set debug related */
-#if DPMAIF_TRAFFIC_MONITOR_INTERVAL
+#ifdef DPMAIF_TRAFFIC_MONITOR_INTERVAL
 	timer_setup(&hif_ctrl->traffic_monitor, dpmaif_traffic_monitor_func, 0);
 #endif
 	ccci_hif_register(DPMAIF_HIF_ID, (void *)dpmaif_ctrl,

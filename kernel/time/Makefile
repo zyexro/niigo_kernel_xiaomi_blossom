@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: GPL-2.0
-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
-
 obj-y += time.o timer.o hrtimer.o
 obj-y += timekeeping.o ntp.o clocksource.o jiffies.o timer_list.o
 obj-y += timeconv.o timecounter.o alarmtimer.o
@@ -21,4 +19,3 @@ obj-$(CONFIG_TICK_ONESHOT)			+= tick-oneshot.o tick-sched.o
 obj-$(CONFIG_HAVE_GENERIC_VDSO)			+= vsyscall.o
 obj-$(CONFIG_DEBUG_FS)				+= timekeeping_debug.o
 obj-$(CONFIG_TEST_UDELAY)			+= test_udelay.o
-obj-$(CONFIG_MTK_AEE_IPANIC)			+= timer_list_aee.o

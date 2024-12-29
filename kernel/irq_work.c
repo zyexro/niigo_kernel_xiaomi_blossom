@@ -17,7 +17,6 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/smp.h>
-#include <linux/interrupt.h>
 #include <asm/processor.h>
 
 
@@ -144,7 +143,6 @@ static void irq_work_run_list(struct llist_head *list)
 	struct irq_work *work, *tmp;
 	struct llist_node *llnode;
 	unsigned long flags;
-	unsigned long long ts;
 
 	BUG_ON(!irqs_disabled());
 
@@ -163,9 +161,7 @@ static void irq_work_run_list(struct llist_head *list)
 		flags = work->flags & ~IRQ_WORK_PENDING;
 		xchg(&work->flags, flags);
 
-		check_start_time(ts);
 		work->func(work);
-		check_process_time("irq_work %ps", ts, work->func);
 		/*
 		 * Clear the BUSY bit and return to the free state if
 		 * no-one else claimed it meanwhile.

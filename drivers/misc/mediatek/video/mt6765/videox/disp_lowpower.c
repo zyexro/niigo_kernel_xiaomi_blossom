@@ -5,6 +5,7 @@
 
 #include <linux/delay.h>
 #include <linux/sched.h>
+#include <linux/sched/clock.h>
 #include <linux/semaphore.h>
 #include <linux/module.h>
 #include <linux/wait.h>
@@ -12,8 +13,6 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/ktime.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
 #include <linux/slab.h>
 #include <linux/math64.h>
 #include "disp_drv_platform.h"	/* must be at the top-most */

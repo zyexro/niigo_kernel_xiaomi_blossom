@@ -5,6 +5,7 @@
 
 #include <linux/delay.h>
 #include <linux/sched.h>
+#include <linux/sched/clock.h>
 #include <uapi/linux/sched/types.h>
 #include <linux/semaphore.h>
 #include <linux/module.h>

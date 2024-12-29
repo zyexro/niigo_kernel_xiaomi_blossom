@@ -19,6 +19,7 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 #include <linux/sched.h>
+#include <linux/sched/clock.h>
 #include <linux/mm.h>
 #include <linux/seq_file.h>
 #include "smi_public.h"

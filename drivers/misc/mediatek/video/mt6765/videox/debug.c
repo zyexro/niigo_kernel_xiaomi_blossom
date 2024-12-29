@@ -9,6 +9,7 @@
 #include <linux/fb.h>
 #include <linux/vmalloc.h>
 #include <linux/sched.h>
+#include <linux/sched/clock.h>
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 #include <linux/debugfs.h>
@@ -19,11 +20,9 @@
 #endif
 
 #include <linux/wait.h>
-#include <linux/time.h>
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/file.h>
-#include <linux/sched.h>
 #include "ddp_m4u.h"
 #include "disp_drv_log.h"
 #include "mtkfb.h"

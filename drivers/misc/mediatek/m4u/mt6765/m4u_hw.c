@@ -3,6 +3,7 @@
  * Copyright (c) 2020 MediaTek Inc.
  */
 
+#include <linux/sched/clock.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 

@@ -11,6 +11,7 @@
 #include <linux/spinlock.h>
 #include <linux/kthread.h>
 #include <linux/timer.h>
+#include <linux/sched/clock.h>
 
 /* #include <mach/mt_irq.h> */
 #include "disp_drv_platform.h"	/* must be at the top-most */

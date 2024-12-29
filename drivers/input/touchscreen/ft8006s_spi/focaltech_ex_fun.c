@@ -34,6 +34,7 @@
 * 1.Included header files
 *****************************************************************************/
 #include "focaltech_core.h"
+#include <linux/uaccess.h>
 
 /*****************************************************************************
 * Private constant and macro definitions using #define

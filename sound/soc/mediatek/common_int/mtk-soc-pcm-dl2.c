@@ -45,6 +45,7 @@
 #include "mtk-soc-pcm-common.h"
 #include "mtk-soc-pcm-platform.h"
 #include <linux/ftrace.h>
+#include <linux/sched/clock.h>
 
 static int fast_dl_hdoutput;
 static struct afe_mem_control_t *pMemControl;

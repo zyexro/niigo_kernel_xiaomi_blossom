@@ -306,7 +306,7 @@ PVRSRV_ERROR LinuxEventObjectSignal(IMG_HANDLE hOSEventObjectList)
 	list_for_each_safe(psListEntry, psListEntryTemp, psList)
 	{
 		psLinuxEventObject = (PVRSRV_LINUX_EVENT_OBJECT *)list_entry(psListEntry, PVRSRV_LINUX_EVENT_OBJECT, sList);
-		wake_up_interruptible(&psLinuxEventObject->sWait);
+		wake_up_interruptible_sync(&psLinuxEventObject->sWait);
 	}
 	read_unlock_bh(&psLinuxEventObjectList->sLock);
 

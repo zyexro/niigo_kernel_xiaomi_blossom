@@ -52,8 +52,7 @@ config MTK_DTBO_FEATURE
 	  If you are not sure about this, set y
 
 menu "Storage"
-source "drivers/misc/mediatek/blocktag/Kconfig"
-source "drivers/misc/mediatek/pidmap/Kconfig"
+
 endmenu # Storage
 
 menu "Power, PMIC, Battery & Low Power"

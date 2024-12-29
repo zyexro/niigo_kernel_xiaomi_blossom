@@ -47,7 +47,6 @@
 
 #include <linux/uaccess.h>
 
-#include "mtk_mmc_block.h"
 #include "queue.h"
 #include "block.h"
 #include "core.h"
@@ -1502,10 +1501,8 @@ static void mmc_blk_cqe_complete_rq(struct mmc_queue *mq, struct request *req)
 	} else if (mrq->data) {
 		if (blk_update_request(req, BLK_STS_OK, mrq->data->bytes_xfered))
 			blk_mq_requeue_request(req, true);
-		else {
-			mt_biolog_cqhci_complete(req->tag);
+		else
 			__blk_mq_end_request(req, BLK_STS_OK);
-		}
 	} else {
 		blk_mq_end_request(req, BLK_STS_OK);
 	}
@@ -1600,13 +1597,6 @@ static int mmc_blk_cqe_issue_flush(struct mmc_queue *mq, struct request *req)
 static int mmc_blk_cqe_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_queue_req *mqrq = req_to_mmc_queue_req(req);
-
-	if (req) {
-		mt_bio_queue_alloc(current, req->q, false);
-		mt_biolog_cqhci_check();
-		mt_biolog_cqhci_queue_task(mq->card->host, req->tag,
-			&(mqrq->brq.mrq));
-	}
 
 	mmc_blk_data_prep(mq, mqrq, 0, NULL, NULL);
 
@@ -2258,14 +2248,6 @@ static int mmc_blk_mq_issue_rw_rq(struct mmc_queue *mq,
 	struct request *prev_req = NULL;
 	int err = 0;
 
-	/* blocktag SD Card path only */
-	if (req && req->__data_len &&
-		(host->caps2 & MMC_CAP2_NO_MMC)) {
-		mt_bio_queue_alloc(current, req->q, true);
-		mt_biolog_mmcqd_req_check(true);
-		mt_biolog_mmcqd_req_start(host, true);
-	}
-
 	mmc_blk_rw_rq_prep(mqrq, mq->card, 0, mq);
 
 	mqrq->brq.mrq.done = mmc_blk_mq_req_done;
@@ -2288,9 +2270,6 @@ static int mmc_blk_mq_issue_rw_rq(struct mmc_queue *mq,
 	/* Release re-tuning here where there is no synchronization required */
 	if (err || mmc_host_done_complete(host))
 		mmc_retune_release(host);
-
-	if (!err)
-		mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data, true);
 
 out_post_req:
 	if (err)
@@ -2359,11 +2338,6 @@ static int mmc_blk_swcq_issue_rw_rq(struct mmc_queue *mq,
 	else
 		return -EBUSY;
 
-	if (req) {
-		mt_bio_queue_alloc(current, req->q, false);
-		mt_biolog_mmcqd_req_check(false);
-		mt_biolog_mmcqd_req_start(host, false);
-	}
 	mq->mqrq[index].req = req;
 	atomic_set(&mqrq->index, index + 1);
 	atomic_set(&mq->mqrq[index].index, index + 1);
@@ -2384,9 +2358,6 @@ static int mmc_blk_swcq_issue_rw_rq(struct mmc_queue *mq,
 
 	if (err)
 		mmc_post_req(host, &mqrq->brq.mrq, err);
-
-	if (!err)
-		mt_biolog_mmcqd_req_end(mqrq->brq.mrq.data, false);
 
 	return err;
 }
@@ -3294,7 +3265,7 @@ static int __init mmc_blk_init(void)
 	res = mmc_register_driver(&mmc_driver);
 	if (res)
 		goto out_blkdev_unreg;
-	mt_mmc_biolog_init();
+
 	return 0;
 
 out_blkdev_unreg:

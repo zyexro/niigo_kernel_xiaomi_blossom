@@ -109,8 +109,6 @@ obj-$(CONFIG_MTK_USB_TYPEC) += typec/
 obj-$(CONFIG_MTK_MDLA_SUPPORT) += mdla/
 obj-$(CONFIG_MTK_VPU_SUPPORT) += vpu/
 obj-$(CONFIG_MTK_CCU)	+= ccu/src/
-obj-$(CONFIG_MTK_BLOCK_TAG) += blocktag/
-obj-$(CONFIG_MTK_PID_MAP) += pidmap/
 obj-$(CONFIG_MTK_JPEG) += jpeg/
 ifneq ($(wildcard $(srctree)/../vendor/mediatek/internal/selinux_warning_enable),)
 obj-$(CONFIG_MTK_SELINUX_AEE_WARNING)	+= selinux_warning/

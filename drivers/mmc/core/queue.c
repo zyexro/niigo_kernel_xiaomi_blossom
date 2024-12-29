@@ -25,7 +25,6 @@
 #include "card.h"
 #include "host.h"
 #include "mmc_crypto.h"
-#include "mtk_mmc_block.h"
 
 static inline bool mmc_cqe_dcmd_busy(struct mmc_queue *mq)
 {

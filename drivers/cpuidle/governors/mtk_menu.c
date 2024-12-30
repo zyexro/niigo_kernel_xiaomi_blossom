@@ -21,7 +21,6 @@
 #include "mtk_menu.h"
 
 static bool screen_on;
-static DEFINE_SPINLOCK(mtk_menu_spin_lock);
 
 bool __attribute__((weak)) system_idle_hint_result(void)
 {
@@ -59,22 +58,10 @@ static int mtk_menu_fb_notifier_callback(struct notifier_block *self,
 
 	switch (blank) {
 	case FB_BLANK_UNBLANK:
-
-		spin_lock_irqsave(&mtk_menu_spin_lock, flags);
-
 		screen_on = true;
-
-		spin_unlock_irqrestore(&mtk_menu_spin_lock, flags);
-
 		break;
 	case FB_BLANK_POWERDOWN:
-
-		spin_lock_irqsave(&mtk_menu_spin_lock, flags);
-
 		screen_on = false;
-
-		spin_unlock_irqrestore(&mtk_menu_spin_lock, flags);
-
 		break;
 	default:
 		break;
@@ -91,13 +78,7 @@ static bool is_screen_on(void)
 {
 	bool result = false;
 	unsigned long flags = 0;
-
-	spin_lock_irqsave(&mtk_menu_spin_lock, flags);
-
 	result = screen_on;
-
-	spin_unlock_irqrestore(&mtk_menu_spin_lock, flags);
-
 	return result;
 }
 
@@ -738,11 +719,7 @@ static int __init init_menu(void)
 		return r;
 	}
 
-	spin_lock_irqsave(&mtk_menu_spin_lock, flags);
-
 	screen_on = true;
-
-	spin_unlock_irqrestore(&mtk_menu_spin_lock, flags);
 
 	mtk_cpuidle_framework_init();
 

@@ -29,7 +29,9 @@
 #include "psm_core.h"
 #include "stp_core.h"
 #include "stp_dbg.h"
+#if 0
 #include "connsys_debug_utility.h"
+#endif
 #include "wmt_step.h"
 #include "wmt_alarm.h"
 #ifdef CONFIG_MTK_ENG_BUILD
@@ -744,10 +746,12 @@ static INT32 wmt_dbg_emi_dump(INT32 par1, INT32 offset, INT32 size)
 /********************************************************/
 static INT32 wmt_dbg_suspend_debug(INT32 par1, INT32 par2, INT32 par3)
 {
+#if 0
 	if (par2 > 0)
 		connsys_log_alarm_enable(par2);
 	else
 		connsys_log_alarm_disable();
+#endif
 	return 0;
 }
 

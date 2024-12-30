@@ -71,7 +71,9 @@
 #include "wmt_proc_dbg.h"
 #include "wmt_alarm.h"
 
+#if 0
 #include "connsys_debug_utility.h"
+#endif
 
 #ifdef CONFIG_COMPAT
 #define COMPAT_WMT_IOCTL_SET_PATCH_NAME		_IOW(WMT_IOC_MAGIC, 4, compat_uptr_t)
@@ -278,7 +280,9 @@ static VOID wmt_pwr_on_off_handler(struct work_struct *work)
 	/* Update blank off status before wmt power off */
 	if (wmt_dev_get_blank_state() == 0) {
 		wmt_dev_blank_handler();
+#if 0
 		connsys_log_blank_state_changed(0);
+#endif
 	}
 
 	if (always_pwr_on_flag == 0) {
@@ -294,7 +298,9 @@ static VOID wmt_pwr_on_off_handler(struct work_struct *work)
 	/* Update blank on status after wmt power on */
 	if (wmt_dev_get_blank_state() == 1) {
 		wmt_dev_blank_handler();
+#if 0
 		connsys_log_blank_state_changed(1);
+#endif
 	}
 }
 

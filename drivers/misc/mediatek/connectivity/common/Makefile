@@ -143,7 +143,7 @@ endif
 ccflags-y += -I$(src)/common_main/linux/include
 ccflags-y += -I$(src)/common_detect/drv_init/inc
 ccflags-y += -I$(src)/common_detect
-ccflags-y += -I$(src)/debug_utility
+#ccflags-y += -I$(src)/debug_utility
 
 $(MODULE_NAME)-objs += common_detect/wmt_detect_pwr.o
 $(MODULE_NAME)-objs += common_detect/wmt_detect.o
@@ -269,9 +269,10 @@ ifeq ($(CONFIG_MTK_BTIF),$(filter $(CONFIG_MTK_BTIF),y m))
 $(MODULE_NAME)-objs += common_main/linux/stp_btif.o
 endif
 
-$(MODULE_NAME)-objs += debug_utility/ring.o
-$(MODULE_NAME)-objs += debug_utility/ring_emi.o
-$(MODULE_NAME)-objs += debug_utility/connsys_debug_utility.o
+#$(MODULE_NAME)-objs += debug_utility/ring.o
+#$(MODULE_NAME)-objs += debug_utility/ring_emi.o
+#$(MODULE_NAME)-objs += debug_utility/connsys_debug_utility.o
+
 ###############################################################################
 # test
 ###############################################################################

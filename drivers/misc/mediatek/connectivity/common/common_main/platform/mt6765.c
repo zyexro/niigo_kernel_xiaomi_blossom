@@ -39,7 +39,9 @@
 #include <linux/delay.h>
 #include <linux/memblock.h>
 #include <linux/platform_device.h>
+#if 0
 #include "connsys_debug_utility.h"
+#endif
 #ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
 #include "fw_log_wmt.h"
 #endif
@@ -1189,8 +1191,10 @@ static INT32 consys_dedicated_log_path_init(struct platform_device *pdev)
 	irq_config.irq_flag = irq_flag;
 	irq_config.irq_callback = NULL;
 
+#if 0
 	connsys_dedicated_log_path_apsoc_init(
 		gConEmiPhyBase, &connsys_fw_log_parameter, &irq_config);
+#endif
 #ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
 	fw_log_wmt_init();
 #endif
@@ -1202,7 +1206,9 @@ static VOID consys_dedicated_log_path_deinit(VOID)
 #ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
 	fw_log_wmt_deinit();
 #endif
+#if 0
 	connsys_dedicated_log_path_apsoc_deinit();
+#endif
 }
 
 static UINT32 consys_read_cpupcr(VOID)

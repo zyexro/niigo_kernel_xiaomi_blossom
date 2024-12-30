@@ -33,7 +33,9 @@
 */
 #include <connectivity_build_in_adapter.h>
 #include "osal_typedef.h"
+#if 0
 #include "connsys_debug_utility.h"
+#endif
 #include "wmt_lib.h"
 #include "wmt_core.h"
 #include "wmt_ctrl.h"

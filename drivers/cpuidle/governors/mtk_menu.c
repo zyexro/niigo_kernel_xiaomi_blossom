@@ -223,8 +223,7 @@ static inline int get_loadavg(unsigned long load)
 	return LOAD_INT(load) * 10 + LOAD_FRAC(load) / 10;
 }
 
-static inline int which_bucket(unsigned int duration,
-			unsigned long nr_iowaiters)
+static inline int which_bucket(unsigned int duration, unsigned long nr_iowaiters)
 {
 	int bucket = 0;
 
@@ -235,7 +234,7 @@ static inline int which_bucket(unsigned int duration,
 	 * E(duration)|iowait
 	 */
 	if (nr_iowaiters)
-		bucket = BUCKETS / 2;
+		bucket = BUCKETS/2;
 
 	if (duration < 10)
 		return bucket;
@@ -257,8 +256,7 @@ static inline int which_bucket(unsigned int duration,
  * to be, the higher this multiplier, and thus the higher
  * the barrier to go to an expensive C state.
  */
-static inline int performance_multiplier(unsigned long nr_iowaiters,
-				unsigned long load)
+static inline int performance_multiplier(unsigned long nr_iowaiters, unsigned long load)
 {
 	int mult = 1;
 
@@ -304,7 +302,6 @@ again:
 	divisor = 0;
 	for (i = 0; i < INTERVALS; i++) {
 		unsigned int value = data->intervals[i];
-
 		if (value <= thresh) {
 			sum += value;
 			divisor++;
@@ -321,10 +318,8 @@ again:
 	variance = 0;
 	for (i = 0; i < INTERVALS; i++) {
 		unsigned int value = data->intervals[i];
-
 		if (value <= thresh) {
 			int64_t diff = (int64_t)value - avg;
-
 			variance += diff * diff;
 		}
 	}
@@ -345,10 +340,9 @@ again:
 	 *
 	 * Use this result only if there is no timer to wake us up sooner.
 	 */
-	if (likely(variance <= U64_MAX / 36)) {
-		if ((((u64)avg * avg > variance * 36)
-			&& (divisor * 4 >= INTERVALS * 3))
-			|| variance <= 400) {
+	if (likely(variance <= U64_MAX/36)) {
+		if ((((u64)avg*avg > variance*36) && (divisor * 4 >= INTERVALS * 3))
+							|| variance <= 400) {
 			return avg;
 		}
 	}
@@ -405,8 +399,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 	}
 
 	/* determine the expected residency time, round up */
-	data->next_timer_us =
-		ktime_to_us(tick_nohz_get_sleep_length(&delta_next));
+	data->next_timer_us = ktime_to_us(tick_nohz_get_sleep_length(&delta_next));
 	get_iowait_load(&nr_iowaiters, &cpu_load);
 	data->bucket = which_bucket(data->next_timer_us, nr_iowaiters);
 
@@ -416,10 +409,9 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 	 * operands are 32 bits.
 	 * Make sure to round up for half microseconds.
 	 */
-	data->predicted_us =
-		DIV_ROUND_CLOSEST_ULL((uint64_t)data->next_timer_us *
-			data->correction_factor[data->bucket],
-			RESOLUTION * DECAY);
+	data->predicted_us = DIV_ROUND_CLOSEST_ULL((uint64_t)data->next_timer_us *
+					 data->correction_factor[data->bucket],
+					 RESOLUTION * DECAY);
 
 	/* do NOT use correlation_factor if screen OFF */
 	if (!is_screen_on() && system_idle_hint_result())
@@ -450,8 +442,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 		 * unless the timer is happening really really soon, or
 		 * C1's exit latency exceeds the user configured limit.
 		 */
-		polling_threshold =
-			max_t(unsigned int, 20, s->target_residency);
+		polling_threshold = max_t(unsigned int, 20, s->target_residency);
 		if (data->next_timer_us > polling_threshold &&
 		    latency_req > s->exit_latency && !s->disabled &&
 		    !dev->states_usage[1].disable)
@@ -476,8 +467,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 		 * Use the performance multiplier and the user-configurable
 		 * latency_req to determine the maximum exit latency.
 		 */
-		interactivity_req = data->predicted_us /
-				performance_multiplier(nr_iowaiters, cpu_load);
+		interactivity_req = data->predicted_us / performance_multiplier(nr_iowaiters, cpu_load);
 
 #ifdef USE_INTERACTIVITY_REQ
 		if (latency_req > interactivity_req)
@@ -537,12 +527,11 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 			 */
 			for (i = idx - 1; i >= 0; i--) {
 				if (drv->states[i].disabled ||
-					dev->states_usage[i].disable)
+				    dev->states_usage[i].disable)
 					continue;
 
 				idx = i;
-				if (drv->states[i].target_residency <=
-					delta_next_us)
+				if (drv->states[i].target_residency <= delta_next_us)
 					break;
 			}
 		}
@@ -674,7 +663,7 @@ static int menu_enable_device(struct cpuidle_driver *drv,
 	 * if the correction factor is 0 (eg first time init or cpu hotplug
 	 * etc), we actually want to start out with a unity factor.
 	 */
-	for (i = 0; i < BUCKETS; i++)
+	for(i = 0; i < BUCKETS; i++)
 		data->correction_factor[i] = RESOLUTION * DECAY;
 
 	return 0;

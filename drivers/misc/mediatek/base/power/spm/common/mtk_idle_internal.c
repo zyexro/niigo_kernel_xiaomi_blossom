@@ -240,6 +240,8 @@ int mtk_idle_enter(
 
 	idle_cnt[idle_type][cpu]++;
 
+	idle_flag |= MTK_IDLE_LOG_DISABLE;
+
 	/* Disable log when we profiling idle latency */
 	if (mtk_idle_latency_profile_is_on())
 		idle_flag |= MTK_IDLE_LOG_DISABLE;

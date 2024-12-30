@@ -1584,11 +1584,6 @@ CONFIG_MTK_DTBO_FEATURE=y
 #
 
 #
-# Storage Block Tag
-#
-# CONFIG_MTK_BLOCK_TAG is not set
-
-#
 # Power, PMIC, Battery & Low Power
 #
 CONFIG_MTK_BASE_POWER=y
@@ -1930,7 +1925,6 @@ CONFIG_MTK_AMMS=y
 # CONFIG_MTK_HIGH_FRAME_RATE is not set
 # CONFIG_MTK_MET_CORE is not set
 # CONFIG_MTPROF is not set
-# CONFIG_MTK_SCHED_MONITOR is not set
 # CONFIG_MTK_AEE_FEATURE is not set
 CONFIG_MTK_CM_MGR=y
 # CONFIG_MTK_CM_MGR_LEGACY is not set

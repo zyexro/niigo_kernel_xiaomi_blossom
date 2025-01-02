@@ -567,44 +567,28 @@ int mcdi_governor_select(int cpu, int cluster_idx)
 
 	/* Check if any core deepidle/SODI can entered */
 	if (mcdi_feature_stat.any_core && last_core_token_get) {
-
 		if (tbl->states[MCDI_STATE_CLUSTER_OFF + 1].exit_latency
 				< latency_req) {
-
-			/* trace_check_anycore_rcuidle(cpu, 1, -1); */
-
 			select_state = any_core_deepidle_sodi_check(cpu);
-
-			/* trace_check_anycore_rcuidle(cpu, 0, select_state); */
-
 		} else {
 			any_core_cpu_cond_inc(LATENCY_CNT);
 		}
-
 	}
 
 	if (!is_anycore_dpidle_sodi_state(select_state)) {
-
 		if (last_core_token_get) {
-
 			spin_lock_irqsave(&mcdi_gov_spin_lock, flags);
-
 			WARN_ON(last_core_token != cpu);
-
 			last_core_token = -1;
-
 			spin_unlock_irqrestore(&mcdi_gov_spin_lock, flags);
 		}
 
 		if (tbl->states[MCDI_STATE_CLUSTER_OFF].exit_latency
 				< latency_req
 			&& mcdi_feature_stat.cluster_off) {
-
 			select_state = MCDI_STATE_CLUSTER_OFF;
-
 			if (is_last_core_in_cluster(cpu))
 				cluster_off_check(cpu, &select_state);
-
 		} else {
 			select_state = MCDI_STATE_CPU_OFF;
 		}
@@ -670,9 +654,7 @@ void mcdi_avail_cpu_cluster_update(void)
 		mcdi_gov_data.avail_cnt_cluster[i] = 0;
 
 	for (cpu = 0; cpu < NF_CPU; cpu++) {
-
 		cluster_idx = cluster_idx_get(cpu);
-
 		if (cpu_online(cpu)) {
 			mcdi_gov_data.avail_cnt_cluster[cluster_idx]++;
 			mcdi_gov_data.avail_cpu_mask |= (1 << cpu);

@@ -134,9 +134,11 @@ enum PWM_LOG_TYPE {
 #endif
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
+#if 0
 static DEFINE_SPINLOCK(g_pwm_log_lock);
 static struct PWM_LOG g_pwm_log_buffer[PWM_LOG_BUFFER_SIZE + 1];
 static int g_pwm_log_index;
+#endif
 #if defined(PWM_USE_HIGH_ULPOSC_FQ)
 static bool g_pwm_first_config[PWM_TOTAL_MODULE_NUM];
 #endif		/* PWM_USE_HIGH_ULPOSC_FQ */
@@ -444,6 +446,7 @@ static int disp_pwm_level_remap(enum disp_pwm_id_t id, int level_1024)
 	return level_1024;
 }
 
+#if 0
 #define LOGBUFFERSIZE 384
 static void disp_pwm_log(int level_1024, int log_type)
 {
@@ -498,6 +501,7 @@ static void disp_pwm_log(int level_1024, int log_type)
 	}
 
 }
+#endif
 #endif				/* not define CONFIG_FPGA_EARLY_PORTING */
 
 int disp_bls_set_max_backlight(unsigned int level_1024)
@@ -590,8 +594,10 @@ int disp_pwm_set_backlight_cmdq(enum disp_pwm_id_t id,
 		if (abs_diff < 0)
 			abs_diff = -abs_diff;
 
-		/* To be printed in UART log */
+#if 0
+		/* To be printed in UART log, then fucking guard it */
 		disp_pwm_log(level_1024, MSG_LOG);
+#endif
 
 		if ((old_pwm == 0 || level_1024 == 0 || abs_diff > 64) &&
 			old_pwm != level_1024) {

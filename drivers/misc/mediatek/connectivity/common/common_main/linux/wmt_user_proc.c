@@ -16,7 +16,9 @@
 #include "wmt_user_proc.h"
 #include "wmt_lib.h"
 #include "stp_core.h"
+#if 0
 #include "connsys_debug_utility.h"
+#endif
 #include "wmt_alarm.h"
 
 #ifdef DFT_TAG

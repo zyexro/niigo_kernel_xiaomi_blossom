@@ -230,6 +230,7 @@ WMT_CONSYS_IC_OPS consys_ic_ops = {
 	.consys_ic_get_options = consys_get_options,
 };
 
+#if 0
 static const struct connlog_emi_config connsys_fw_log_parameter = {
 	.emi_offset = 0x36500,
 	.emi_size_total = (192*1024),/* 192KB */
@@ -238,6 +239,7 @@ static const struct connlog_emi_config connsys_fw_log_parameter = {
 	.emi_size_bt = (64*1024),
 	.emi_size_gps = (32*1024),
 };
+#endif
 
 /*******************************************************************************
 *                           P R I V A T E   D A T A
@@ -1169,6 +1171,7 @@ static VOID consys_set_dl_rom_patch_flag(INT32 flag)
 
 static INT32 consys_dedicated_log_path_init(struct platform_device *pdev)
 {
+#if 0
 	struct device_node *node;
 	UINT32 irq_num;
 	UINT32 irq_flag;
@@ -1191,7 +1194,6 @@ static INT32 consys_dedicated_log_path_init(struct platform_device *pdev)
 	irq_config.irq_flag = irq_flag;
 	irq_config.irq_callback = NULL;
 
-#if 0
 	connsys_dedicated_log_path_apsoc_init(
 		gConEmiPhyBase, &connsys_fw_log_parameter, &irq_config);
 #endif

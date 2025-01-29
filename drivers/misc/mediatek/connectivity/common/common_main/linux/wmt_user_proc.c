@@ -81,10 +81,12 @@ INT32 wmt_user_proc_wmt_assert_ctrl(INT32 par1, INT32 par2, INT32 par3)
 /********************************************************/
 static INT32 wmt_user_proc_suspend_debug(INT32 par1, INT32 par2, INT32 par3)
 {
+#if 0
 	if (par2 > 0)
 		connsys_log_alarm_enable(par2);
 	else
 		connsys_log_alarm_disable();
+#endif
 	return 0;
 }
 

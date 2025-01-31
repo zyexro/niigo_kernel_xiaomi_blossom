@@ -396,7 +396,7 @@ CONFIG_ARM64_VHE=y
 #
 # ARMv8.2 architectural features
 #
-CONFIG_ARM64_UAO=y
+# CONFIG_ARM64_UAO is not set
 # CONFIG_ARM64_PMEM is not set
 # CONFIG_ARM64_RAS_EXTN is not set
 # CONFIG_ARM64_SVE is not set

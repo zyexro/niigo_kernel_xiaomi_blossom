@@ -121,12 +121,12 @@ void can_stat_update(struct timer_list *t)
 	struct s_stats *can_stats = net->can.can_stats;
 	unsigned long j = jiffies; /* snapshot */
 
-	long rx_frames = atomic_long_read(&pkg_stats->rx_frames);
-	long tx_frames = atomic_long_read(&pkg_stats->tx_frames);
-	long matches = atomic_long_read(&pkg_stats->matches);
-	long rx_frames_delta = atomic_long_read(&pkg_stats->rx_frames_delta);
-	long tx_frames_delta = atomic_long_read(&pkg_stats->tx_frames_delta);
-	long matches_delta = atomic_long_read(&pkg_stats->matches_delta);
+	long rx_frames = atomic_long_read(&can_stats->rx_frames);
+	long tx_frames = atomic_long_read(&can_stats->tx_frames);
+	long matches = atomic_long_read(&can_stats->matches);
+	long rx_frames_delta = atomic_long_read(&can_stats->rx_frames_delta);
+	long tx_frames_delta = atomic_long_read(&can_stats->tx_frames_delta);
+	long matches_delta = atomic_long_read(&can_stats->matches_delta);
 
 	/* restart counting in timer context on user request */
 	if (user_reset)

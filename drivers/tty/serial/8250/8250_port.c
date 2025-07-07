@@ -731,8 +731,8 @@ static void serial8250_set_sleep(struct uart_8250_port *p, int sleep)
 	if (p->capabilities & UART_CAP_SLEEP) {
 		if (p->capabilities & UART_CAP_EFR) {
 			lcr = serial_in(p, UART_LCR);
-			serial_out(p, UART_LCR, UART_LCR_CONF_MODE_B);
 			efr = serial_in(p, UART_EFR);
+			serial_out(p, UART_LCR, UART_LCR_CONF_MODE_B);
 			serial_out(p, UART_EFR, UART_EFR_ECB);
 			serial_out(p, UART_LCR, 0);
 		}
@@ -3272,13 +3272,8 @@ static void serial8250_console_restore(struct uart_8250_port *up)
 	unsigned int baud, quot, frac = 0;
 
 	termios.c_cflag = port->cons->cflag;
-	termios.c_ispeed = port->cons->ispeed;
-	termios.c_ospeed = port->cons->ospeed;
-	if (port->state->port.tty && termios.c_cflag == 0) {
+	if (port->state->port.tty && termios.c_cflag == 0)
 		termios.c_cflag = port->state->port.tty->termios.c_cflag;
-		termios.c_ispeed = port->state->port.tty->termios.c_ispeed;
-		termios.c_ospeed = port->state->port.tty->termios.c_ospeed;
-	}
 
 	baud = serial8250_get_baud_rate(port, &termios, NULL);
 	quot = serial8250_get_divisor(port, baud, &frac);

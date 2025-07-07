@@ -20,6 +20,8 @@
 #include <net/sch_generic.h>
 #include <linux/ip.h>
 #include <linux/ktime.h>
+#include <linux/string_helpers.h>
+#include <linux/usb/composite.h>
 
 #include "u_ether.h"
 #include "rndis.h"
@@ -85,40 +87,6 @@ static inline int qlen(struct usb_gadget *gadget, unsigned qmult)
 
 /*-------------------------------------------------------------------------*/
 
-/* REVISIT there must be a better way than having two sets
- * of debug calls ...
- */
-
-#undef DBG
-#undef VDBG
-#undef ERROR
-#undef INFO
-
-#define xprintk(d, level, fmt, args...) \
-	printk(level "%s: " fmt , (d)->net->name , ## args)
-
-#ifdef DEBUG
-#undef DEBUG
-#define DBG(dev, fmt, args...) \
-	xprintk(dev , KERN_DEBUG , fmt , ## args)
-#else
-#define DBG(dev, fmt, args...) \
-	do { } while (0)
-#endif /* DEBUG */
-
-#ifdef VERBOSE_DEBUG
-#define VDBG	DBG
-#else
-#define VDBG(dev, fmt, args...) \
-	do { } while (0)
-#endif /* DEBUG */
-
-#define ERROR(dev, fmt, args...) \
-	xprintk(dev , KERN_ERR , fmt , ## args)
-#define INFO(dev, fmt, args...) \
-	xprintk(dev , KERN_INFO , fmt , ## args)
-
-/*-------------------------------------------------------------------------*/
 unsigned int rndis_test_last_resp_id;
 unsigned int rndis_test_last_msg_id;
 EXPORT_SYMBOL_GPL(rndis_test_last_msg_id);
@@ -137,6 +105,9 @@ unsigned long rndis_test_tx_usb_out;
 unsigned long rndis_test_tx_complete;
 #define U_ETHER_DBG(fmt, args...) \
 		pr_debug("U_ETHER,%s, " fmt, __func__, ## args)
+
+/*-------------------------------------------------------------------------*/
+
 /* NETWORK DRIVER HOOKUP (to the layer above this driver) */
 static int ueth_change_mtu(struct net_device *net, int new_mtu)
 {
@@ -1342,6 +1313,8 @@ int gether_get_host_addr_cdc(struct net_device *net, char *host_addr, int len)
 
 	dev = netdev_priv(net);
 	snprintf(host_addr, len, "%pm", dev->host_mac);
+
+	string_upper(host_addr, host_addr);
 
 	return strlen(host_addr);
 }

@@ -147,7 +147,7 @@ free_dtab:
 static void dev_map_free(struct bpf_map *map)
 {
 	struct bpf_dtab *dtab = container_of(map, struct bpf_dtab, map);
-	int i, cpu;
+	u32 i;
 
 	/* At this point bpf_prog->aux->refcnt == 0 and this map->refcnt == 0,
 	 * so the programs (can be more than one that used this map) were
@@ -168,18 +168,6 @@ static void dev_map_free(struct bpf_map *map)
 
 	/* Make sure prior __dev_map_entry_free() have completed. */
 	rcu_barrier();
-
-	/* To ensure all pending flush operations have completed wait for flush
-	 * bitmap to indicate all flush_needed bits to be zero on _all_ cpus.
-	 * Because the above synchronize_rcu() ensures the map is disconnected
-	 * from the program we can assume no new bits will be set.
-	 */
-	for_each_online_cpu(cpu) {
-		unsigned long *bitmap = per_cpu_ptr(dtab->flush_needed, cpu);
-
-		while (!bitmap_empty(bitmap, dtab->map.max_entries))
-			cond_resched();
-	}
 
 	for (i = 0; i < dtab->map.max_entries; i++) {
 		struct bpf_dtab_netdev *dev;
@@ -224,8 +212,7 @@ void __dev_map_insert_ctx(struct bpf_map *map, u32 bit)
 }
 
 static int bq_xmit_all(struct bpf_dtab_netdev *obj,
-		       struct xdp_bulk_queue *bq, u32 flags,
-		       bool in_napi_ctx)
+		       struct xdp_bulk_queue *bq, u32 flags)
 {
 	struct net_device *dev = obj->dev;
 	int sent = 0, drops = 0, err = 0;
@@ -261,11 +248,7 @@ error:
 	for (i = 0; i < bq->count; i++) {
 		struct xdp_frame *xdpf = bq->q[i];
 
-		/* RX path under NAPI protection, can return frames faster */
-		if (likely(in_napi_ctx))
-			xdp_return_frame_rx_napi(xdpf);
-		else
-			xdp_return_frame(xdpf);
+		xdp_return_frame_rx_napi(xdpf);
 		drops++;
 	}
 	goto out;
@@ -296,7 +279,7 @@ void __dev_map_flush(struct bpf_map *map)
 			continue;
 
 		bq = this_cpu_ptr(dev->bulkq);
-		bq_xmit_all(dev, bq, XDP_XMIT_FLUSH, true);
+		bq_xmit_all(dev, bq, XDP_XMIT_FLUSH);
 
 		__clear_bit(bit, bitmap);
 	}
@@ -329,7 +312,7 @@ static int bq_enqueue(struct bpf_dtab_netdev *obj, struct xdp_frame *xdpf,
 	struct xdp_bulk_queue *bq = this_cpu_ptr(obj->bulkq);
 
 	if (unlikely(bq->count == DEV_MAP_BULK_SIZE))
-		bq_xmit_all(obj, bq, 0, true);
+		bq_xmit_all(obj, bq, 0);
 
 	/* Ingress dev_rx will be the same for all xdp_frame's in
 	 * bulk_queue, because bq stored per-CPU and must be flushed
@@ -385,32 +368,11 @@ static void *dev_map_lookup_elem(struct bpf_map *map, void *key)
 	return dev ? &dev->ifindex : NULL;
 }
 
-static void dev_map_flush_old(struct bpf_dtab_netdev *dev)
-{
-	if (dev->dev->netdev_ops->ndo_xdp_xmit) {
-		struct xdp_bulk_queue *bq;
-		unsigned long *bitmap;
-
-		int cpu;
-
-		rcu_read_lock();
-		for_each_online_cpu(cpu) {
-			bitmap = per_cpu_ptr(dev->dtab->flush_needed, cpu);
-			__clear_bit(dev->bit, bitmap);
-
-			bq = per_cpu_ptr(dev->bulkq, cpu);
-			bq_xmit_all(dev, bq, XDP_XMIT_FLUSH, false);
-		}
-		rcu_read_unlock();
-	}
-}
-
 static void __dev_map_entry_free(struct rcu_head *rcu)
 {
 	struct bpf_dtab_netdev *dev;
 
 	dev = container_of(rcu, struct bpf_dtab_netdev, rcu);
-	dev_map_flush_old(dev);
 	free_percpu(dev->bulkq);
 	dev_put(dev->dev);
 	kfree(dev);
@@ -420,7 +382,7 @@ static int dev_map_delete_elem(struct bpf_map *map, void *key)
 {
 	struct bpf_dtab *dtab = container_of(map, struct bpf_dtab, map);
 	struct bpf_dtab_netdev *old_dev;
-	int k = *(u32 *)key;
+	u32 k = *(u32 *)key;
 
 	if (k >= map->max_entries)
 		return -EINVAL;

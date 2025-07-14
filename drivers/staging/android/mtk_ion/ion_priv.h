@@ -107,7 +107,7 @@ struct ion_device {
 	struct dentry *heaps_debug_root;
 	struct dentry *clients_debug_root;
 #endif
-#if 0
+#if IS_ENABLED(CONFIG_PROC_FS)
 	struct proc_dir_entry *proc_root;
 	struct proc_dir_entry *heaps_proc_root;
 	struct proc_dir_entry *clients_proc_root;
@@ -145,7 +145,7 @@ struct ion_client {
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 	struct dentry *debug_root;
 #endif
-#if 0
+#if IS_ENABLED(CONFIG_PROC_FS)
 	struct proc_dir_entry *proc_root;
 #endif
 	char dbg_name[ION_MM_DBG_NAME_LEN]; /* add by K for debug! */
@@ -521,9 +521,5 @@ int ion_share_dma_buf_fd_nolock(struct ion_client *client,
 
 struct ion_handle *pass_to_user(struct ion_handle *handle);
 void user_ion_free_nolock(struct ion_client *client, struct ion_handle *handle);
-
-struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
-			       size_t align, unsigned int heap_id_mask,
-			       unsigned int flags, bool grab_handle);
 
 #endif /* _ION_PRIV_H */

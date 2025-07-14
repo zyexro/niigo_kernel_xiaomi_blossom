@@ -140,6 +140,8 @@ static struct page *alloc_buffer_page(struct ion_system_heap *heap,
 	page = ion_page_pool_alloc(pool);
 
 	if (!page) {
+		IONMSG("[ion_dbg] alloc_pages order=%lu cache=%d\n",
+		       order, cached);
 		alloc_large_fail_ts = sched_clock();
 		return NULL;
 	}
@@ -1010,17 +1012,8 @@ static int __do_dump_share_fd(const void *data, struct file *file,
 	#define MVA_ALIGN_MASK (MVA_SIZE - 1)
 
 	buffer = ion_drv_file_to_buffer(file);
-	if (IS_ERR_OR_NULL(buffer) || IS_ERR_OR_NULL(buffer->heap))
-		return 0;
-
-	/*
-	 * secure heap buffer struct is different with mm_heap buffer,
-	 * and it isn't public, don't dump here.
-	 *
-	 * only dump supported heap type in ion_mm_heap.c
-	 */
-	if (buffer->heap->type != (unsigned int)ION_HEAP_TYPE_MULTIMEDIA &&
-	    buffer->heap->type != (unsigned int)ION_HEAP_TYPE_SYSTEM)
+	if (IS_ERR_OR_NULL(buffer) || IS_ERR_OR_NULL(buffer->heap) ||
+	    (int)buffer->heap->type != ION_HEAP_TYPE_MULTIMEDIA)
 		return 0;
 
 	bug_info = (struct ion_mm_buffer_info *)buffer->priv_virt;
@@ -2061,7 +2054,6 @@ long ion_mm_ioctl(struct ion_client *client, unsigned int cmd,
 			mutex_lock(&buffer->lock);
 			ret = sec_ops->phys(sec_heap, buffer, &phy_addr, &len);
 			param.get_phys_param.phy_addr = phy_addr;
-			param.get_phys_param.len = len;
 			mutex_unlock(&buffer->lock);
 		} else {
 			IONMSG(": Error. get iova is not from %d heap.\n",

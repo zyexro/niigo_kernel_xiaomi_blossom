@@ -22,7 +22,7 @@
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 #include <linux/debugfs.h>
 #endif
-#if 0
+#if IS_ENABLED(CONFIG_PROC_FS)
 #include <linux/proc_fs.h>
 #endif
 #include <linux/seq_file.h>
@@ -417,12 +417,6 @@ static long ion_sys_cache_sync(struct ion_client *client,
 		return -EINVAL;
 	}
 
-	if (kernel_handle->buffer->size < param->size) {
-		IONMSG("%s error, sync size is larger than buf_sz:%zu\n",
-		       __func__, kernel_handle->buffer->size);
-		goto err;
-	}
-
 	buffer = kernel_handle->buffer;
 	sync_size = param->size;
 
@@ -430,46 +424,41 @@ static long ion_sys_cache_sync(struct ion_client *client,
 	case ION_CACHE_CLEAN_BY_RANGE:
 	case ION_CACHE_INVALID_BY_RANGE:
 	case ION_CACHE_FLUSH_BY_RANGE:
-
 		sync_va = (unsigned long)param->va;
-
 		if (sync_size == 0 || sync_va == 0) {
 			/* whole buffer cache sync
 			 * get sync_va and sync_size here
 			 */
 			sync_size = buffer->size;
-
-			/* Do kernel map and do cache sync
-			 * 32bit project, vmap space is small,
-			 *    4MB as a boundary for mapping.
-			 * 64bit vmap space is huge
-			 */
-#ifdef CONFIG_ARM64
-			sync_va = (unsigned long)ion_map_kernel(client,
-								kernel_handle);
 			from_kernel = 1;
-			ion_need_unmap_flag = 1;
-#else
-			if (sync_size <= SZ_4M) {
-				sync_va = (unsigned long)
-				ion_map_kernel(client, kernel_handle);
-				from_kernel = 1;
-				ion_need_unmap_flag = 1;
+			if (buffer->kmap_cnt != 0) {
+				sync_va = (unsigned long)buffer->vaddr;
 			} else {
-				ret =
-				ion_sys_cache_sync_buf(client, sync_type,
-						       kernel_handle);
-				goto out;
-			}
+				/* Do kernel map and do cache sync
+				 * 32bit project, vmap space is small,
+				 *    4MB as a boundary for mapping.
+				 * 64bit vmap space is huge
+				 */
+#ifdef CONFIG_ARM64
+				sync_va = (unsigned long)
+					  ion_map_kernel(client, kernel_handle);
+				ion_need_unmap_flag = 1;
+#else
+				if (sync_size <= SZ_4M) {
+					sync_va = (unsigned long)
+					ion_map_kernel(client, kernel_handle);
+					ion_need_unmap_flag = 1;
+				} else {
+					ret =
+					ion_sys_cache_sync_buf(client,
+							       sync_type,
+							       kernel_handle);
+					goto out;
+				}
 #endif
-			if (IS_ERR_OR_NULL(ERR_PTR((long)sync_va))) {
-				IONMSG("%s #%d: map failed\n", __func__,
-				       __LINE__);
-				ret = -ENOMEM;
-				goto err;
 			}
 		}
-		break;
+			break;
 
 	/* range PA(means mva) mode, need map
 	 * NOTICE: m4u_mva_map_kernel only support m4u0
@@ -543,29 +532,12 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd,
 	ion_phys_addr_t phy_addr;
 
 	ION_FUNC_ENTER;
-	if (!arg) {
-		IONMSG("%s:err arg = NULL. %s(%s),%d, k:%d\n",
-		       __func__, client->name, client->dbg_name,
-		       client->pid, from_kernel);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	if (from_kernel) {
+	if (from_kernel)
 		param = *(struct ion_sys_data *)arg;
-	} else {
+	else
 		ret_copy =
 		    copy_from_user(&param, (void __user *)arg,
 				   sizeof(struct ion_sys_data));
-		if (ret_copy != 0) {
-			IONMSG("%s:err arg copy failed. %s(%s),%d, k:%d\n",
-			       __func__, client->name, client->dbg_name,
-			       client->pid, from_kernel);
-			ret = -EFAULT;
-			goto err;
-		}
-	}
-
 
 	switch (param.sys_cmd) {
 	case ION_SYS_CACHE_SYNC:
@@ -606,8 +578,8 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd,
 	}
 	break;
 	case ION_SYS_SET_CLIENT_NAME:
-		ret = ion_sys_copy_client_name(param.client_name_param.name,
-					       client->dbg_name);
+		ion_sys_copy_client_name(param.client_name_param.name,
+					 client->dbg_name);
 		break;
 //phase out, use ion_sys_cache_sync, by Guangming
 //	case ION_SYS_DMA_OP:
@@ -619,22 +591,12 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd,
 		ret = -EFAULT;
 		break;
 	}
-
-	if (ret) {
-		IONMSG("[%s]:failed to finish io-cmd(%d). %s(%s),%d, k:%d\n",
-		       __func__, param.sys_cmd,
-		       client->name, client->dbg_name,
-		       client->pid, from_kernel);
-		goto err;
-	}
-
 	if (from_kernel)
 		*(struct ion_sys_data *)arg = param;
 	else
 		ret_copy =
 		    copy_to_user((void __user *)arg, &param,
 				 sizeof(struct ion_sys_data));
-err:
 	ION_FUNC_LEAVE;
 	return ret;
 }
@@ -784,7 +746,7 @@ int ion_device_destroy_heaps(struct ion_device *dev)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_DEBUG_FS)
+#if IS_ENABLED(CONFIG_DEBUG_FS) || IS_ENABLED(CONFIG_PROC_FS)
 /*for clients ion mm heap summary size*/
 static int ion_clients_summary_show(struct seq_file *s, void *unused)
 {
@@ -848,7 +810,7 @@ static const struct file_operations debug_client_fops = {
 };
 #endif
 
-#if 0
+#if IS_ENABLED(CONFIG_PROC_FS)
 static int ion_proc_client_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, ion_clients_summary_show, PDE_DATA(inode));
@@ -929,7 +891,7 @@ static int ion_drv_probe(struct platform_device *pdev)
 			       "./heaps/ion_mm_heap");
 #endif
 
-#if 0
+#if IS_ENABLED(CONFIG_PROC_FS)
 	proc_create("clients_summary", S_IFREG | 0664,
 		    g_ion_device->clients_proc_root,
 		    &proc_client_fops);

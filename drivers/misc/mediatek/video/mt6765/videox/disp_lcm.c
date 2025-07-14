@@ -1671,6 +1671,9 @@ int disp_lcm_esd_recover(struct disp_lcm_handle *plcm)
 	return -1;
 }
 
+#if defined(CONFIG_TOUCHSCREEN_COMMON)
+extern int tpd_gesture_flag;
+#endif
 int disp_lcm_suspend(struct disp_lcm_handle *plcm)
 {
 	struct LCM_DRIVER *lcm_drv = NULL;
@@ -1685,8 +1688,16 @@ int disp_lcm_suspend(struct disp_lcm_handle *plcm)
 			return -1;
 		}
 
+#if defined(CONFIG_TOUCHSCREEN_COMMON)
+		if(!tpd_gesture_flag) {
+			if (lcm_drv->suspend_power)
+				lcm_drv->suspend_power();
+		}
+#else
 		if (lcm_drv->suspend_power)
 			lcm_drv->suspend_power();
+#endif
+
 
 		return 0;
 	}
@@ -1702,8 +1713,16 @@ int disp_lcm_resume(struct disp_lcm_handle *plcm)
 	if (_is_lcm_inited(plcm)) {
 		lcm_drv = plcm->drv;
 
+#if defined(CONFIG_TOUCHSCREEN_COMMON)
+		if(!tpd_gesture_flag) {
+			if (lcm_drv->resume_power)
+				lcm_drv->resume_power();
+		}
+#else
 		if (lcm_drv->resume_power)
 			lcm_drv->resume_power();
+#endif
+
 
 		if (lcm_drv->resume) {
 			lcm_drv->resume();

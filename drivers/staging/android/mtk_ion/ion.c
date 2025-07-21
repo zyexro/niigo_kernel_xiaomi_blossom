@@ -1027,21 +1027,11 @@ void ion_client_destroy(struct ion_client *client)
 	struct ion_device *dev = client->dev;
 	struct rb_node *n;
 
-	pr_debug("%s: %d\n", __func__, __LINE__);
 	while ((n = rb_first(&client->handles))) {
 		struct ion_handle *handle = rb_entry(n, struct ion_handle,
 						     node);
 
 		mutex_lock(&client->lock);
-		IONMSG("%s:hdl=%p,buf=%p,sz=%zu,ref=%d,kmp=%d\n",
-		       __func__, handle, handle->buffer,
-		       handle->buffer->size,
-		       atomic_read(&handle->buffer->ref.refcount.refs),
-		       handle->buffer->kmap_cnt);
-		IONMSG("%s:client=%s,disp=%s,dbg=%s\n",
-		       __func__, client->name ? client->name : NULL,
-		       client->display_name ? client->display_name : NULL,
-		       client->dbg_name);
 		ion_handle_destroy(&handle->ref);
 		mutex_unlock(&client->lock);
 	}

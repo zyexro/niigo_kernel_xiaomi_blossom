@@ -93,12 +93,9 @@
 #include <linux/kcov.h>
 #include <linux/livepatch.h>
 #include <linux/thread_info.h>
-<<<<<<< HEAD
 #include <linux/cpufreq_times.h>
 #include <linux/scs.h>
-=======
 #include <linux/simple_lmk.h>
->>>>>>> 58ecd977a286 (simple_lmk: Introduce Simple Low Memory Killer for Android)
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>

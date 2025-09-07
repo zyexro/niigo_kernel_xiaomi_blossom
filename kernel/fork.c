@@ -96,6 +96,7 @@
 #include <linux/cpufreq_times.h>
 #include <linux/scs.h>
 #include <linux/simple_lmk.h>
+#include <linux/string.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -731,6 +732,24 @@ void __put_task_struct(struct task_struct *tsk)
 		free_task(tsk);
 }
 EXPORT_SYMBOL_GPL(__put_task_struct);
+
+/**
+ * task_is_zygote - Check if a task is a zygote process
+ * @task: task to check
+ *
+ * Return: 1 if zygote, 0 otherwise.
+ */
+int task_is_zygote(struct task_struct *task)
+{
+    if (!task || !task->comm)
+        return 0;
+
+    return (strncmp(task->comm, "zygote", TASK_COMM_LEN) == 0) ||
+           (strncmp(task->comm, "zygote64", TASK_COMM_LEN) == 0) ||
+           (strncmp(task->comm, "usap32", TASK_COMM_LEN) == 0) ||
+           (strncmp(task->comm, "usap64", TASK_COMM_LEN) == 0);
+}
+EXPORT_SYMBOL(task_is_zygote);
 
 void __init __weak arch_task_cache_init(void) { }
 

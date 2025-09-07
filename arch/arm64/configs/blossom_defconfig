@@ -124,6 +124,13 @@ CONFIG_ZRAM=y
 CONFIG_ZRAM_WRITEBACK=y
 CONFIG_BLK_DEV_LOOP_MIN_COUNT=16
 CONFIG_SIMTRAY_STATUS=y
+CONFIG_KPROFILES=y                                                   
+CONFIG_KP_DEFAULT_MODE=3                                             
+# CONFIG_AUTO_KPROFILES_NONE is not set                              
+# CONFIG_AUTO_KPROFILES_MSM_DRM is not set                         
+# CONFIG_AUTO_KPROFILES_MI_DRM is not set                          
+CONFIG_AUTO_KPROFILES_FB=y                                           
+CONFIG_KP_VERBOSE_DEBUG=y
 CONFIG_ANDROID_DEFAULT_SETTING=y
 CONFIG_MTK_ANDROID_DEFAULT_SETTING=y
 CONFIG_USB_MTK_HDRC=y

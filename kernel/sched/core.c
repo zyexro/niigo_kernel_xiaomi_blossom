@@ -11,6 +11,7 @@
 
 #include <linux/kcov.h>
 #include <linux/scs.h>
+#include <linux/sched.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
@@ -3159,6 +3160,12 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 		p->sched_reset_on_fork = 0;
 	}
 
+	if (task_is_zygote(current)) {
+		p->static_prio = NICE_TO_PRIO(-10);
+		p->prio = p->normal_prio = __normal_prio(p);
+		pr_info("Scheduler: Boosted priority for new app '%s' (pid: %d) forked from Zygote.\n",
+			p->comm, p->pid);
+	}
 	if (dl_prio(p->prio))
 		return -EAGAIN;
 	else if (rt_prio(p->prio))

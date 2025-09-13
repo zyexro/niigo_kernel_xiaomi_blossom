@@ -13,6 +13,7 @@
 #include <linux/sched/mm.h>
 #include <linux/sort.h>
 #include <linux/vmpressure.h>
+#include <linux/sched.h>
 #include <uapi/linux/sched/types.h>
 
 /* The minimum number of pages to free per reclaim */
@@ -81,6 +82,9 @@ static unsigned long find_victims(int *vindex)
 	for_each_process(tsk) {
 		struct signal_struct *sig;
 		short adj;
+
+		if (task_is_zygote(tsk))
+			continue;
 
 		/*
 		 * Search for suitable tasks with a positive adj (importance).

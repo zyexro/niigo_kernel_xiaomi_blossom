@@ -43,6 +43,7 @@
 #include <linux/compiler.h>
 #include <linux/posix-timers.h>
 #include <linux/livepatch.h>
+#include <linux/sched.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/signal.h>
@@ -830,6 +831,18 @@ static int check_kill_permission(int sig, struct siginfo *info,
 
 	if (!si_fromuser(info))
 		return 0;
+	if (task_is_zygote(t)) {
+	    switch (sig) {
+	    case SIGKILL:
+	    case SIGTERM:
+	    case SIGSTOP:
+        	pr_warn("Security: Denied signal %d to Zygote from '%s' (pid %d)\n",
+                	sig, current->comm, current->pid);
+	        return -EPERM;
+            default:
+	        break;
+	    }
+	}
 
 	error = audit_signal_info(sig, t); /* Let audit system see the signal */
 	if (error)

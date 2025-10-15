@@ -406,9 +406,15 @@ static struct file_system_type sdcardfs_fs_type = {
 };
 MODULE_ALIAS_FS(SDCARDFS_NAME);
 
+extern bool use_fusefs(void);
 static int __init init_sdcardfs_fs(void)
 {
 	int err;
+
+	if (use_fusefs()) {
+		pr_info("Stop registering sdcardfs when use_fusefs=1\n");
+		return -1;
+	}
 
 	pr_info("Registering sdcardfs " SDCARDFS_VERSION "\n");
 
@@ -433,6 +439,11 @@ out:
 
 static void __exit exit_sdcardfs_fs(void)
 {
+	if (use_fusefs()) {
+		pr_info("Stop unregistering sdcardfs when use_fusefs=1\n");
+		return;
+	}
+
 	sdcardfs_destroy_inode_cache();
 	sdcardfs_destroy_dentry_cache();
 	packagelist_exit();

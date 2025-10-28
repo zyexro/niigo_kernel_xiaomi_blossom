@@ -1718,7 +1718,7 @@ static int __init initialize_ptr_random(void)
 	int ret;
 
 	/* Use hw RNG if available. */
-	if (get_random_bytes_arch(&ptr_key, key_size) == key_size) {
+	if (get_random_bytes(&ptr_key, key_size) == key_size) {
 		static_branch_disable(&not_filled_random_ptr_key);
 		return 0;
 	}

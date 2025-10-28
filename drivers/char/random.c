@@ -84,16 +84,6 @@ static enum {
 /* Various types of waiters for crng_init->CRNG_READY transition. */
 static DECLARE_WAIT_QUEUE_HEAD(crng_init_wait);
 static struct fasync_struct *fasync;
-static DEFINE_SPINLOCK(random_ready_chain_lock);
-static RAW_NOTIFIER_HEAD(random_ready_chain);
-
-/* Control how we warn userspace. */
-static struct ratelimit_state urandom_warning =
-	RATELIMIT_STATE_INIT_FLAGS("urandom_warning", HZ, 3, RATELIMIT_MSG_ON_RELEASE);
-static int ratelimit_disable __read_mostly =
-	IS_ENABLED(CONFIG_WARN_ALL_UNSEEDED_RANDOM);
-module_param_named(ratelimit_disable, ratelimit_disable, int, 0644);
-MODULE_PARM_DESC(ratelimit_disable, "Disable random ratelimit suppression");
 
 /*
  * Returns whether or not the input pool has been seeded and thus guaranteed
@@ -135,51 +125,6 @@ int wait_for_random_bytes(void)
 	return 0;
 }
 EXPORT_SYMBOL(wait_for_random_bytes);
-
-/*
- * Add a callback function that will be invoked when the input
- * pool is initialised.
- *
- * returns: 0 if callback is successfully added
- *	    -EALREADY if pool is already initialised (callback not called)
- */
-int __cold register_random_ready_notifier(struct notifier_block *nb)
-{
-	unsigned long flags;
-	int ret = -EALREADY;
-
-	if (crng_ready())
-		return ret;
-
-	spin_lock_irqsave(&random_ready_chain_lock, flags);
-	if (!crng_ready())
-		ret = raw_notifier_chain_register(&random_ready_chain, nb);
-	spin_unlock_irqrestore(&random_ready_chain_lock, flags);
-	return ret;
-}
-
-/*
- * Delete a previously registered readiness callback function.
- */
-int __cold unregister_random_ready_notifier(struct notifier_block *nb)
-{
-	unsigned long flags;
-	int ret;
-
-	spin_lock_irqsave(&random_ready_chain_lock, flags);
-	ret = raw_notifier_chain_unregister(&random_ready_chain, nb);
-	spin_unlock_irqrestore(&random_ready_chain_lock, flags);
-	return ret;
-}
-
-static void __cold process_random_ready_list(void)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&random_ready_chain_lock, flags);
-	raw_notifier_call_chain(&random_ready_chain, 0, NULL);
-	spin_unlock_irqrestore(&random_ready_chain_lock, flags);
-}
 
 #define warn_unseeded_randomness() \
 	if (IS_ENABLED(CONFIG_WARN_ALL_UNSEEDED_RANDOM) && !crng_ready()) \
@@ -319,7 +264,7 @@ static void crng_fast_key_erasure(u8 key[CHACHA20_KEY_SIZE],
 	chacha20_block(chacha_state, first_block);
 
 	memcpy(key, first_block, CHACHA20_KEY_SIZE);
-	memcpy(random_data, first_block + CHACHA20_KEY_SIZE, random_data_len);
+	memmove(random_data, first_block + CHACHA20_KEY_SIZE, random_data_len);
 	memzero_explicit(first_block, sizeof(first_block));
 }
 
@@ -421,12 +366,9 @@ static void _get_random_bytes(void *buf, size_t len)
 /*
  * This function is the exported kernel interface.  It returns some
  * number of good random numbers, suitable for key generation, seeding
- * TCP sequence numbers, etc.  It does not rely on the hardware random
- * number generator.  For random bytes direct from the hardware RNG
- * (when available), use get_random_bytes_arch(). In order to ensure
- * that the randomness provided by this function is okay, the function
- * wait_for_random_bytes() should be called and return 0 at least once
- * at any point prior.
+ * TCP sequence numbers, etc. In order to ensure that the randomness
+ * by this function is okay, the function wait_for_random_bytes()
+ * should be called and return 0 at least once at any point prior.
  */
 void get_random_bytes(void *buf, int len)
 {
@@ -568,34 +510,6 @@ int __cold random_prepare_cpu(unsigned int cpu)
 }
 #endif
 
-/*
- * This function will use the architecture-specific hardware random
- * number generator if it is available. It is not recommended for
- * use. Use get_random_bytes() instead. It returns the number of
- * bytes filled in.
- */
-size_t __must_check get_random_bytes_arch(void *buf, size_t len)
-{
-	size_t left = len;
-	u8 *p = buf;
-
-	while (left) {
-		unsigned long v;
-		size_t block_len = min_t(size_t, left, sizeof(unsigned long));
-
-		if (!arch_get_random_long(&v))
-			break;
-
-		memcpy(p, &v, block_len);
-		p += block_len;
-		left -= block_len;
-	}
-
-	return len - left;
-}
-EXPORT_SYMBOL(get_random_bytes_arch);
-
-
 /**********************************************************************
  *
  * Entropy accumulation and extraction routines.
@@ -716,13 +630,9 @@ static void __cold _credit_init_bits(size_t bits)
 
 	if (orig < POOL_READY_BITS && new >= POOL_READY_BITS) {
 		crng_reseed(NULL); /* Sets crng_init to CRNG_READY under base_crng.lock. */
-		process_random_ready_list();
 		wake_up_interruptible(&crng_init_wait);
 		kill_fasync(&fasync, SIGIO, POLL_IN);
 		pr_notice("crng init done\n");
-		if (urandom_warning.missed)
-			pr_notice("%d urandom warning(s) missed due to ratelimiting\n",
-				  urandom_warning.missed);
 	} else if (orig < POOL_EARLY_BITS && new >= POOL_EARLY_BITS) {
 		spin_lock_irqsave(&base_crng.lock, flags);
 		/* Check if crng_init is CRNG_EMPTY, to avoid race with crng_reseed(). */
@@ -1151,7 +1061,7 @@ struct entropy_timer_state {
  *
  * So the re-arming always happens in the entropy loop itself.
  */
-static void __cold entropy_timer(struct timer_list *t)
+static void __cold entropy_timer(struct timer_list *timer)
 {
 	struct entropy_timer_state *state = container_of(timer, struct entropy_timer_state, timer);
 	unsigned long entropy = random_get_entropy();
@@ -1242,20 +1152,16 @@ static void __cold try_to_generate_entropy(void)
  * getrandom(2) is the primary modern interface into the RNG and should
  * be used in preference to anything else.
  *
- * Reading from /dev/random has the same functionality as calling
- * getrandom(2) with flags=0. In earlier versions, however, it had
- * vastly different semantics and should therefore be avoided, to
- * prevent backwards compatibility issues.
- *
- * Reading from /dev/urandom has the same functionality as calling
- * getrandom(2) with flags=GRND_INSECURE. Because it does not block
- * waiting for the RNG to be ready, it should not be used.
+ * Reading from /dev/random and /dev/urandom both have the same effect
+ * as calling getrandom(2) with flags=0. (In earlier versions, however,
+ * they each had different semantics.)
  *
  * Writing to either /dev/random or /dev/urandom adds entropy to
  * the input pool but does not credit it.
  *
- * Polling on /dev/random indicates when the RNG is initialized, on
- * the read side, and when it wants new entropy, on the write side.
+ * Polling on /dev/random or /dev/urandom indicates when the RNG
+ * is initialized, on the read side, and when it wants new entropy,
+ * on the write side.
  *
  * Both /dev/random and /dev/urandom have the same set of ioctls for
  * adding entropy, getting the entropy count, zeroing the count, and
@@ -1330,23 +1236,6 @@ static ssize_t write_pool_user(struct iov_iter *iter)
 static ssize_t random_write_iter(struct kiocb *kiocb, struct iov_iter *iter)
 {
 	return write_pool_user(iter);
-}
-
-static ssize_t urandom_read_iter(struct kiocb *kiocb, struct iov_iter *iter)
-{
-	static int maxwarn = 10;
-
-	if (!crng_ready()) {
-		if (!ratelimit_disable && maxwarn <= 0)
-			++urandom_warning.missed;
-		else if (ratelimit_disable || __ratelimit(&urandom_warning)) {
-			--maxwarn;
-			pr_notice("%s: uninitialized urandom read (%zu bytes read)\n",
-				  current->comm, iov_iter_count(iter));
-		}
-	}
-
-	return get_random_bytes_user(iter);
 }
 
 static ssize_t random_read_iter(struct kiocb *kiocb, struct iov_iter *iter)
@@ -1438,16 +1327,7 @@ const struct file_operations random_fops = {
 	.write_iter = random_write_iter,
 	.poll = random_poll,
 	.unlocked_ioctl = random_ioctl,
-	.fasync = random_fasync,
-	.llseek = noop_llseek,
-	.splice_read = generic_file_splice_read,
-	.splice_write = iter_file_splice_write,
-};
-
-const struct file_operations urandom_fops = {
-	.read_iter = urandom_read_iter,
-	.write_iter = random_write_iter,
-	.unlocked_ioctl = random_ioctl,
+	.compat_ioctl = compat_ptr_ioctl,
 	.fasync = random_fasync,
 	.llseek = noop_llseek,
 	.splice_read = generic_file_splice_read,
@@ -1530,7 +1410,7 @@ static int proc_do_uuid(struct ctl_table *table, int write, void *buf,
 }
 
 /* The same as proc_dointvec, but writes don't change anything. */
-static int proc_do_rointvec(struct ctl_table *table, int write, void __user *buf,
+static int proc_do_rointvec(struct ctl_table *table, int write, void *buf,
 			    size_t *lenp, loff_t *ppos)
 {
 	return write ? 0 : proc_dointvec(table, 0, buf, lenp, ppos);

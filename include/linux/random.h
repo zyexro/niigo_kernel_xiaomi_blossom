@@ -29,7 +29,6 @@ static inline void add_latent_entropy(void)
 }
 
 void get_random_bytes(void *buf, int len);
-size_t __must_check get_random_bytes_arch(void *buf, size_t len);
 u8 get_random_u8(void);
 u16 get_random_u16(void);
 u32 get_random_u32(void);
@@ -69,8 +68,6 @@ static inline unsigned long get_random_canary(void)
 int __init random_init(const char *command_line);
 bool rng_is_initialized(void);
 int wait_for_random_bytes(void);
-int register_random_ready_notifier(struct notifier_block *nb);
-int unregister_random_ready_notifier(struct notifier_block *nb);
 
 /* Calls wait_for_random_bytes() and then calls get_random_bytes(buf, nbytes).
  * Returns the result of the call to wait_for_random_bytes. */
@@ -139,7 +136,7 @@ int random_online_cpu(unsigned int cpu);
 #endif
 
 #ifndef MODULE
-extern const struct file_operations random_fops, urandom_fops;
+extern const struct file_operations random_fops;
 #endif
 
 #endif /* _LINUX_RANDOM_H */

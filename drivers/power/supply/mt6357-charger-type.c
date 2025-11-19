@@ -535,7 +535,9 @@ static int get_vbus_voltage(struct mtk_charger_type *info,
 
 void do_charger_detect(struct mtk_charger_type *info, bool en)
 {
-	union power_supply_propval prop, prop2, prop3;
+	union power_supply_propval prop_online = {0};
+	union power_supply_propval prop_type = {0};
+	union power_supply_propval prop_usb_type = {0};
 	int ret = 0;
 
 #ifndef CONFIG_TCPC_CLASS
@@ -545,22 +547,20 @@ void do_charger_detect(struct mtk_charger_type *info, bool en)
 	}
 #endif
 
-	prop.intval = en;
+	prop_online.intval = en;
 	if (en) {
 		ret = power_supply_set_property(info->psy,
-				POWER_SUPPLY_PROP_ONLINE, &prop);
+				POWER_SUPPLY_PROP_ONLINE, &prop_online);
 		ret = power_supply_get_property(info->psy,
-				POWER_SUPPLY_PROP_TYPE, &prop2);
+				POWER_SUPPLY_PROP_TYPE, &prop_type);
 		ret = power_supply_get_property(info->psy,
-				POWER_SUPPLY_PROP_USB_TYPE, &prop3);
+				POWER_SUPPLY_PROP_USB_TYPE, &prop_usb_type);
+		pr_notice("type:%d usb_type:%d\n", prop_type.intval, prop_usb_type.intval);
 	} else {
-		prop2.intval = POWER_SUPPLY_TYPE_UNKNOWN;
-		prop3.intval = POWER_SUPPLY_USB_TYPE_UNKNOWN;
 		info->psy_desc.type = POWER_SUPPLY_TYPE_UNKNOWN;
 		info->type = POWER_SUPPLY_USB_TYPE_UNKNOWN;
+		pr_notice("%s type:0 usb_type:0\n", __func__);
 	}
-
-	pr_notice("%s type:%d usb_type:%d\n", __func__, prop2.intval, prop3.intval);
 
 	power_supply_changed(info->psy);
 }
@@ -721,7 +721,7 @@ static int mt_usb_get_property(struct power_supply *psy,
 			val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (info->type == POWER_SUPPLY_USB_TYPE_SDP)
+	        if (info->type == POWER_SUPPLY_USB_TYPE_SDP)
 			val->intval = 500000;
 		else
 			val->intval = 1500000;

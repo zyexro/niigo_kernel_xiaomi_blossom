@@ -249,8 +249,7 @@ config ARCH_HAS_FORTIFY_SOURCE
 config ARCH_HAS_SET_MEMORY
 	bool
 
-# Select if arch has all set_direct_map_invalid/default() functions
-config ARCH_HAS_SET_DIRECT_MAP
+config ARCH_HAS_CPU_FINALIZE_INIT
 	bool
 
 # Select if arch init_task must go in the __init_task_data section
@@ -1023,6 +1022,14 @@ config ARCH_HAS_NONLEAF_PMD_YOUNG
 	  accessed bit in non-leaf PMD entries when using them as part of linear
 	  address translations. Page table walkers that clear the accessed bit
 	  may use this capability to reduce their search space.
+
+config LLVM_POLLY
+	bool "Enable LLVM's polyhedral loop optimizer (Polly)"
+	help
+	  This option enables LLVM's polyhedral loop optimizer known as Polly.
+	  Polly is able to optimize various loops throughout the kernel for
+	  maximum cache locality. This requires an LLVM toolchain explicitly
+	  compiled with Polly support.
 
 source "kernel/gcov/Kconfig"
 

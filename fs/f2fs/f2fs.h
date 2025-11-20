@@ -2097,6 +2097,7 @@ void f2fs_printk(struct f2fs_sb_info *sbi, const char *fmt, ...);
 #define f2fs_debug(sbi, fmt, ...)					\
 	f2fs_printk(sbi, KERN_DEBUG fmt, ##__VA_ARGS__)
 
+void f2fs_msg(struct super_block *sb, const char *level, const char *fmt, ...);
 static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 						struct inode *inode,
 						block_t count)

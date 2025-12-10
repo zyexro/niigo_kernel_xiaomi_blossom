@@ -350,7 +350,7 @@ static void proc_configure_early_demux(int enabled, int protocol)
 }
 
 static int proc_tcp_early_demux(struct ctl_table *table, int write,
-				void *buffer, size_t *lenp, loff_t *ppos)
+				void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int ret = 0;
 
@@ -366,7 +366,7 @@ static int proc_tcp_early_demux(struct ctl_table *table, int write,
 }
 
 static int proc_udp_early_demux(struct ctl_table *table, int write,
-				void *buffer, size_t *lenp, loff_t *ppos)
+				void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int ret = 0;
 
@@ -630,14 +630,14 @@ static struct ctl_table ipv4_net_table[] = {
 		.data           = &init_net.ipv4.sysctl_udp_early_demux,
 		.maxlen         = sizeof(int),
 		.mode           = 0644,
-		.proc_handler   = proc_douintvec_minmax,
+		.proc_handler   = proc_udp_early_demux
 	},
 	{
 		.procname       = "tcp_early_demux",
 		.data           = &init_net.ipv4.sysctl_tcp_early_demux,
 		.maxlen         = sizeof(int),
 		.mode           = 0644,
-		.proc_handler   = proc_douintvec_minmax,
+		.proc_handler   = proc_tcp_early_demux
 	},
 	{
 		.procname	= "ip_default_ttl",

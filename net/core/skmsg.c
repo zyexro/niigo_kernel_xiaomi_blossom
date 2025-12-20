@@ -699,12 +699,11 @@ static void sk_psock_destroy(struct rcu_head *rcu)
 
 void sk_psock_drop(struct sock *sk, struct sk_psock *psock)
 {
+	rcu_assign_sk_user_data(sk, NULL);
 	sk_psock_cork_free(psock);
-	sk_psock_zap_ingress(psock);
+	sk_psock_restore_proto(sk, psock);
 
 	write_lock_bh(&sk->sk_callback_lock);
-	sk_psock_restore_proto(sk, psock);
-	rcu_assign_sk_user_data(sk, NULL);
 	if (psock->progs.skb_parser)
 		sk_psock_stop_strp(sk, psock);
 	else if (psock->progs.skb_verdict)
@@ -712,7 +711,7 @@ void sk_psock_drop(struct sock *sk, struct sk_psock *psock)
 	write_unlock_bh(&sk->sk_callback_lock);
 	sk_psock_clear_state(psock, SK_PSOCK_TX_ENABLED);
 
-	call_rcu(&psock->rcu, sk_psock_destroy);
+	call_rcu_sched(&psock->rcu, sk_psock_destroy);
 }
 EXPORT_SYMBOL_GPL(sk_psock_drop);
 
@@ -774,6 +773,7 @@ static void sk_psock_skb_redirect(struct sk_buff *skb)
 {
 	struct sk_psock *psock_other;
 	struct sock *sk_other;
+	bool ingress;
 
 	sk_other = tcp_skb_bpf_redirect_fetch(skb);
 	/* This error is a buggy BPF program, it returned a redirect
@@ -794,8 +794,18 @@ static void sk_psock_skb_redirect(struct sk_buff *skb)
 		return;
 	}
 
-	skb_queue_tail(&psock_other->ingress_skb, skb);
-	schedule_work(&psock_other->work);
+	ingress = tcp_skb_bpf_ingress(skb);
+	if ((!ingress && sock_writeable(sk_other)) ||
+	    (ingress &&
+	     atomic_read(&sk_other->sk_rmem_alloc) <=
+	     sk_other->sk_rcvbuf)) {
+		if (!ingress)
+			skb_set_owner_w(skb, sk_other);
+		skb_queue_tail(&psock_other->ingress_skb, skb);
+		schedule_work(&psock_other->work);
+	} else {
+		kfree_skb(skb);
+	}
 }
 
 static void sk_psock_tls_verdict_apply(struct sk_buff *skb, struct sock *sk, int verdict)
@@ -806,6 +816,7 @@ static void sk_psock_tls_verdict_apply(struct sk_buff *skb, struct sock *sk, int
 		break;
 	case __SK_PASS:
 	case __SK_DROP:
+		/* fall-through */
 	default:
 		break;
 	}

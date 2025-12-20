@@ -88,10 +88,8 @@ int sk_msg_clone(struct sock *sk, struct sk_msg *dst, struct sk_msg *src,
 {
 	int i = src->sg.start;
 	struct scatterlist *sge = sk_msg_elem(src, i);
+	struct scatterlist *sgd = NULL;
 	u32 sge_len, sge_off;
-
-	if (sk_msg_full(dst))
-		return -ENOSPC;
 
 	while (off) {
 		if (sge->length > off)
@@ -105,12 +103,26 @@ int sk_msg_clone(struct sock *sk, struct sk_msg *dst, struct sk_msg *src,
 
 	while (len) {
 		sge_len = sge->length - off;
-		sge_off = sge->offset + off;
 		if (sge_len > len)
 			sge_len = len;
+
+		if (dst->sg.end)
+			sgd = sk_msg_elem(dst, dst->sg.end - 1);
+
+		if (sgd &&
+		    (sg_page(sge) == sg_page(sgd)) &&
+		    (sg_virt(sge) + off == sg_virt(sgd) + sgd->length)) {
+			sgd->length += sge_len;
+			dst->sg.size += sge_len;
+		} else if (!sk_msg_full(dst)) {
+			sge_off = sge->offset + off;
+			sk_msg_page_add(dst, sg_page(sge), sge_len, sge_off);
+		} else {
+			return -ENOSPC;
+		}
+
 		off = 0;
 		len -= sge_len;
-		sk_msg_page_add(dst, sg_page(sge), sge_len, sge_off);
 		sk_mem_charge(sk, sge_len);
 		sk_msg_iter_var_next(i);
 		if (i == src->sg.end && len)
@@ -436,6 +448,7 @@ static int sk_psock_skb_ingress_enqueue(struct sk_buff *skb,
 
 	copied = skb->len;
 	msg->sg.start = 0;
+	msg->sg.size = copied;
 	msg->sg.end = num_sge;
 	msg->skb = skb;
 
@@ -498,10 +511,12 @@ static int sk_psock_skb_ingress_self(struct sk_psock *psock, struct sk_buff *skb
 static int sk_psock_handle_skb(struct sk_psock *psock, struct sk_buff *skb,
 			       u32 off, u32 len, bool ingress)
 {
-	if (ingress)
-		return sk_psock_skb_ingress(psock, skb);
-	else
+	if (!ingress) {
+		if (!sock_writeable(psock->sk))
+			return -EAGAIN;
 		return skb_send_sock_locked(psock->sk, skb, off, len);
+	}
+	return sk_psock_skb_ingress(psock, skb);
 }
 
 static void sk_psock_backlog(struct work_struct *work)
@@ -582,7 +597,7 @@ struct sk_psock *sk_psock_init(struct sock *sk, int node)
 
 	prot = READ_ONCE(sk->sk_prot);
 	psock->sk = sk;
-	psock->eval =  __SK_NONE;
+	psock->eval = __SK_NONE;
 	psock->sk_proto = prot;
 	psock->saved_unhash = prot->unhash;
 	psock->saved_destroy = prot->destroy;
@@ -684,11 +699,12 @@ static void sk_psock_destroy(struct rcu_head *rcu)
 
 void sk_psock_drop(struct sock *sk, struct sk_psock *psock)
 {
-	rcu_assign_sk_user_data(sk, NULL);
 	sk_psock_cork_free(psock);
-	sk_psock_restore_proto(sk, psock);
+	sk_psock_zap_ingress(psock);
 
 	write_lock_bh(&sk->sk_callback_lock);
+	sk_psock_restore_proto(sk, psock);
+	rcu_assign_sk_user_data(sk, NULL);
 	if (psock->progs.skb_parser)
 		sk_psock_stop_strp(sk, psock);
 	else if (psock->progs.skb_verdict)
@@ -696,7 +712,7 @@ void sk_psock_drop(struct sock *sk, struct sk_psock *psock)
 	write_unlock_bh(&sk->sk_callback_lock);
 	sk_psock_clear_state(psock, SK_PSOCK_TX_ENABLED);
 
-	call_rcu_sched(&psock->rcu, sk_psock_destroy);
+	call_rcu(&psock->rcu, sk_psock_destroy);
 }
 EXPORT_SYMBOL_GPL(sk_psock_drop);
 
@@ -719,7 +735,6 @@ int sk_psock_msg_verdict(struct sock *sk, struct sk_psock *psock,
 	struct bpf_prog *prog;
 	int ret;
 
-	preempt_disable();
 	rcu_read_lock();
 	prog = READ_ONCE(psock->progs.msg_parser);
 	if (unlikely(!prog)) {
@@ -729,7 +744,7 @@ int sk_psock_msg_verdict(struct sock *sk, struct sk_psock *psock,
 
 	sk_msg_compute_data_pointers(msg);
 	msg->sk = sk;
-	ret = BPF_PROG_RUN(prog, msg);
+	ret = bpf_prog_run_pin_on_cpu(prog, msg);
 	ret = sk_psock_map_verd(ret, msg->sk_redir);
 	psock->apply_bytes = msg->apply_bytes;
 	if (ret == __SK_REDIRECT) {
@@ -744,7 +759,6 @@ int sk_psock_msg_verdict(struct sock *sk, struct sk_psock *psock,
 	}
 out:
 	rcu_read_unlock();
-	preempt_enable();
 	return ret;
 }
 EXPORT_SYMBOL_GPL(sk_psock_msg_verdict);
@@ -752,74 +766,41 @@ EXPORT_SYMBOL_GPL(sk_psock_msg_verdict);
 static int sk_psock_bpf_run(struct sk_psock *psock, struct bpf_prog *prog,
 			    struct sk_buff *skb)
 {
-	int ret;
-
-	skb->sk = psock->sk;
 	bpf_compute_data_end_sk_skb(skb);
-	preempt_disable();
-	ret = BPF_PROG_RUN(prog, skb);
-	preempt_enable();
-	/* strparser clones the skb before handing it to a upper layer,
-	 * meaning skb_orphan has been called. We NULL sk on the way out
-	 * to ensure we don't trigger a BUG_ON() in skb/sk operations
-	 * later and because we are not charging the memory of this skb
-	 * to any socket yet.
-	 */
-	skb->sk = NULL;
-	return ret;
+	return bpf_prog_run_pin_on_cpu(prog, skb);
 }
 
 static void sk_psock_skb_redirect(struct sk_buff *skb)
 {
 	struct sk_psock *psock_other;
 	struct sock *sk_other;
-	bool ingress;
 
 	sk_other = tcp_skb_bpf_redirect_fetch(skb);
+	/* This error is a buggy BPF program, it returned a redirect
+	 * return code, but then didn't set a redirect interface.
+	 */
 	if (unlikely(!sk_other)) {
 		kfree_skb(skb);
 		return;
 	}
 	psock_other = sk_psock(sk_other);
+	/* This error indicates the socket is being torn down or had another
+	 * error that caused the pipe to break. We can't send a packet on
+	 * a socket that is in this state so we drop the skb.
+	 */
 	if (!psock_other || sock_flag(sk_other, SOCK_DEAD) ||
 	    !sk_psock_test_state(psock_other, SK_PSOCK_TX_ENABLED)) {
 		kfree_skb(skb);
 		return;
 	}
 
-	ingress = tcp_skb_bpf_ingress(skb);
-	if ((!ingress && sock_writeable(sk_other)) ||
-	    (ingress &&
-	     atomic_read(&sk_other->sk_rmem_alloc) <=
-	     sk_other->sk_rcvbuf)) {
-		if (!ingress)
-			skb_set_owner_w(skb, sk_other);
-		skb_queue_tail(&psock_other->ingress_skb, skb);
-		schedule_work(&psock_other->work);
-	} else {
-		kfree_skb(skb);
-	}
+	skb_queue_tail(&psock_other->ingress_skb, skb);
+	schedule_work(&psock_other->work);
 }
 
 static void sk_psock_tls_verdict_apply(struct sk_buff *skb, struct sock *sk, int verdict)
 {
 	switch (verdict) {
-	case __SK_PASS:
-		sk_other = psock->sk;
-		if (sock_flag(sk_other, SOCK_DEAD) ||
-		    !sk_psock_test_state(psock, SK_PSOCK_TX_ENABLED)) {
-			goto out_free;
-		}
-		if (atomic_read(&sk_other->sk_rmem_alloc) <=
-		    sk_other->sk_rcvbuf) {
-			struct tcp_skb_cb *tcp = TCP_SKB_CB(skb);
-
-			tcp->bpf.flags |= BPF_F_INGRESS;
-			skb_queue_tail(&psock->ingress_skb, skb);
-			schedule_work(&psock->work);
-			break;
-		}
-		goto out_free;
 	case __SK_REDIRECT:
 		sk_psock_skb_redirect(skb);
 		break;
@@ -886,7 +867,6 @@ static void sk_psock_verdict_apply(struct sk_psock *psock,
 		sk_psock_skb_redirect(skb);
 		break;
 	case __SK_DROP:
-		/* fall-through */
 	default:
 out_free:
 		kfree_skb(skb);

@@ -406,6 +406,7 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 			       unsigned int flags)
 {
 	bool set_iowait_boost = flags & SCHED_CPUFREQ_IOWAIT;
+	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
 
 	/* Reset boost if the CPU appears to have been idle enough */
 	if (sg_cpu->iowait_boost &&
@@ -415,8 +416,6 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 	/* Boost only tasks waking up after IO */
 	if (!set_iowait_boost)
 		return;
-
-	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
 
 	if (!sg_policy->tunables->iowait_boost_enable)
 		return;

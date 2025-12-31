@@ -35,7 +35,10 @@ struct mt_gpufreq_power_table_info {
 	unsigned int gpufreq_power;
 };
 
-typedef void (*gpufreq_power_limit_notify)(unsigned int); /* legacy */
+#ifndef __GPUFREQ_POWER_LIMIT_NOTIFY_DEFINED__
+#define __GPUFREQ_POWER_LIMIT_NOTIFY_DEFINED__
+typedef void (*gpufreq_power_limit_notify)(unsigned int);
+#endif
 
 /****************************
  * MTK GPUFREQ API

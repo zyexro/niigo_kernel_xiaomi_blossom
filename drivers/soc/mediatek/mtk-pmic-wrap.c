@@ -935,7 +935,7 @@ struct pmic_wrapper_type {
 	u32 wdt_src;
 	u32 caps;
 	unsigned int has_bridge:1;
-	int slv_switch:1;
+	unsigned int slv_switch:1;
 	int (*init_reg_clock)(struct pmic_wrapper *wrp);
 	int (*init_soc_specific)(struct pmic_wrapper *wrp);
 };

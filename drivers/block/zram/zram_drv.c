@@ -41,7 +41,11 @@ static DEFINE_IDR(zram_index_idr);
 static DEFINE_MUTEX(zram_index_mutex);
 
 static int zram_major;
+#ifdef CONFIG_ZRAM_DEF_COMP
+static const char *default_compressor = CONFIG_ZRAM_DEF_COMP;
+#else
 static const char *default_compressor = "lzo-rle";
+#endif
 
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;

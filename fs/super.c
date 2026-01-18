@@ -1017,11 +1017,6 @@ cancel_readonly:
 	return retval;
 }
 
-int do_remount_sb(struct super_block *sb, int flags, void *data, int force)
-{
-	return do_remount_sb2(NULL, sb, flags, data, force);
-}
-
 static void do_emergency_remount_callback(struct super_block *sb)
 {
 	down_write(&sb->s_umount);

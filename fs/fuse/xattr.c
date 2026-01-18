@@ -60,22 +60,22 @@ ssize_t fuse_getxattr(struct inode *inode, const char *name, void *value,
 
 	memset(&inarg, 0, sizeof(inarg));
 	inarg.size = size;
-	args.in.h.opcode = FUSE_GETXATTR;
-	args.in.h.nodeid = get_node_id(inode);
-	args.in.numargs = 2;
-	args.in.args[0].size = sizeof(inarg);
-	args.in.args[0].value = &inarg;
-	args.in.args[1].size = strlen(name) + 1;
-	args.in.args[1].value = name;
+	args.opcode = FUSE_GETXATTR;
+	args.nodeid = get_node_id(inode);
+	args.in_numargs = 2;
+	args.in_args[0].size = sizeof(inarg);
+	args.in_args[0].value = &inarg;
+	args.in_args[1].size = strlen(name) + 1;
+	args.in_args[1].value = name;
 	/* This is really two different operations rolled into one */
-	args.out.numargs = 1;
+	args.out_numargs = 1;
 	if (size) {
 		args.out_argvar = true;
 		args.out_args[0].size = size;
 		args.out_args[0].value = value;
 	} else {
-		args.out.args[0].size = sizeof(outarg);
-		args.out.args[0].value = &outarg;
+		args.out_args[0].size = sizeof(outarg);
+		args.out_args[0].value = &outarg;
 	}
 	ret = fuse_simple_request(fm, &args);
 	if (!ret && !size)
@@ -124,20 +124,20 @@ ssize_t fuse_listxattr(struct dentry *entry, char *list, size_t size)
 
 	memset(&inarg, 0, sizeof(inarg));
 	inarg.size = size;
-	args.in.h.opcode = FUSE_LISTXATTR;
-	args.in.h.nodeid = get_node_id(inode);
-	args.in.numargs = 1;
-	args.in.args[0].size = sizeof(inarg);
-	args.in.args[0].value = &inarg;
+	args.opcode = FUSE_LISTXATTR;
+	args.nodeid = get_node_id(inode);
+	args.in_numargs = 1;
+	args.in_args[0].size = sizeof(inarg);
+	args.in_args[0].value = &inarg;
 	/* This is really two different operations rolled into one */
-	args.out.numargs = 1;
+	args.out_numargs = 1;
 	if (size) {
 		args.out_argvar = true;
 		args.out_args[0].size = size;
 		args.out_args[0].value = list;
 	} else {
-		args.out.args[0].size = sizeof(outarg);
-		args.out.args[0].value = &outarg;
+		args.out_args[0].size = sizeof(outarg);
+		args.out_args[0].value = &outarg;
 	}
 	ret = fuse_simple_request(fm, &args);
 	if (!ret && !size)

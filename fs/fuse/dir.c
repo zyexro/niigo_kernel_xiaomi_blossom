@@ -147,14 +147,14 @@ static void fuse_lookup_init(struct fuse_conn *fc, struct fuse_args *args,
 			     struct fuse_entry_out *outarg)
 {
 	memset(outarg, 0, sizeof(struct fuse_entry_out));
-	args->in.h.opcode = FUSE_LOOKUP;
-	args->in.h.nodeid = nodeid;
-	args->in.numargs = 1;
-	args->in.args[0].size = name->len + 1;
-	args->in.args[0].value = name->name;
-	args->out.numargs = 1;
-	args->out.args[0].size = sizeof(struct fuse_entry_out);
-	args->out.args[0].value = outarg;
+	args->opcode = FUSE_LOOKUP;
+	args->nodeid = nodeid;
+	args->in_numargs = 1;
+	args->in_args[0].size = name->len + 1;
+	args->in_args[0].value = name->name;
+	args->out_numargs = 1;
+	args->out_args[0].size = sizeof(struct fuse_entry_out);
+	args->out_args[0].value = outarg;
 }
 
 /*
@@ -288,14 +288,14 @@ static void fuse_dentry_canonical_path(const struct path *path,
 	if (!path_name)
 		goto default_path;
 
-	args.in.h.opcode = FUSE_CANONICAL_PATH;
-	args.in.h.nodeid = get_node_id(inode);
-	args.in.numargs = 0;
-	args.out.numargs = 1;
-	args.out.args[0].size = PATH_MAX;
-	args.out.args[0].value = path_name;
-	args.out.argvar = 1;
-	args.out.canonical_path = canonical_path;
+	args.opcode = FUSE_CANONICAL_PATH;
+	args.nodeid = get_node_id(inode);
+	args.in_numargs = 0;
+	args.out_numargs = 1;
+	args.out_args[0].size = PATH_MAX;
+	args.out_args[0].value = path_name;
+	args.out_argvar = 1;
+	args.canonical_path = canonical_path;
 
 	err = fuse_simple_request(fm, &args);
 	free_page((unsigned long)path_name);
@@ -1515,14 +1515,14 @@ static void fuse_setattr_fill(struct fuse_conn *fc, struct fuse_args *args,
 			      struct fuse_setattr_in *inarg_p,
 			      struct fuse_attr_out *outarg_p)
 {
-	args->in.h.opcode = FUSE_SETATTR;
-	args->in.h.nodeid = get_node_id(inode);
-	args->in.numargs = 1;
-	args->in.args[0].size = sizeof(*inarg_p);
-	args->in.args[0].value = inarg_p;
-	args->out.numargs = 1;
-	args->out.args[0].size = sizeof(*outarg_p);
-	args->out.args[0].value = outarg_p;
+	args->opcode = FUSE_SETATTR;
+	args->nodeid = get_node_id(inode);
+	args->in_numargs = 1;
+	args->in_args[0].size = sizeof(*inarg_p);
+	args->in_args[0].value = inarg_p;
+	args->out_numargs = 1;
+	args->out_args[0].size = sizeof(*outarg_p);
+	args->out_args[0].value = outarg_p;
 }
 
 /*

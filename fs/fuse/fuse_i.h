@@ -33,6 +33,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/refcount.h>
 #include <linux/user_namespace.h>
+#include <linux/freezer.h>
 #include <linux/statfs.h>
 
 #define FUSE_SUPER_MAGIC 0x65735546
@@ -459,7 +460,7 @@ struct fuse_req {
 	/** Used to wake up the task waiting for completion of request*/
 	wait_queue_head_t waitq;
 
-#if IS_ENABLED(CONFIG_VIRTIO_FS)
+#ifdef CONFIG_VIRTIO_FS
 	/** virtio-fs's physically contiguous buffer for in and out args */
 	void *argbuf;
 #endif
@@ -1220,6 +1221,7 @@ int fuse_allow_current_process(struct fuse_conn *fc);
 
 u64 fuse_lock_owner_id(struct fuse_conn *fc, fl_owner_t id);
 
+void fuse_flush_time_update(struct inode *inode);
 void fuse_update_ctime(struct inode *inode);
 
 int fuse_update_attributes(struct inode *inode, struct file *file);
@@ -1346,6 +1348,50 @@ void fuse_dax_inode_init(struct inode *inode);
 void fuse_dax_inode_cleanup(struct inode *inode);
 bool fuse_dax_check_alignment(struct fuse_conn *fc, unsigned int map_alignment);
 void fuse_dax_cancel_work(struct fuse_conn *fc);
+
+#ifdef CONFIG_FREEZER
+static inline void fuse_freezer_do_not_count(void)
+{
+	current->flags |= PF_FREEZER_SKIP;
+}
+
+static inline void fuse_freezer_count(void)
+{
+	current->flags &= ~PF_FREEZER_SKIP;
+}
+#else /* !CONFIG_FREEZER */
+static inline void fuse_freezer_do_not_count(void) {}
+static inline void fuse_freezer_count(void) {}
+#endif
+
+#define fuse_wait_event(wq, condition)						\
+({										\
+	fuse_freezer_do_not_count();						\
+	wait_event(wq, condition);						\
+	fuse_freezer_count();							\
+})
+
+#define fuse_wait_event_killable(wq, condition)					\
+({										\
+	int __ret = 0;								\
+										\
+	fuse_freezer_do_not_count();						\
+	__ret = wait_event_killable(wq, condition);				\
+	fuse_freezer_count();							\
+										\
+	__ret;									\
+})
+
+#define fuse_wait_event_killable_exclusive(wq, condition)			\
+({										\
+	int __ret = 0;								\
+										\
+	fuse_freezer_do_not_count();						\
+	__ret = wait_event_killable_exclusive(wq, condition);			\
+	fuse_freezer_count();							\
+										\
+	__ret;									\
+})
 
 /* backing.c */
 

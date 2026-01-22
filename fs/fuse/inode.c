@@ -64,7 +64,7 @@ static struct file_system_type fuseblk_fs_type;
 
 struct fuse_forget_link *fuse_alloc_forget(void)
 {
-	return kzalloc(sizeof(struct fuse_forget_link), GFP_KERNEL);
+	return kzalloc(sizeof(struct fuse_forget_link), GFP_KERNEL_ACCOUNT);
 }
 
 static struct inode *fuse_alloc_inode(struct super_block *sb)
@@ -1134,7 +1134,7 @@ static void sanitize_global_limit(unsigned *limit)
 	 * 1/2^13 of the total memory, assuming 392 bytes per request.
 	 */
 	if (*limit == 0)
-		*limit = ((totalram_pages << PAGE_SHIFT) >> 13) / 392;
+		*limit = ((totalram_pages() << PAGE_SHIFT) >> 13) / 392;
 
 	if (*limit >= 1 << 16)
 		*limit = (1 << 16) - 1;

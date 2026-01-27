@@ -1334,6 +1334,7 @@ struct dentry *fuse_lookup_finalize(struct fuse_bpf_args *fa, struct inode *dir,
 	error = inode ?
 		fuse_handle_bpf_prog(feb, dir, &get_fuse_inode(inode)->bpf) :
 		fuse_handle_bpf_prog(feb, dir, &fuse_entry->bpf);
+	feb->bpf_file = NULL;
 	if (error) {
 		ret = ERR_PTR(error);
 		goto out;
@@ -1357,6 +1358,8 @@ out:
 	iput(inode);
 	if (feb->backing_file)
 		fput(feb->backing_file);
+	if (feb->bpf_file)
+		fput(feb->bpf_file);
 	return ret;
 }
 

@@ -597,9 +597,11 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
 		err = fuse_handle_backing(&bpf_arg,
 				&get_fuse_inode(*inode)->backing_inode,
 				&get_fuse_dentry(entry)->backing_path);
-		if (!err)
+		if (!err) {
 			err = fuse_handle_bpf_prog(&bpf_arg, NULL,
 					   &get_fuse_inode(*inode)->bpf);
+			bpf_arg.bpf_file = NULL;
+		}
 		if (err) {
 			iput(*inode);
 			*inode = NULL;
@@ -639,6 +641,8 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
  out:
 	if (bpf_arg.backing_file)
 		fput(bpf_arg.backing_file);
+	if (bpf_arg.bpf_file)
+		fput(bpf_arg.bpf_file);
 	return err;
 }
 

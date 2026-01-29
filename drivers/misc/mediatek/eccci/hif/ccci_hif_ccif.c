@@ -1745,7 +1745,8 @@ static int ccif_debug(unsigned char hif_id,
 
 	switch (flag) {
 	case CCCI_HIF_DEBUG_SET_WAKEUP:
-		ret = atomic_set(&ccif_ctrl->wakeup_src, para[0]);
+		atomic_set(&ccif_ctrl->wakeup_src, para[0]);
+		ret = para[0];
 		break;
 	case CCCI_HIF_DEBUG_RESET:
 		ccci_reset_ccif_hw(ccif_ctrl->md_id, AP_MD1_CCIF,

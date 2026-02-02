@@ -25,16 +25,16 @@
 #include <linux/moduleloader.h>
 #include <linux/bpf.h>
 #include <linux/btf.h>
-#include <linux/frame.h>
+#include <linux/objtool.h>
 #include <linux/rbtree_latch.h>
 #include <linux/kallsyms.h>
 #include <linux/rcupdate.h>
 #include <linux/perf_event.h>
 #include <linux/extable.h>
+#include <linux/log2.h>
 #include <linux/nospec.h>
 
 #include <asm/barrier.h>
-#include <linux/log2.h>
 #include <asm/unaligned.h>
 
 #include <trace/hooks/memory.h>
@@ -859,14 +859,6 @@ void bpf_jit_uncharge_modmem(u32 pages)
 {
 	atomic_long_sub(pages, &bpf_jit_current);
 }
-
-#if IS_ENABLED(CONFIG_BPF_JIT) && IS_ENABLED(CONFIG_CFI_CLANG)
-bool __weak arch_bpf_jit_check_func(const struct bpf_prog *prog)
-{
-	return true;
-}
-EXPORT_SYMBOL_GPL(arch_bpf_jit_check_func);
-#endif
 
 void *__weak bpf_jit_alloc_exec(unsigned long size)
 {
@@ -1898,9 +1890,7 @@ struct bpf_prog *bpf_prog_select_runtime(struct bpf_prog *fp, int *err)
 	}
 
 finalize:
-	*err = bpf_prog_lock_ro(fp);
-	if (*err)
-		return fp;
+	bpf_prog_lock_ro(fp);
 
 	/* The tail call compatibility check can only be done at
 	 * this late stage as we need to determine, if we deal

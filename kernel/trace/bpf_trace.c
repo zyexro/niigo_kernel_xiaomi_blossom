@@ -16,9 +16,6 @@
 #include <linux/syscalls.h>
 #include <linux/error-injection.h>
 #include <linux/btf_ids.h>
-#include <linux/bpf_lsm.h>
-
-#include <net/bpf_sk_storage.h>
 
 #include <uapi/linux/bpf.h>
 #include <uapi/linux/btf.h>
@@ -516,7 +513,6 @@ fmt_next:
 /* Horrid workaround for getting va_list handling working with different
  * argument type combinations generically for 32 and 64 bit archs.
  */
-#ifdef CONFIG_TRACE_PRINTK
 #define __BPF_TP_EMIT()	__BPF_ARG3_TP()
 #define __BPF_TP(...)							\
 	bpf_do_trace_printk(fmt, ##__VA_ARGS__)
@@ -543,9 +539,6 @@ fmt_next:
 	      : __BPF_ARG2_TP((u32)arg3, ##__VA_ARGS__)))
 
 	return __BPF_TP_EMIT();
-#else
-	return 0;
-#endif /* CONFIG_TRACE_PRINTK */
 }
 
 static const struct bpf_func_proto bpf_trace_printk_proto = {
@@ -1028,20 +1021,6 @@ const struct bpf_func_proto bpf_get_current_task_proto = {
 	.ret_type	= RET_INTEGER,
 };
 
-BPF_CALL_0(bpf_get_current_task_btf)
-{
-	return (unsigned long) current;
-}
-
-BTF_ID_LIST_SINGLE(bpf_get_current_btf_ids, struct, task_struct)
-
-static const struct bpf_func_proto bpf_get_current_task_btf_proto = {
-	.func		= bpf_get_current_task_btf,
-	.gpl_only	= true,
-	.ret_type	= RET_PTR_TO_BTF_ID,
-	.ret_btf_id	= &bpf_get_current_btf_ids[0],
-};
-
 BPF_CALL_2(bpf_current_task_under_cgroup, struct bpf_map *, map, u32, idx)
 {
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
@@ -1198,11 +1177,7 @@ BTF_SET_END(btf_allowlist_d_path)
 
 static bool bpf_d_path_allowed(const struct bpf_prog *prog)
 {
-	if (prog->type == BPF_PROG_TYPE_LSM)
-		return bpf_lsm_is_sleepable_hook(prog->aux->attach_btf_id);
-
-	return btf_id_set_contains(&btf_allowlist_d_path,
-				   prog->aux->attach_btf_id);
+	return btf_id_set_contains(&btf_allowlist_d_path, prog->aux->attach_btf_id);
 }
 
 BTF_ID_LIST_SINGLE(bpf_d_path_btf_ids, struct, path)
@@ -1303,8 +1278,6 @@ bpf_tracing_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		return &bpf_get_current_pid_tgid_proto;
 	case BPF_FUNC_get_current_task:
 		return &bpf_get_current_task_proto;
-	case BPF_FUNC_get_current_task_btf:
-		return &bpf_get_current_task_btf_proto;
 	case BPF_FUNC_get_current_uid_gid:
 		return &bpf_get_current_uid_gid_proto;
 	case BPF_FUNC_get_current_comm:
@@ -1760,10 +1733,6 @@ tracing_prog_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		return &bpf_skc_to_tcp_request_sock_proto;
 	case BPF_FUNC_skc_to_udp6_sock:
 		return &bpf_skc_to_udp6_sock_proto;
-	case BPF_FUNC_sk_storage_get:
-		return &bpf_sk_storage_get_tracing_proto;
-	case BPF_FUNC_sk_storage_delete:
-		return &bpf_sk_storage_delete_tracing_proto;
 #endif
 	case BPF_FUNC_seq_printf:
 		return prog->expected_attach_type == BPF_TRACE_ITER ?
@@ -2213,6 +2182,20 @@ int bpf_get_perf_event_info(const struct perf_event *event, u32 *prog_id,
 	return err;
 }
 
+static int __init send_signal_irq_work_init(void)
+{
+	int cpu;
+	struct send_signal_irq_work *work;
+
+	for_each_possible_cpu(cpu) {
+		work = per_cpu_ptr(&send_signal_work, cpu);
+		init_irq_work(&work->irq_work, do_bpf_send_signal);
+	}
+	return 0;
+}
+
+subsys_initcall(send_signal_irq_work_init);
+
 #ifdef CONFIG_MODULES
 static int bpf_event_notify(struct notifier_block *nb, unsigned long op,
 			    void *module)
@@ -2264,18 +2247,5 @@ static int __init bpf_event_init(void)
 	return 0;
 }
 
-static int __init send_signal_irq_work_init(void)
-{
-	int cpu;
-	struct send_signal_irq_work *work;
-
-	for_each_possible_cpu(cpu) {
-		work = per_cpu_ptr(&send_signal_work, cpu);
-		init_irq_work(&work->irq_work, do_bpf_send_signal);
-	}
-	return 0;
-}
-
 fs_initcall(bpf_event_init);
-subsys_initcall(send_signal_irq_work_init);
 #endif /* CONFIG_MODULES */

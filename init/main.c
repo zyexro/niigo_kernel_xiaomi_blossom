@@ -140,25 +140,6 @@ static char *initcall_command_line;
 static char *execute_command;
 static char *ramdisk_execute_command;
 
-#if defined(CONFIG_FUSE_FS) && defined(CONFIG_FUSE_BPF)
-static unsigned int __use_fusefs = 0;
-static int __init set_fusefs_state(char *val)
-{
-	get_option(&val, &__use_fusefs);
-	return 0;
-}
-__setup("use_fusefs=", set_fusefs_state);
-bool use_fusefs(void)
-{
-	return __use_fusefs >= 1;
-}
-#else
-bool use_fusefs(void)
-{
-	return false;
-}
-#endif
-
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

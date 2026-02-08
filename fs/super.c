@@ -1532,13 +1532,28 @@ EXPORT_SYMBOL(mount_single);
 int vfs_get_tree(struct fs_context *fc)
 {
 	struct super_block *sb;
-	int error = -ENOMEM;
-	void *sec_opts = NULL;
+	int error;
 
-	if (data && !(type->fs_flags & FS_BINARY_MOUNTDATA)) {
-		error = security_sb_eat_lsm_opts(data, &sec_opts);
-		if (error)
-			return ERR_PTR(error);
+	if (fc->fs_type->fs_flags & FS_REQUIRES_DEV && !fc->source)
+		return -ENOENT;
+
+	if (fc->root)
+		return -EBUSY;
+
+	/* Get the mountable root in fc->root, with a ref on the root and a ref
+	 * on the superblock.
+	 */
+	error = fc->ops->get_tree(fc);
+	if (error < 0)
+		return error;
+
+	if (!fc->root) {
+		pr_err("Filesystem %s get_tree() didn't set fc->root\n",
+		       fc->fs_type->name);
+		/* We don't know what the locking state of the superblock is -
+		 * if there is a superblock.
+		 */
+		BUG();
 	}
 
 	sb = fc->root->d_sb;
@@ -1553,14 +1568,10 @@ int vfs_get_tree(struct fs_context *fc)
 	smp_wmb();
 	sb->s_flags |= SB_BORN;
 
-	error = security_sb_set_mnt_opts(sb, sec_opts, 0, NULL);
-	if (error)
-		goto out_sb;
-
-	if (!(flags & MS_KERNMOUNT)) {
-		error = security_sb_kern_mount(sb);
-		if (error)
-			goto out_sb;
+	error = security_sb_set_mnt_opts(sb, fc->security, 0, NULL);
+	if (unlikely(error)) {
+		fc_drop_locked(fc);
+		return error;
 	}
 
 	/*
@@ -1572,15 +1583,7 @@ int vfs_get_tree(struct fs_context *fc)
 	WARN((sb->s_maxbytes < 0), "%s set sb->s_maxbytes to "
 		"negative value (%lld)\n", fc->fs_type->name, sb->s_maxbytes);
 
-	up_write(&sb->s_umount);
-	security_free_mnt_opts(&sec_opts);
-	return root;
-out_sb:
-	dput(root);
-	deactivate_locked_super(sb);
-out_free_secdata:
-	security_free_mnt_opts(&sec_opts);
-	return ERR_PTR(error);
+	return 0;
 }
 EXPORT_SYMBOL(vfs_get_tree);
 

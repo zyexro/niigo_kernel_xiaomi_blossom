@@ -2432,7 +2432,7 @@ static int do_remount(struct path *path, int ms_flags, int sb_flags,
 	int err;
 	struct super_block *sb = path->mnt->mnt_sb;
 	struct mount *mnt = real_mount(path->mnt);
-	void *sec_opts = NULL;
+	struct fs_context *fc;
 
 	if (!check_mnt(mnt))
 		return -EINVAL;
@@ -2443,15 +2443,9 @@ static int do_remount(struct path *path, int ms_flags, int sb_flags,
 	if (!can_change_locked_flags(mnt, mnt_flags))
 		return -EPERM;
 
-	if (data && !(sb->s_type->fs_flags & FS_BINARY_MOUNTDATA)) {
-		err = security_sb_eat_lsm_opts(data, &sec_opts);
-		if (err)
-			return err;
-	}
-	err = security_sb_remount(sb, sec_opts);
-	security_free_mnt_opts(&sec_opts);
-	if (err)
-		return err;
+	fc = fs_context_for_reconfigure(path->dentry, sb_flags, MS_RMT_MASK);
+	if (IS_ERR(fc))
+		return PTR_ERR(fc);
 
 	fc->oldapi = true;
 	err = parse_monolithic_mount_data(fc, data);

@@ -466,9 +466,9 @@ int commit_creds(struct cred *new)
 
 	/* alter the thread keyring */
 	if (!uid_eq(new->fsuid, old->fsuid))
-		key_fsuid_changed(new);
+		key_fsuid_changed(task);
 	if (!gid_eq(new->fsgid, old->fsgid))
-		key_fsgid_changed(new);
+		key_fsgid_changed(task);
 
 	/* do it
 	 * RLIMIT_NPROC limits on user->processes have already been checked

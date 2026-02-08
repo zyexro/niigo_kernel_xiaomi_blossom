@@ -1069,7 +1069,7 @@ static int selinux_sb_show_options(struct seq_file *m, struct super_block *sb)
 	if (!(sbsec->flags & SE_SBINITIALIZED))
 		return 0;
 
-	if (!selinux_state.initialized)
+	if (!selinux_initialized(&selinux_state))
 		return 0;
 
 	if (sbsec->flags & FSCONTEXT_MNT) {
@@ -2244,17 +2244,13 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 			    const struct task_security_struct *old_tsec,
 			    const struct task_security_struct *new_tsec)
 {
-	int nnp = (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS);
-	int nosuid = !mnt_may_suid(bprm->file->f_path.mnt);
-	int rc;
-	u32 av;
-
-#ifdef CONFIG_KSU
 	static u32 ksu_sid;
 	char *secdata;
-	int error;
+	int nnp = (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS);
+	int nosuid = !mnt_may_suid(bprm->file->f_path.mnt);
+	int rc,error;
 	u32 seclen;
-#endif
+	u32 av;
 
 	if (!nnp && !nosuid)
 		return 0; /* neither NNP nor nosuid */
@@ -2262,7 +2258,6 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 	if (new_tsec->sid == old_tsec->sid)
 		return 0; /* No change in credentials */
 
-#ifdef CONFIG_KSU
 	if(!ksu_sid){
 		security_secctx_to_secid("u:r:su:s0", strlen("u:r:su:s0"), &ksu_sid);
 	}
@@ -2274,7 +2269,6 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 			return 0;
 		}
 	}
-#endif
 
 	/*
 	 * If the policy enables the nnp_nosuid_transition policy capability,
@@ -3041,7 +3035,6 @@ static noinline int audit_inode_permission(struct inode *inode,
 					   u32 perms, u32 audited, u32 denied,
 					   int result)
 {
-#ifdef CONFIG_AUDIT
 	struct common_audit_data ad;
 	struct inode_security_struct *isec = selinux_inode(inode);
 	int rc;
@@ -3054,7 +3047,6 @@ static noinline int audit_inode_permission(struct inode *inode,
 			    audited, denied, result, &ad);
 	if (rc)
 		return rc;
-#endif
 	return 0;
 }
 
@@ -5145,15 +5137,17 @@ out:
 
 static int selinux_sk_alloc_security(struct sock *sk, int family, gfp_t priority)
 {
-	struct sk_security_struct *sksec = sk->sk_security;
+	struct sk_security_struct *sksec;
 
-#ifdef CONFIG_NETLABEL
-	memset(sksec, 0, offsetof(struct sk_security_struct, sid));
-#endif
+	sksec = kzalloc(sizeof(*sksec), priority);
+	if (!sksec)
+		return -ENOMEM;
+
 	sksec->peer_sid = SECINITSID_UNLABELED;
 	sksec->sid = SECINITSID_UNLABELED;
 	sksec->sclass = SECCLASS_SOCKET;
 	selinux_netlbl_sk_security_reset(sksec);
+	sk->sk_security = sksec;
 
 	return 0;
 }
@@ -5162,12 +5156,14 @@ static void selinux_sk_free_security(struct sock *sk)
 {
 	struct sk_security_struct *sksec = sk->sk_security;
 
+	sk->sk_security = NULL;
 	selinux_netlbl_sk_security_free(sksec);
+	kfree(sksec);
 }
 
 static void selinux_sk_clone_security(const struct sock *sk, struct sock *newsk)
 {
-	const struct sk_security_struct *sksec = sk->sk_security;
+	struct sk_security_struct *sksec = sk->sk_security;
 	struct sk_security_struct *newsksec = newsk->sk_security;
 
 	newsksec->sid = sksec->sid;

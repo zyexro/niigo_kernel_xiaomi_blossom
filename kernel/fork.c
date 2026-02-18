@@ -1438,7 +1438,7 @@ static int copy_files(unsigned long clone_flags, struct task_struct *tsk)
 		goto out;
 	}
 
-	newf = dup_fd(oldf, NULL);
+	newf = dup_fd(oldf, &error);
 	if (!newf)
 		goto out;
 
@@ -2658,7 +2658,7 @@ static int unshare_fd(unsigned long unshare_flags, struct files_struct **new_fdp
 
 	if ((unshare_flags & CLONE_FILES) &&
 	    (fd && atomic_read(&fd->count) > 1)) {
-		*new_fdp = dup_fd(fd, NULL);
+		*new_fdp = dup_fd(fd, &error);
 		if (!*new_fdp)
 			return error;
 	}

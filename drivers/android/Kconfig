@@ -93,6 +93,7 @@ config ANDROID_VENDOR_HOOKS
 config ANDROID_BINDER_LOGS
 	bool "Android Binder Logging"
 	depends on ANDROID_BINDERFS
+	default n
 	help
 	  Enables binder_logs directory in binderfs and debug_mask for dmesg
 	  logging. Needed for DEBUG_FS.

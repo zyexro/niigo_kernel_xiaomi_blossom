@@ -265,9 +265,6 @@ static ssize_t uid_remove_write(struct file *file,
 	if (uid_start >= INT_MAX || uid_end >= INT_MAX)
 		return -EINVAL;
 
-	/* Also remove uids from /proc/uid_time_in_state */
-	cpufreq_task_times_remove_uids(uid_start, uid_end);
-
 	for (; uid_start <= uid_end; uid_start++) {
 		lock_uid(uid_start);
 		hash_for_each_possible_safe(hash_table, uid_entry, tmp,

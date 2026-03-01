@@ -54,18 +54,18 @@ static inline void kcov_remote_start_usb(u64 id)
 
 #else
 
-static inline void kcov_task_init(struct task_struct *t) {}
-static inline void kcov_task_exit(struct task_struct *t) {}
-static inline void kcov_prepare_switch(struct task_struct *t) {}
-static inline void kcov_finish_switch(struct task_struct *t) {}
-static inline void kcov_remote_start(u64 handle) {}
-static inline void kcov_remote_stop(void) {}
-static inline u64 kcov_common_handle(void)
+static __always_inline void kcov_task_init(struct task_struct *t) {}
+static __always_inline void kcov_task_exit(struct task_struct *t) {}
+static __always_inline void kcov_prepare_switch(struct task_struct *t) {}
+static __always_inline void kcov_finish_switch(struct task_struct *t) {}
+static __always_inline void kcov_remote_start(u64 handle) {}
+static __always_inline void kcov_remote_stop(void) {}
+static __always_inline u64 kcov_common_handle(void)
 {
 	return 0;
 }
-static inline void kcov_remote_start_common(u64 id) {}
-static inline void kcov_remote_start_usb(u64 id) {}
+static __always_inline void kcov_remote_start_common(u64 id) {}
+static __always_inline void kcov_remote_start_usb(u64 id) {}
 
 #endif /* CONFIG_KCOV */
 #endif /* _LINUX_KCOV_H */

@@ -76,7 +76,7 @@ static inline void *try_get_task_stack(struct task_struct *tsk)
 	return task_stack_page(tsk);
 }
 
-static inline void put_task_stack(struct task_struct *tsk) {}
+static __always_inline void put_task_stack(struct task_struct *tsk) {}
 #endif
 
 #define task_stack_end_corrupted(task) \

@@ -22,12 +22,12 @@ static inline bool vtime_accounting_cpu_enabled(void) { return true; }
  * For now vtime state is tied to context tracking. We might want to decouple
  * those later if necessary.
  */
-static inline bool vtime_accounting_enabled(void)
+static __always_inline bool vtime_accounting_enabled(void)
 {
 	return context_tracking_is_enabled();
 }
 
-static inline bool vtime_accounting_cpu_enabled(void)
+static __always_inline bool vtime_accounting_cpu_enabled(void)
 {
 	if (vtime_accounting_enabled()) {
 		if (context_tracking_cpu_is_enabled())
@@ -37,7 +37,7 @@ static inline bool vtime_accounting_cpu_enabled(void)
 	return false;
 }
 #else /* !CONFIG_VIRT_CPU_ACCOUNTING */
-static inline bool vtime_accounting_cpu_enabled(void) { return false; }
+static __always_inline bool vtime_accounting_cpu_enabled(void) { return false; }
 #endif
 
 
@@ -50,7 +50,7 @@ static inline bool vtime_accounting_cpu_enabled(void) { return false; }
 extern void vtime_task_switch(struct task_struct *prev);
 #else
 extern void vtime_common_task_switch(struct task_struct *prev);
-static inline void vtime_task_switch(struct task_struct *prev)
+static __always_inline void vtime_task_switch(struct task_struct *prev)
 {
 	if (vtime_accounting_cpu_enabled())
 		vtime_common_task_switch(prev);
@@ -62,8 +62,8 @@ extern void vtime_account_idle(struct task_struct *tsk);
 
 #else /* !CONFIG_VIRT_CPU_ACCOUNTING */
 
-static inline void vtime_task_switch(struct task_struct *prev) { }
-static inline void vtime_account_system(struct task_struct *tsk) { }
+static __always_inline void vtime_task_switch(struct task_struct *prev) { }
+static __always_inline void vtime_account_system(struct task_struct *tsk) { }
 #endif /* !CONFIG_VIRT_CPU_ACCOUNTING */
 
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN

@@ -135,6 +135,7 @@
 #include <linux/sched/clock.h>
 #include <linux/sched/topology.h>
 #include <linux/tick.h>
+#include <linux/module.h>
 
 /*
  * The number of bits to shift the cpu's capacity by in order to determine
@@ -694,6 +695,26 @@ static struct cpuidle_governor teo_governor = {
 	.select =	teo_select,
 	.reflect =	teo_reflect,
 };
+
+/*
+ * Map TEO internal data to MTK expected symbols
+ */
+unsigned int get_menu_predict_us(void)
+{
+	struct teo_cpu *cpu_data = per_cpu_ptr(&teo_cpus, smp_processor_id());
+
+	/* TEO uses sleep_length_ns, convert to microseconds for MTK */
+	return ktime_to_us(cpu_data->sleep_length_ns);
+}
+EXPORT_SYMBOL_GPL(get_menu_predict_us);
+
+unsigned int get_menu_next_timer_us(void)
+{
+	struct teo_cpu *cpu_data = per_cpu_ptr(&teo_cpus, smp_processor_id());
+
+	return ktime_to_us(cpu_data->sleep_length_ns);
+}
+EXPORT_SYMBOL_GPL(get_menu_next_timer_us);
 
 static int __init teo_governor_init(void)
 {

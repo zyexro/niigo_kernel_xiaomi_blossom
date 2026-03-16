@@ -244,6 +244,7 @@ static ssize_t __sbi_show_value(struct f2fs_attr *a,
 		return sysfs_emit(buf,
 				"show sysfs node value with wrong type\n");
 	}
+}
 
 static ssize_t main_blkaddr_show(struct f2fs_attr *a,
 				struct f2fs_sb_info *sbi, char *buf)

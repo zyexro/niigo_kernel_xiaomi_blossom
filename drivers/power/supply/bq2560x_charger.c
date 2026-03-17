@@ -186,7 +186,7 @@ static int bq2560x_disable_charger(struct bq2560x *bq)
 	return ret;
 }
 
-int bq2560x_set_chargecurrent(struct bq2560x *bq, int curr)
+static int bq2560x_set_chargecurrent(struct bq2560x *bq, int curr)
 {
 	u8 ichg;
 
@@ -199,7 +199,7 @@ int bq2560x_set_chargecurrent(struct bq2560x *bq, int curr)
 
 }
 
-int bq2560x_set_term_current(struct bq2560x *bq, int curr)
+static int bq2560x_set_term_current(struct bq2560x *bq, int curr)
 {
 	u8 iterm;
 
@@ -211,9 +211,8 @@ int bq2560x_set_term_current(struct bq2560x *bq, int curr)
 	return bq2560x_update_bits(bq, BQ2560X_REG_03, REG03_ITERM_MASK,
 				   iterm << REG03_ITERM_SHIFT);
 }
-EXPORT_SYMBOL_GPL(bq2560x_set_term_current);
 
-int bq2560x_set_prechg_current(struct bq2560x *bq, int curr)
+static int bq2560x_set_prechg_current(struct bq2560x *bq, int curr)
 {
 	u8 iprechg;
 
@@ -225,9 +224,8 @@ int bq2560x_set_prechg_current(struct bq2560x *bq, int curr)
 	return bq2560x_update_bits(bq, BQ2560X_REG_03, REG03_IPRECHG_MASK,
 				   iprechg << REG03_IPRECHG_SHIFT);
 }
-EXPORT_SYMBOL_GPL(bq2560x_set_prechg_current);
 
-int bq2560x_set_chargevolt(struct bq2560x *bq, int volt)
+static int bq2560x_set_chargevolt(struct bq2560x *bq, int volt)
 {
 	u8 val;
 
@@ -239,7 +237,7 @@ int bq2560x_set_chargevolt(struct bq2560x *bq, int volt)
 				   val << REG04_VREG_SHIFT);
 }
 
-int bq2560x_set_input_volt_limit(struct bq2560x *bq, int volt)
+static int bq2560x_set_input_volt_limit(struct bq2560x *bq, int volt)
 {
 	u8 val;
 
@@ -251,7 +249,7 @@ int bq2560x_set_input_volt_limit(struct bq2560x *bq, int volt)
 				   val << REG06_VINDPM_SHIFT);
 }
 
-int bq2560x_set_input_current_limit(struct bq2560x *bq, int curr)
+static int bq2560x_set_input_current_limit(struct bq2560x *bq, int curr)
 {
 	u8 val;
 
@@ -263,7 +261,7 @@ int bq2560x_set_input_current_limit(struct bq2560x *bq, int curr)
 				   val << REG00_IINLIM_SHIFT);
 }
 
-int bq2560x_set_watchdog_timer(struct bq2560x *bq, u8 timeout)
+static int bq2560x_set_watchdog_timer(struct bq2560x *bq, u8 timeout)
 {
 	u8 temp;
 
@@ -272,26 +270,23 @@ int bq2560x_set_watchdog_timer(struct bq2560x *bq, u8 timeout)
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_05, REG05_WDT_MASK, temp);
 }
-EXPORT_SYMBOL_GPL(bq2560x_set_watchdog_timer);
 
-int bq2560x_disable_watchdog_timer(struct bq2560x *bq)
+static int bq2560x_disable_watchdog_timer(struct bq2560x *bq)
 {
 	u8 val = REG05_WDT_DISABLE << REG05_WDT_SHIFT;
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_05, REG05_WDT_MASK, val);
 }
-EXPORT_SYMBOL_GPL(bq2560x_disable_watchdog_timer);
 
-int bq2560x_reset_watchdog_timer(struct bq2560x *bq)
+static int bq2560x_reset_watchdog_timer(struct bq2560x *bq)
 {
 	u8 val = REG01_WDT_RESET << REG01_WDT_RESET_SHIFT;
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_01, REG01_WDT_RESET_MASK,
 				   val);
 }
-EXPORT_SYMBOL_GPL(bq2560x_reset_watchdog_timer);
 
-int bq2560x_reset_chip(struct bq2560x *bq)
+static int bq2560x_reset_chip(struct bq2560x *bq)
 {
 	int ret;
 	u8 val = REG0B_REG_RESET << REG0B_REG_RESET_SHIFT;
@@ -300,18 +295,16 @@ int bq2560x_reset_chip(struct bq2560x *bq)
 	    bq2560x_update_bits(bq, BQ2560X_REG_0B, REG0B_REG_RESET_MASK, val);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(bq2560x_reset_chip);
 
-int bq2560x_enter_hiz_mode(struct bq2560x *bq)
+static int bq2560x_enter_hiz_mode(struct bq2560x *bq)
 {
 	u8 val = REG00_HIZ_ENABLE << REG00_ENHIZ_SHIFT;
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_00, REG00_ENHIZ_MASK, val);
 
 }
-EXPORT_SYMBOL_GPL(bq2560x_enter_hiz_mode);
 
-int bq2560x_exit_hiz_mode(struct bq2560x *bq)
+static int bq2560x_exit_hiz_mode(struct bq2560x *bq)
 {
 
 	u8 val = REG00_HIZ_DISABLE << REG00_ENHIZ_SHIFT;
@@ -319,9 +312,8 @@ int bq2560x_exit_hiz_mode(struct bq2560x *bq)
 	return bq2560x_update_bits(bq, BQ2560X_REG_00, REG00_ENHIZ_MASK, val);
 
 }
-EXPORT_SYMBOL_GPL(bq2560x_exit_hiz_mode);
 
-int bq2560x_get_hiz_mode(struct bq2560x *bq, u8 *state)
+static int bq2560x_get_hiz_mode(struct bq2560x *bq, u8 *state)
 {
 	u8 val;
 	int ret;
@@ -333,7 +325,6 @@ int bq2560x_get_hiz_mode(struct bq2560x *bq, u8 *state)
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(bq2560x_get_hiz_mode);
 
 static int bq2560x_enable_term(struct bq2560x *bq, bool enable)
 {
@@ -349,9 +340,8 @@ static int bq2560x_enable_term(struct bq2560x *bq, bool enable)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(bq2560x_enable_term);
 
-int bq2560x_set_boost_current(struct bq2560x *bq, int curr)
+static int bq2560x_set_boost_current(struct bq2560x *bq, int curr)
 {
 	u8 val;
 
@@ -363,7 +353,7 @@ int bq2560x_set_boost_current(struct bq2560x *bq, int curr)
 				   val << REG02_BOOST_LIM_SHIFT);
 }
 
-int bq2560x_set_boost_voltage(struct bq2560x *bq, int volt)
+static int bq2560x_set_boost_voltage(struct bq2560x *bq, int volt)
 {
 	u8 val;
 
@@ -379,7 +369,6 @@ int bq2560x_set_boost_voltage(struct bq2560x *bq, int volt)
 	return bq2560x_update_bits(bq, BQ2560X_REG_06, REG06_BOOSTV_MASK,
 				   val << REG06_BOOSTV_SHIFT);
 }
-EXPORT_SYMBOL_GPL(bq2560x_set_boost_voltage);
 
 static int bq2560x_set_acovp_threshold(struct bq2560x *bq, int volt)
 {
@@ -419,40 +408,6 @@ static int bq2560x_set_int_mask(struct bq2560x *bq, int mask)
 	return bq2560x_update_bits(bq, BQ2560X_REG_0A, REG0A_INT_MASK_MASK,
 				   val << REG0A_INT_MASK_SHIFT);
 }
-
-static int bq2560x_enable_batfet(struct bq2560x *bq)
-{
-	const u8 val = REG07_BATFET_ON << REG07_BATFET_DIS_SHIFT;
-
-	return bq2560x_update_bits(bq, BQ2560X_REG_07, REG07_BATFET_DIS_MASK,
-				   val);
-}
-EXPORT_SYMBOL_GPL(bq2560x_enable_batfet);
-
-static int bq2560x_disable_batfet(struct bq2560x *bq)
-{
-	const u8 val = REG07_BATFET_OFF << REG07_BATFET_DIS_SHIFT;
-
-	return bq2560x_update_bits(bq, BQ2560X_REG_07, REG07_BATFET_DIS_MASK,
-				   val);
-}
-EXPORT_SYMBOL_GPL(bq2560x_disable_batfet);
-
-static int bq2560x_set_batfet_delay(struct bq2560x *bq, uint8_t delay)
-{
-	u8 val;
-
-	if (delay == 0)
-		val = REG07_BATFET_DLY_0S;
-	else
-		val = REG07_BATFET_DLY_10S;
-
-	val <<= REG07_BATFET_DLY_SHIFT;
-
-	return bq2560x_update_bits(bq, BQ2560X_REG_07, REG07_BATFET_DLY_MASK,
-				   val);
-}
-EXPORT_SYMBOL_GPL(bq2560x_set_batfet_delay);
 
 static int bq2560x_set_vdpm_bat_track(struct bq2560x *bq)
 {

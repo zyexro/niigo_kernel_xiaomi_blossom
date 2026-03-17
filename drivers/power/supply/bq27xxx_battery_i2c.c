@@ -129,7 +129,7 @@ static int bq27xxx_battery_i2c_bulk_read(struct bq27xxx_device_info *di, u8 reg,
 }
 
 static int bq27xxx_battery_i2c_bulk_write(struct bq27xxx_device_info *di,
-					  u8 reg, u8 *data, int len)
+					  u8 reg, const u8 *data, int len)
 {
 	struct i2c_client *client = to_i2c_client(di->dev);
 	struct i2c_msg msg;

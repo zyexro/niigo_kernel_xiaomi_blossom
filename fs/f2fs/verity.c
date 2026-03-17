@@ -29,7 +29,7 @@
 #include "f2fs.h"
 #include "xattr.h"
 
-#define F2FS_VERIFY_VER	(1)
+#define F2FS_VERIFY_VER (1)
 
 static inline loff_t f2fs_verity_metadata_pos(const struct inode *inode)
 {
@@ -44,8 +44,8 @@ static int pagecache_read(struct inode *inode, void *buf, size_t count,
 			  loff_t pos)
 {
 	while (count) {
-		size_t n = min_t(size_t, count,
-				 PAGE_SIZE - offset_in_page(pos));
+		size_t n =
+			min_t(size_t, count, PAGE_SIZE - offset_in_page(pos));
 		struct page *page;
 		void *addr;
 
@@ -78,8 +78,8 @@ static int pagecache_write(struct inode *inode, const void *buf, size_t count,
 		return -EFBIG;
 
 	while (count) {
-		size_t n = min_t(size_t, count,
-				 PAGE_SIZE - offset_in_page(pos));
+		size_t n =
+			min_t(size_t, count, PAGE_SIZE - offset_in_page(pos));
 		struct page *page;
 		void *fsdata;
 		void *addr;
@@ -201,7 +201,8 @@ static int f2fs_get_verity_descriptor(struct inode *inode, void *buf,
 			    F2FS_XATTR_NAME_VERITY, &dloc, sizeof(dloc), NULL);
 	if (res < 0 && res != -ERANGE)
 		return res;
-	if (res != sizeof(dloc) || dloc.version != cpu_to_le32(F2FS_VERIFY_VER)) {
+	if (res != sizeof(dloc) ||
+	    dloc.version != cpu_to_le32(F2FS_VERIFY_VER)) {
 		f2fs_warn(F2FS_I_SB(inode), "unknown verity xattr format");
 		return -EINVAL;
 	}
@@ -286,9 +287,9 @@ static int f2fs_write_merkle_tree_block(struct inode *inode, const void *buf,
 }
 
 const struct fsverity_operations f2fs_verityops = {
-	.begin_enable_verity	= f2fs_begin_enable_verity,
-	.end_enable_verity	= f2fs_end_enable_verity,
-	.get_verity_descriptor	= f2fs_get_verity_descriptor,
-	.read_merkle_tree_page	= f2fs_read_merkle_tree_page,
+	.begin_enable_verity = f2fs_begin_enable_verity,
+	.end_enable_verity = f2fs_end_enable_verity,
+	.get_verity_descriptor = f2fs_get_verity_descriptor,
+	.read_merkle_tree_page = f2fs_read_merkle_tree_page,
 	.write_merkle_tree_block = f2fs_write_merkle_tree_block,
 };

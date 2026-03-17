@@ -150,7 +150,7 @@ struct f2fs_mount_info {
 
 	/* For compression */
 	unsigned char compress_algorithm;	/* algorithm type */
-	unsigned compress_log_size;		/* cluster log size */
+	unsigned int compress_log_size;		/* cluster log size */
 	unsigned char compress_ext_cnt;		/* extension count */
 	unsigned char extensions[COMPRESS_EXT_NUM][F2FS_EXTENSION_LEN];	/* extensions */
 };
@@ -199,7 +199,7 @@ enum {
 #define	CP_DISCARD	0x00000010
 #define CP_TRIMMED	0x00000020
 #define CP_PAUSE	0x00000040
-#define CP_RESIZE 	0x00000080
+#define CP_RESIZE	0x00000080
 
 #define MAX_DISCARD_BLOCKS(sbi)		BLKS_PER_SEC(sbi)
 #define DEF_MAX_DISCARD_REQUEST		8	/* issue 8 discards per round */
@@ -1896,6 +1896,7 @@ static inline unsigned long f2fs_qf_ino(struct super_block *sb, int type)
 static inline __u64 cur_cp_crc(struct f2fs_checkpoint *cp)
 {
 	size_t crc_offset = le32_to_cpu(cp->checksum_offset);
+
 	return le32_to_cpu(*((__le32 *)((unsigned char *)cp + crc_offset)));
 }
 
@@ -3532,7 +3533,7 @@ int f2fs_preallocate_blocks(struct kiocb *iocb, struct iov_iter *from);
 int f2fs_reserve_block(struct dnode_of_data *dn, pgoff_t index);
 int f2fs_mpage_readpages(struct address_space *mapping,
 			struct list_head *pages, struct page *page,
-			unsigned nr_pages, bool is_readahead);
+			unsigned int nr_pages, bool is_readahead);
 struct page *f2fs_get_read_data_page(struct inode *inode, pgoff_t index,
 			int op_flags, bool for_write);
 struct page *f2fs_find_data_page(struct inode *inode, pgoff_t index);
@@ -3956,7 +3957,7 @@ struct page *f2fs_compress_control_page(struct page *page);
 int f2fs_prepare_compress_overwrite(struct inode *inode,
 			struct page **pagep, pgoff_t index, void **fsdata);
 bool f2fs_compress_write_end(struct inode *inode, void *fsdata,
-					pgoff_t index, unsigned copied);
+					pgoff_t index, unsigned int copied);
 int f2fs_truncate_partial_cluster(struct inode *inode, u64 from, bool lock);
 void f2fs_compress_write_end_io(struct bio *bio, struct page *page);
 bool f2fs_is_compress_backend_ready(struct inode *inode);
@@ -3972,7 +3973,7 @@ int f2fs_write_multi_pages(struct compress_ctx *cc,
 						enum iostat_type io_type);
 int f2fs_is_compressed_cluster(struct inode *inode, pgoff_t index);
 int f2fs_read_multi_pages(struct compress_ctx *cc, struct bio **bio_ret,
-				unsigned nr_pages, sector_t *last_block_in_bio,
+				unsigned int nr_pages, sector_t *last_block_in_bio,
 				bool is_readahead, bool for_write);
 struct decompress_io_ctx *f2fs_alloc_dic(struct compress_ctx *cc);
 void f2fs_free_dic(struct decompress_io_ctx *dic);

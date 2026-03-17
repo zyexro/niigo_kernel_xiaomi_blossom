@@ -33,7 +33,7 @@ static unsigned long __count_free_nids(struct f2fs_sb_info *sbi)
 static unsigned long __count_extent_cache(struct f2fs_sb_info *sbi)
 {
 	return atomic_read(&sbi->total_zombie_tree) +
-				atomic_read(&sbi->total_ext_node);
+	       atomic_read(&sbi->total_ext_node);
 }
 
 unsigned long f2fs_shrink_count(struct shrinker *shrink,
@@ -73,7 +73,7 @@ unsigned long f2fs_shrink_count(struct shrinker *shrink,
 }
 
 unsigned long f2fs_shrink_scan(struct shrinker *shrink,
-				struct shrink_control *sc)
+			       struct shrink_control *sc)
 {
 	unsigned long nr = sc->nr_to_scan;
 	struct f2fs_sb_info *sbi;

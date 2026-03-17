@@ -64,8 +64,8 @@ void f2fs_do_read_inline_data(struct page *page, struct page *ipage)
 		SetPageUptodate(page);
 }
 
-void f2fs_truncate_inline_inode(struct inode *inode,
-					struct page *ipage, u64 from)
+void f2fs_truncate_inline_inode(struct inode *inode, struct page *ipage,
+				u64 from)
 {
 	void *addr;
 
@@ -89,12 +89,11 @@ int f2fs_read_inline_data(struct inode *inode, struct page *page)
 	if (trace_android_fs_dataread_start_enabled()) {
 		char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
 
-		path = android_fstrace_get_pathname(pathbuf,
-						    MAX_TRACE_PATHBUF_LEN,
-						    inode);
+		path = android_fstrace_get_pathname(
+			pathbuf, MAX_TRACE_PATHBUF_LEN, inode);
 		trace_android_fs_dataread_start(inode, page_offset(page),
-						PAGE_SIZE, current->pid,
-						path, current->comm);
+						PAGE_SIZE, current->pid, path,
+						current->comm);
 	}
 
 	ipage = f2fs_get_node_page(F2FS_I_SB(inode), inode->i_ino);
@@ -120,8 +119,7 @@ int f2fs_read_inline_data(struct inode *inode, struct page *page)
 	if (!PageUptodate(page))
 		SetPageUptodate(page);
 	f2fs_put_page(ipage, 1);
-	trace_android_fs_dataread_end(inode, page_offset(page),
-				      PAGE_SIZE);
+	trace_android_fs_dataread_end(inode, page_offset(page), PAGE_SIZE);
 	unlock_page(page);
 	return 0;
 }
@@ -160,8 +158,10 @@ int f2fs_convert_inline_page(struct dnode_of_data *dn, struct page *page)
 	if (unlikely(dn->data_blkaddr != NEW_ADDR)) {
 		f2fs_put_dnode(dn);
 		set_sbi_flag(fio.sbi, SBI_NEED_FSCK);
-		f2fs_warn(fio.sbi, "%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, run fsck to fix.",
-			  __func__, dn->inode->i_ino, dn->data_blkaddr);
+		f2fs_warn(
+			fio.sbi,
+			"%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, run fsck to fix.",
+			__func__, dn->inode->i_ino, dn->data_blkaddr);
 		return -EFSCORRUPTED;
 	}
 
@@ -294,8 +294,8 @@ int f2fs_recover_inline_data(struct inode *inode, struct page *npage)
 	if (IS_INODE(npage))
 		ri = F2FS_INODE(npage);
 
-	if (f2fs_has_inline_data(inode) &&
-			ri && (ri->i_inline & F2FS_INLINE_DATA)) {
+	if (f2fs_has_inline_data(inode) && ri &&
+	    (ri->i_inline & F2FS_INLINE_DATA)) {
 process_inline:
 		ipage = f2fs_get_node_page(sbi, inode->i_ino);
 		if (IS_ERR(ipage))
@@ -333,9 +333,9 @@ process_inline:
 	return 0;
 }
 
-struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
-					const struct f2fs_filename *fname,
-					struct page **res_page)
+struct f2fs_dir_entry *
+f2fs_find_in_inline_dir(struct inode *dir, const struct f2fs_filename *fname,
+			struct page **res_page)
 {
 	struct f2fs_sb_info *sbi = F2FS_SB(dir->i_sb);
 	struct f2fs_dir_entry *de;
@@ -363,7 +363,7 @@ struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
 }
 
 int f2fs_make_empty_inline_dir(struct inode *inode, struct inode *parent,
-							struct page *ipage)
+			       struct page *ipage)
 {
 	struct f2fs_dentry_ptr d;
 	void *inline_dentry;
@@ -386,7 +386,7 @@ int f2fs_make_empty_inline_dir(struct inode *inode, struct inode *parent,
  * release ipage in this function.
  */
 static int f2fs_move_inline_dirents(struct inode *dir, struct page *ipage,
-							void *inline_dentry)
+				    void *inline_dentry)
 {
 	struct page *page;
 	struct dnode_of_data dn;
@@ -408,8 +408,10 @@ static int f2fs_move_inline_dirents(struct inode *dir, struct page *ipage,
 	if (unlikely(dn.data_blkaddr != NEW_ADDR)) {
 		f2fs_put_dnode(&dn);
 		set_sbi_flag(F2FS_P_SB(page), SBI_NEED_FSCK);
-		f2fs_warn(F2FS_P_SB(page), "%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, run fsck to fix.",
-			  __func__, dir->i_ino, dn.data_blkaddr);
+		f2fs_warn(
+			F2FS_P_SB(page),
+			"%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, run fsck to fix.",
+			__func__, dir->i_ino, dn.data_blkaddr);
 		err = -EFSCORRUPTED;
 		goto out;
 	}
@@ -447,7 +449,7 @@ static int f2fs_move_inline_dirents(struct inode *dir, struct page *ipage,
 	 * inline_dentry's structure for backward compatibility.
 	 */
 	if (!f2fs_sb_has_flexible_inline_xattr(F2FS_I_SB(dir)) &&
-			!f2fs_has_inline_xattr(dir))
+	    !f2fs_has_inline_xattr(dir))
 		F2FS_I(dir)->i_inline_xattr_size = 0;
 
 	f2fs_i_depth_write(dir, 1);
@@ -511,13 +513,13 @@ punch_dentry_pages:
 }
 
 static int f2fs_move_rehashed_dirents(struct inode *dir, struct page *ipage,
-							void *inline_dentry)
+				      void *inline_dentry)
 {
 	void *backup_dentry;
 	int err;
 
-	backup_dentry = f2fs_kmalloc(F2FS_I_SB(dir),
-				MAX_INLINE_DATA(dir), GFP_F2FS_ZERO);
+	backup_dentry = f2fs_kmalloc(F2FS_I_SB(dir), MAX_INLINE_DATA(dir),
+				     GFP_F2FS_ZERO);
 	if (!backup_dentry) {
 		f2fs_put_page(ipage, 1);
 		return -ENOMEM;
@@ -542,7 +544,7 @@ static int f2fs_move_rehashed_dirents(struct inode *dir, struct page *ipage,
 	 * inline_dentry's structure for backward compatibility.
 	 */
 	if (!f2fs_sb_has_flexible_inline_xattr(F2FS_I_SB(dir)) &&
-			!f2fs_has_inline_xattr(dir))
+	    !f2fs_has_inline_xattr(dir))
 		F2FS_I(dir)->i_inline_xattr_size = 0;
 
 	kfree(backup_dentry);
@@ -561,7 +563,7 @@ recover:
 }
 
 static int do_convert_inline_dir(struct inode *dir, struct page *ipage,
-							void *inline_dentry)
+				 void *inline_dentry)
 {
 	if (!F2FS_I(dir)->i_dir_level)
 		return f2fs_move_inline_dirents(dir, ipage, inline_dentry);
@@ -674,7 +676,7 @@ out:
 }
 
 void f2fs_delete_inline_entry(struct f2fs_dir_entry *dentry, struct page *page,
-					struct inode *dir, struct inode *inode)
+			      struct inode *dir, struct inode *inode)
 {
 	struct f2fs_dentry_ptr d;
 	void *inline_dentry;
@@ -728,7 +730,7 @@ bool f2fs_empty_inline_dir(struct inode *dir)
 }
 
 int f2fs_read_inline_dir(struct file *file, struct dir_context *ctx,
-				struct fscrypt_str *fstr)
+			 struct fscrypt_str *fstr)
 {
 	struct inode *inode = file_inode(file);
 	struct page *ipage = NULL;
@@ -764,11 +766,12 @@ int f2fs_read_inline_dir(struct file *file, struct dir_context *ctx,
 }
 
 int f2fs_inline_data_fiemap(struct inode *inode,
-		struct fiemap_extent_info *fieinfo, __u64 start, __u64 len)
+			    struct fiemap_extent_info *fieinfo, __u64 start,
+			    __u64 len)
 {
 	__u64 byteaddr, ilen;
 	__u32 flags = FIEMAP_EXTENT_DATA_INLINE | FIEMAP_EXTENT_NOT_ALIGNED |
-		FIEMAP_EXTENT_LAST;
+		      FIEMAP_EXTENT_LAST;
 	struct node_info ni;
 	struct page *ipage;
 	int err = 0;
@@ -778,7 +781,7 @@ int f2fs_inline_data_fiemap(struct inode *inode,
 		return PTR_ERR(ipage);
 
 	if ((S_ISREG(inode->i_mode) || S_ISLNK(inode->i_mode)) &&
-				!f2fs_has_inline_data(inode)) {
+	    !f2fs_has_inline_data(inode)) {
 		err = -EAGAIN;
 		goto out;
 	}
@@ -801,7 +804,7 @@ int f2fs_inline_data_fiemap(struct inode *inode,
 
 	byteaddr = (__u64)ni.blk_addr << inode->i_sb->s_blocksize_bits;
 	byteaddr += (char *)inline_data_addr(inode, ipage) -
-					(char *)F2FS_INODE(ipage);
+		    (char *)F2FS_INODE(ipage);
 	err = fiemap_fill_next_extent(fieinfo, start, byteaddr, ilen, flags);
 	trace_f2fs_fiemap(inode, start, byteaddr, ilen, flags, err);
 out:

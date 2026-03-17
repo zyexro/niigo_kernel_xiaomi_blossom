@@ -22,13 +22,10 @@ static inline void __print_last_io(void)
 	if (!last_io.len)
 		return;
 
-	trace_printk("%3x:%3x %4x %-16s %2x %5x %5x %12x %4x\n",
-			last_io.major, last_io.minor,
-			last_io.pid, "----------------",
-			last_io.type,
-			last_io.fio.op, last_io.fio.op_flags,
-			last_io.fio.new_blkaddr,
-			last_io.len);
+	trace_printk("%3x:%3x %4x %-16s %2x %5x %5x %12x %4x\n", last_io.major,
+		     last_io.minor, last_io.pid, "----------------",
+		     last_io.type, last_io.fio.op, last_io.fio.op_flags,
+		     last_io.fio.new_blkaddr, last_io.len);
 	memset(&last_io, 0, sizeof(last_io));
 }
 
@@ -76,9 +73,8 @@ retry:
 		goto retry;
 	}
 
-	trace_printk("%3x:%3x %4x %-16s\n",
-			MAJOR(inode->i_sb->s_dev), MINOR(inode->i_sb->s_dev),
-			pid, current->comm);
+	trace_printk("%3x:%3x %4x %-16s\n", MAJOR(inode->i_sb->s_dev),
+		     MINOR(inode->i_sb->s_dev), pid, current->comm);
 out:
 	spin_unlock(&pids_lock);
 	radix_tree_preload_end();
@@ -102,12 +98,10 @@ void f2fs_trace_ios(struct f2fs_io_info *fio, int flush)
 	minor = MINOR(inode->i_sb->s_dev);
 
 	if (last_io.major == major && last_io.minor == minor &&
-			last_io.pid == pid &&
-			last_io.type == __file_type(inode, pid) &&
-			last_io.fio.op == fio->op &&
-			last_io.fio.op_flags == fio->op_flags &&
-			last_io.fio.new_blkaddr + last_io.len ==
-							fio->new_blkaddr) {
+	    last_io.pid == pid && last_io.type == __file_type(inode, pid) &&
+	    last_io.fio.op == fio->op &&
+	    last_io.fio.op_flags == fio->op_flags &&
+	    last_io.fio.new_blkaddr + last_io.len == fio->new_blkaddr) {
 		last_io.len++;
 		return;
 	}
@@ -128,9 +122,9 @@ void f2fs_build_trace_ios(void)
 	spin_lock_init(&pids_lock);
 }
 
-#define PIDVEC_SIZE	128
+#define PIDVEC_SIZE 128
 static unsigned int gang_lookup_pids(pid_t *results, unsigned long first_index,
-							unsigned int max_items)
+				     unsigned int max_items)
 {
 	struct radix_tree_iter iter;
 	void **slot;
@@ -155,7 +149,7 @@ void f2fs_destroy_trace_ios(void)
 
 	spin_lock(&pids_lock);
 	while ((found = gang_lookup_pids(pid, next_pid, PIDVEC_SIZE))) {
-		unsigned idx;
+		unsigned int idx;
 
 		next_pid = pid[found - 1] + 1;
 		for (idx = 0; idx < found; idx++)

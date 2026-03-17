@@ -32,18 +32,18 @@ static void TEA_transform(unsigned int buf[4], unsigned int const in[])
 
 	do {
 		sum += DELTA;
-		b0 += ((b1 << 4)+a) ^ (b1+sum) ^ ((b1 >> 5)+b);
-		b1 += ((b0 << 4)+c) ^ (b0+sum) ^ ((b0 >> 5)+d);
+		b0 += ((b1 << 4) + a) ^ (b1 + sum) ^ ((b1 >> 5) + b);
+		b1 += ((b0 << 4) + c) ^ (b0 + sum) ^ ((b0 >> 5) + d);
 	} while (--n);
 
 	buf[0] += b0;
 	buf[1] += b1;
 }
 
-static void str2hashbuf(const unsigned char *msg, size_t len,
-				unsigned int *buf, int num)
+static void str2hashbuf(const unsigned char *msg, size_t len, unsigned int *buf,
+			int num)
 {
-	unsigned pad, val;
+	unsigned int pad, val;
 	int i;
 
 	pad = (__u32)len | ((__u32)len << 8);

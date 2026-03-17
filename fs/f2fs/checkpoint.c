@@ -778,7 +778,12 @@ static void write_orphan_inodes(struct f2fs_sb_info *sbi, block_t start_blk)
 			memset(orphan_blk, 0, sizeof(*orphan_blk));
 		}
 
-		orphan_blk->ino[nentries++] = cpu_to_le32(orphan->ino);
+		if (unlikely(!orphan_blk)) {
+                       f2fs_warn(sbi, "orphan_blk is NULL, aborting orphan write");
+                       break;
+               }
+
+               orphan_blk->ino[nentries++] = cpu_to_le32(orphan->ino);
 
 		if (nentries == F2FS_ORPHANS_PER_BLOCK) {
 			/*

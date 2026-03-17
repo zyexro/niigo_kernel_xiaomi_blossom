@@ -1854,11 +1854,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	NVT_LOG("mode=%d, max_speed_hz=%d\n", ts->client->mode, ts->client->max_speed_hz);
 
 	//---parse dts---
-	ret = nvt_parse_dt(&client->dev);
-	if (ret) {
-		NVT_ERR("parse dt error\n");
-		goto err_spi_setup;
-	}
+	nvt_parse_dt(&client->dev);
 
 	//---config regulator---
 #if WAKEUP_GESTURE
@@ -2106,20 +2102,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 #endif
 
-	/* 2019.12.16 longcheer taocheng add (xiaomi game mode) start */
-	/*function description*/
-	if (ts->nvt_tp_class == NULL) {
-		if (ts->nvt_tp_class) {
-			ts->nvt_touch_dev = device_create(ts->nvt_tp_class, NULL, 0x38, ts, "tp_dev");
-			if (IS_ERR(ts->nvt_touch_dev)) {
-				NVT_ERR("Failed to create device !\n");
-				goto err_class_create;
-			}
-			dev_set_drvdata(ts->nvt_touch_dev, ts);
-		}
-	}
-	/* 2019.12.16 longcheer taocheng add (xiaomi game mode) end */
-
 	bTouchIsAwake = 1;
 	NVT_LOG("end\n");
 
@@ -2145,11 +2127,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 
 	return 0;
-
-//2019.12.16 longcheer taocheng add (xiaomi game mode)
-err_class_create:
-	class_destroy(ts->nvt_tp_class);
-	ts->nvt_tp_class = NULL;
 
 #if defined(CONFIG_FB)
 err_create_nvt_ts_workqueue_failed:

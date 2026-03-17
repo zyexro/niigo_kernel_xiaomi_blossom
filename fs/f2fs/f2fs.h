@@ -597,9 +597,14 @@ static inline void make_dentry_ptr_inline(struct inode *inode,
 	d->max = entry_cnt;
 	d->nr_bitmap = bitmap_size;
 	d->bitmap = t;
-	d->dentry = t + bitmap_size + reserved_size;
-	d->filename = t + bitmap_size + reserved_size +
-					SIZE_OF_DIR_ENTRY * entry_cnt;
+	if (t) {
+		d->dentry = t + bitmap_size + reserved_size;
+		d->filename = t + bitmap_size + reserved_size +
+						SIZE_OF_DIR_ENTRY * entry_cnt;
+	} else {
+		d->dentry = NULL;
+		d->filename = NULL;
+	}
 }
 
 /*

@@ -117,7 +117,7 @@ static enum power_supply_property mt_usb_properties[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 };
 
-void bc11_set_register_value(struct regmap *map,
+static void bc11_set_register_value(struct regmap *map,
 	unsigned int addr,
 	unsigned int mask,
 	unsigned int shift,
@@ -129,7 +129,7 @@ void bc11_set_register_value(struct regmap *map,
 		val << shift);
 }
 
-unsigned int bc11_get_register_value(struct regmap *map,
+static unsigned int bc11_get_register_value(struct regmap *map,
 	unsigned int addr,
 	unsigned int mask,
 	unsigned int shift)
@@ -533,7 +533,7 @@ static int get_vbus_voltage(struct mtk_charger_type *info,
 }
 
 
-void do_charger_detect(struct mtk_charger_type *info, bool en)
+static void do_charger_detect(struct mtk_charger_type *info, bool en)
 {
 	union power_supply_propval prop_online = {0};
 	union power_supply_propval prop_type = {0};
@@ -551,10 +551,16 @@ void do_charger_detect(struct mtk_charger_type *info, bool en)
 	if (en) {
 		ret = power_supply_set_property(info->psy,
 				POWER_SUPPLY_PROP_ONLINE, &prop_online);
+		if (ret < 0)
+			pr_notice("set online fail, ret=%d\n", ret);
 		ret = power_supply_get_property(info->psy,
 				POWER_SUPPLY_PROP_TYPE, &prop_type);
+		if (ret < 0)
+			pr_notice("get type fail, ret=%d\n", ret);
 		ret = power_supply_get_property(info->psy,
 				POWER_SUPPLY_PROP_USB_TYPE, &prop_usb_type);
+		if (ret < 0)
+			pr_notice("get usb type fail, ret=%d\n", ret);
 		pr_notice("type:%d usb_type:%d\n", prop_type.intval, prop_usb_type.intval);
 	} else {
 		info->psy_desc.type = POWER_SUPPLY_TYPE_UNKNOWN;
@@ -597,7 +603,7 @@ static void do_charger_detection_work(struct work_struct *data)
 }
 
 
-irqreturn_t chrdet_int_handler(int irq, void *data)
+static irqreturn_t chrdet_int_handler(int irq, void *data)
 {
 	struct mtk_charger_type *info = data;
 	unsigned int chrdet = 0;
@@ -661,7 +667,7 @@ static int psy_chr_type_get_property(struct power_supply *psy,
 	return 0;
 }
 
-int psy_chr_type_set_property(struct power_supply *psy,
+static int psy_chr_type_set_property(struct power_supply *psy,
 			enum power_supply_property psp,
 			const union power_supply_propval *val)
 {

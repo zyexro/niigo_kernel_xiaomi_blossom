@@ -48,11 +48,10 @@ static int bq27xxx_battery_hdq_read(struct bq27xxx_device_info *di, u8 reg,
 				    bool single)
 {
 	struct w1_slave *sl = dev_to_w1_slave(di->dev);
-	unsigned int timeout = 3;
-	int upper, lower;
-	int temp;
 
 	if (!single) {
+		unsigned int timeout = 3;
+	        int upper, lower, temp;
 		/*
 		 * Make sure the value has not changed in between reading the
 		 * lower and the upper part

@@ -2596,20 +2596,20 @@ static int nvt_fb_notifier_callback(struct notifier_block *self, unsigned long e
 {
 	struct fb_event *evdata = data;
 	int *blank;
-	struct nvt_ts_data *ts =
+	struct nvt_ts_data *ts_data =
 		container_of(self, struct nvt_ts_data, fb_notif);
 
 	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_POWERDOWN) {
 			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
-			nvt_ts_suspend(&ts->client->dev);
+			nvt_ts_suspend(&ts_data->client->dev);
 		}
 	} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
-			nvt_ts_resume(&ts->client->dev);
+			nvt_ts_resume(&ts_data->client->dev);
 			//queue_work(ts->workqueue, &ts->resume_work);
 		}
 	}
@@ -2645,10 +2645,10 @@ static void nvt_ts_late_resume(struct early_suspend *h)
 #ifdef CONFIG_PM
 static int nvt_pm_suspend(struct device *dev)
 {
-	struct nvt_ts_data *ts = dev_get_drvdata(dev);
+	struct nvt_ts_data *ts_data = dev_get_drvdata(dev);
 
-	ts->dev_pm_suspend = true;
-	reinit_completion(&ts->dev_pm_suspend_completion);
+	ts_data->dev_pm_suspend = true;
+	reinit_completion(&ts_data->dev_pm_suspend_completion);
 	NVT_LOG("pm suspend");
 
 	return 0;
@@ -2656,10 +2656,10 @@ static int nvt_pm_suspend(struct device *dev)
 
 static int nvt_pm_resume(struct device *dev)
 {
-	struct nvt_ts_data *ts = dev_get_drvdata(dev);
+	struct nvt_ts_data *ts_data = dev_get_drvdata(dev);
 
-	ts->dev_pm_suspend = false;
-	complete(&ts->dev_pm_suspend_completion);
+	ts_data->dev_pm_suspend = false;
+	complete(&ts_data->dev_pm_suspend_completion);
 	NVT_LOG("pm resume");
 
 	return 0;

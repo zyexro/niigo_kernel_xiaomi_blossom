@@ -844,7 +844,7 @@ static int add_ipu_page(struct f2fs_sb_info *sbi, struct bio **bio,
 	for (temp = HOT; temp < NR_TEMP_TYPE && !found; temp++) {
 		struct f2fs_bio_info *io = sbi->write_io[DATA] + temp;
 		struct list_head *head = &io->bio_list;
-		struct bio_entry *be;
+		struct bio_entry *be = NULL;
 
 		down_write(&io->bio_list_lock);
 		list_for_each_entry (be, head, list) {
@@ -885,7 +885,7 @@ void f2fs_submit_merged_ipu_write(struct f2fs_sb_info *sbi, struct bio **bio,
 	for (temp = HOT; temp < NR_TEMP_TYPE && !found; temp++) {
 		struct f2fs_bio_info *io = sbi->write_io[DATA] + temp;
 		struct list_head *head = &io->bio_list;
-		struct bio_entry *be;
+		struct bio_entry *be = NULL;
 
 		if (list_empty(head))
 			continue;

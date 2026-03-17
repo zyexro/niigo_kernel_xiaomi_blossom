@@ -367,7 +367,6 @@ int bq2560x_set_boost_voltage(struct bq2560x *bq, int volt)
 {
 	u8 val;
 
-	val = REG06_BOOSTV_5P15V;
 	if (volt == BOOSTV_4850)
 		val = REG06_BOOSTV_4P85V;
 	else if (volt == BOOSTV_5150)
@@ -707,6 +706,8 @@ static int bq2560x_set_hizmode(struct charger_device *chg_dev, bool enable)
 		ret = bq2560x_enter_hiz_mode(bq);
 	else
 		ret = bq2560x_exit_hiz_mode(bq);
+	if (ret < 0)
+		return ret;
 
 	ret = bq2560x_read_byte(bq, &tmp, BQ2560X_REG_00);
 
@@ -1071,7 +1072,7 @@ static int bq2560x_charger_probe(struct i2c_client *client,
 	}
 
 	ret = bq2560x_init_device(bq);
-	if (ret) {
+	if (ret < 0) {
 		pr_err("Failed to init device\n");
 		return ret;
 	}

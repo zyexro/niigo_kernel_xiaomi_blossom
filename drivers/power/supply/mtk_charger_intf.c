@@ -291,9 +291,9 @@ bool is_charger_exist(struct mtk_charger *info)
 
 int get_charger_type(struct mtk_charger *info)
 {
-	union power_supply_propval prop, prop2, prop3;
-	static struct power_supply *chg_psy;
-	int ret;
+	union power_supply_propval prop = {0}, prop2 = {0}, prop3 = {0};
+	struct power_supply *chg_psy = NULL;
+	int res;
 
 	chg_psy = info->chg_psy;
 
@@ -306,29 +306,27 @@ int get_charger_type(struct mtk_charger *info)
 	if (chg_psy == NULL || IS_ERR(chg_psy)) {
 		pr_notice("%s Couldn't get chg_psy\n", __func__);
 	} else {
-		ret = power_supply_get_property(chg_psy,
+		res = power_supply_get_property(chg_psy,
 			POWER_SUPPLY_PROP_ONLINE, &prop);
+		if (!res)
+			res = power_supply_get_property(chg_psy,
+				POWER_SUPPLY_PROP_TYPE, &prop2);
+		if (!res)
+			res = power_supply_get_property(chg_psy,
+				POWER_SUPPLY_PROP_USB_TYPE, &prop3);
 
-		ret = power_supply_get_property(chg_psy,
-			POWER_SUPPLY_PROP_TYPE, &prop2);
-
-		ret = power_supply_get_property(chg_psy,
-			POWER_SUPPLY_PROP_USB_TYPE, &prop3);
-
-		if (prop.intval == 0)
+		if (prop.intval == 0) {
 			prop2.intval = POWER_SUPPLY_TYPE_UNKNOWN;
-		else if (prop2.intval == POWER_SUPPLY_TYPE_USB &&
-		    prop3.intval == POWER_SUPPLY_USB_TYPE_UNKNOWN)
+		} else if (prop2.intval == POWER_SUPPLY_TYPE_USB &&
+		    prop3.intval == POWER_SUPPLY_USB_TYPE_UNKNOWN) {
 			prop2.intval = POWER_SUPPLY_TYPE_UNKNOWN;
-		else if (prop2.intval == POWER_SUPPLY_TYPE_USB &&
-		    prop3.intval == POWER_SUPPLY_USB_TYPE_DCP)
+		} else if (prop2.intval == POWER_SUPPLY_TYPE_USB &&
+		    prop3.intval == POWER_SUPPLY_USB_TYPE_DCP) {
 			prop2.intval = POWER_SUPPLY_TYPE_USB_FLOAT;
+		}
 	}
-
-	pr_notice("%s online:%d type:%d usb_type:%d\n", __func__,
-		prop.intval,
-		prop2.intval,
-		prop3.intval);
+	pr_notice("%s online:%d type:%d usb_type:%d\n res:%d\n", __func__,
+		prop.intval, prop2.intval, prop3.intval, res);
 
 	return prop2.intval;
 }

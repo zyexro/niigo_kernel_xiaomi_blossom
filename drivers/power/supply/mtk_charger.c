@@ -904,7 +904,7 @@ static ssize_t mtk_chg_current_cmd_write(struct file *file,
 
 	if (!info)
 		return -EINVAL;
-	if (count <= 0)
+	if (!count)
 		return -EINVAL;
 
 	len = (count < (sizeof(desc) - 1)) ? count : (sizeof(desc) - 1);
@@ -1928,7 +1928,7 @@ int psy_charger_set_property(struct power_supply *psy,
 static void mtk_charger_external_power_changed(struct power_supply *psy)
 {
 	struct mtk_charger *info;
-	union power_supply_propval prop, prop2;
+	union power_supply_propval prop = {0}, prop2 = {0};
 	struct power_supply *chg_psy = NULL;
 	int ret;
 
@@ -1943,8 +1943,9 @@ static void mtk_charger_external_power_changed(struct power_supply *psy)
 	} else {
 		ret = power_supply_get_property(chg_psy,
 			POWER_SUPPLY_PROP_ONLINE, &prop);
-		ret = power_supply_get_property(chg_psy,
-			POWER_SUPPLY_PROP_USB_TYPE, &prop2);
+		if (!ret)
+			ret = power_supply_get_property(chg_psy,
+				POWER_SUPPLY_PROP_USB_TYPE, &prop2);
 	}
 
 	pr_notice("%s event, name:%s online:%d type:%d vbus:%d\n", __func__,

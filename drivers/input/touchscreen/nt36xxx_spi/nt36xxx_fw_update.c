@@ -148,15 +148,15 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 {
 	uint32_t list = 0;
 	uint32_t pos = 0x00;
-	uint32_t end = 0x00;
+	uint32_t addr_end = 0x00;
 	uint8_t info_sec_num = 0;
 	uint8_t ovly_sec_num = 0;
 	uint8_t ovly_info = 0;
 
 	/* Find the header size */
-	end = fwdata[0] + (fwdata[1] << 8) + (fwdata[2] << 16) + (fwdata[3] << 24);
+	addr_end = fwdata[0] + (fwdata[1] << 8) + (fwdata[2] << 16) + (fwdata[3] << 24);
 	pos = 0x30;	// info section start at 0x30 offset
-	while (pos < end) {
+	while (pos < addr_end) {
 		info_sec_num ++;
 		pos += 0x10;	/* each header info is 16 bytes */
 	}
@@ -237,7 +237,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 			if ((bin_map[list].BIN_addr == 0) && (bin_map[list].size != 0)) {
 				sprintf(bin_map[list].name, "Header");
 			} else {
-				sprintf(bin_map[list].name, "Info-%d", (list - ilm_dlm_num));
+				sprintf(bin_map[list].name, "Info-%u", (unsigned int)(list - ilm_dlm_num));
 			}
 		}
 
@@ -263,7 +263,7 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 					return -EINVAL;
 				}
 			} //ts->hw_crc
-			sprintf(bin_map[list].name, "Overlay-%d", (list- ilm_dlm_num - info_sec_num));
+			sprintf(bin_map[list].name, "Overlay-%u", (unsigned int)(list - ilm_dlm_num - info_sec_num));
 		}
 
 		/* BIN size error detect */
@@ -569,7 +569,7 @@ return:
 static int32_t nvt_write_firmware(const u8 *fwdata, size_t fwsize)
 {
 	uint32_t list = 0;
-	char *name;
+	const char *name;
 	uint32_t BIN_addr, SRAM_addr, size;
 	int32_t ret = 0;
 

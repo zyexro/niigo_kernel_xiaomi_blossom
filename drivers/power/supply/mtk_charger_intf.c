@@ -64,9 +64,9 @@
 
 int get_uisoc(struct mtk_charger *info)
 {
-	union power_supply_propval prop;
+	union power_supply_propval prop = {0};
 	struct power_supply *bat_psy = NULL;
-	int ret;
+	int ret = 50, res;
 
 	bat_psy = info->bat_psy;
 
@@ -80,8 +80,10 @@ int get_uisoc(struct mtk_charger *info)
 		chr_err("%s Couldn't get bat_psy\n", __func__);
 		ret = 50;
 	} else {
-		ret = power_supply_get_property(bat_psy,
+		res = power_supply_get_property(bat_psy,
 			POWER_SUPPLY_PROP_CAPACITY, &prop);
+		if (res < 0)
+			return res;
 		ret = prop.intval;
 	}
 
@@ -258,9 +260,9 @@ bool is_battery_exist(struct mtk_charger *info)
 
 bool is_charger_exist(struct mtk_charger *info)
 {
-	union power_supply_propval prop;
-	static struct power_supply *chg_psy;
-	int ret;
+	union power_supply_propval prop = {0};
+	struct power_supply *chg_psy = NULL;
+	int ret = 0;
 
 	chg_psy = info->chg_psy;
 
@@ -272,16 +274,19 @@ bool is_charger_exist(struct mtk_charger *info)
 
 	if (chg_psy == NULL || IS_ERR(chg_psy)) {
 		pr_notice("%s Couldn't get chg_psy\n", __func__);
-		ret = -1;
+		ret = 0;
 	} else {
-		ret = power_supply_get_property(chg_psy,
+		int res = power_supply_get_property(chg_psy,
 			POWER_SUPPLY_PROP_ONLINE, &prop);
-		ret = prop.intval;
+		if (res < 0)
+			ret = 0;
+		 else
+			ret = prop.intval;
 	}
 
 	chr_debug("%s:%d\n", __func__,
 		ret);
-	return ret;
+	return (ret > 0);
 }
 
 int get_charger_type(struct mtk_charger *info)

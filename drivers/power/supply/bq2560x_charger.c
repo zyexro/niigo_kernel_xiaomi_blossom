@@ -261,16 +261,6 @@ static int bq2560x_set_input_current_limit(struct bq2560x *bq, int curr)
 				   val << REG00_IINLIM_SHIFT);
 }
 
-static int bq2560x_set_watchdog_timer(struct bq2560x *bq, u8 timeout)
-{
-	u8 temp;
-
-	temp = (u8) (((timeout -
-		       REG05_WDT_BASE) / REG05_WDT_LSB) << REG05_WDT_SHIFT);
-
-	return bq2560x_update_bits(bq, BQ2560X_REG_05, REG05_WDT_MASK, temp);
-}
-
 static int bq2560x_disable_watchdog_timer(struct bq2560x *bq)
 {
 	u8 val = REG05_WDT_DISABLE << REG05_WDT_SHIFT;
@@ -284,16 +274,6 @@ static int bq2560x_reset_watchdog_timer(struct bq2560x *bq)
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_01, REG01_WDT_RESET_MASK,
 				   val);
-}
-
-static int bq2560x_reset_chip(struct bq2560x *bq)
-{
-	int ret;
-	u8 val = REG0B_REG_RESET << REG0B_REG_RESET_SHIFT;
-
-	ret =
-	    bq2560x_update_bits(bq, BQ2560X_REG_0B, REG0B_REG_RESET_MASK, val);
-	return ret;
 }
 
 static int bq2560x_enter_hiz_mode(struct bq2560x *bq)
@@ -311,34 +291,6 @@ static int bq2560x_exit_hiz_mode(struct bq2560x *bq)
 
 	return bq2560x_update_bits(bq, BQ2560X_REG_00, REG00_ENHIZ_MASK, val);
 
-}
-
-static int bq2560x_get_hiz_mode(struct bq2560x *bq, u8 *state)
-{
-	u8 val;
-	int ret;
-
-	ret = bq2560x_read_byte(bq, &val, BQ2560X_REG_00);
-	if (ret)
-		return ret;
-	*state = (val & REG00_ENHIZ_MASK) >> REG00_ENHIZ_SHIFT;
-
-	return 0;
-}
-
-static int bq2560x_enable_term(struct bq2560x *bq, bool enable)
-{
-	u8 val;
-	int ret;
-
-	if (enable)
-		val = REG05_TERM_ENABLE << REG05_EN_TERM_SHIFT;
-	else
-		val = REG05_TERM_DISABLE << REG05_EN_TERM_SHIFT;
-
-	ret = bq2560x_update_bits(bq, BQ2560X_REG_05, REG05_EN_TERM_MASK, val);
-
-	return ret;
 }
 
 static int bq2560x_set_boost_current(struct bq2560x *bq, int curr)

@@ -944,7 +944,6 @@ static ssize_t nvt_pf_switch_proc_read(struct file *filp, char __user *buf, size
 		NVT_ERR("copy_to_user() error!\n");
 		return -EFAULT;
 	}
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -1122,7 +1121,6 @@ static ssize_t nvt_sensitivity_switch_proc_read(struct file *filp, char __user *
 		NVT_ERR("copy_to_user() error!\n");
 		return -EFAULT;
 	}
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -1300,7 +1298,6 @@ static ssize_t nvt_er_range_switch_proc_read(struct file *filp, char __user *buf
 		NVT_ERR("copy_to_user() error!\n");
 		return -EFAULT;
 	}
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -1479,7 +1476,6 @@ static ssize_t nvt_max_power_switch_proc_read(struct file *filp, char __user *bu
 	mutex_unlock(&ts->lock);
 
 	cnt = snprintf(buf, PAGE_SIZE - len, "max_power_switch: %d\n", max_power_switch);
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -1653,7 +1649,6 @@ static ssize_t nvt_edge_reject_switch_proc_read(struct file *filp, char __user *
 		return -EFAULT;
 	}
 
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -1836,7 +1831,6 @@ static ssize_t nvt_pocket_palm_switch_proc_read(struct file *filp, char __user *
 		NVT_LOG("copy_to_user() error!\n");
 		return -EFAULT;
 	}
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");
@@ -2022,7 +2016,6 @@ static ssize_t nvt_charger_switch_proc_read(struct file *filp, char __user *buf,
 		NVT_ERR("copy_to_user() error!\n");
 		return -EFAULT;
 	}
-	buf += cnt;
 	len += cnt;
 
 	NVT_LOG("--\n");

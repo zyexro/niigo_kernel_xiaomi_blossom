@@ -280,7 +280,7 @@ return:
 *******************************************************/
 static void *c_start(struct seq_file *m, loff_t *pos)
 {
-	return *pos < 1 ? (void *)1 : NULL;
+	return *pos < 1 ? (void *)(unsigned long)1 : NULL;
 }
 
 /*******************************************************

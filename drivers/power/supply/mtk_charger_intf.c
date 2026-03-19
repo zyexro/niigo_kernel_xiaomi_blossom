@@ -325,7 +325,7 @@ int get_charger_type(struct mtk_charger *info)
 			prop2.intval = POWER_SUPPLY_TYPE_USB_FLOAT;
 		}
 	}
-	pr_notice("%s online:%d type:%d usb_type:%d\n res:%d\n", __func__,
+	pr_notice("%s online:%d type:%d usb_type:%d res:%d\n", __func__,
 		prop.intval, prop2.intval, prop3.intval, res);
 
 	return prop2.intval;

@@ -34,8 +34,8 @@
 #include "internals.h"
 
 /* Perform IRQ balancing every POLL_MS milliseconds */
-static unsigned short sb_poll_ms __read_mostly = CONFIG_IRQ_SBALANCE_POLL_MSEC;
-module_param(sb_poll_ms, short, 0644);
+static unsigned int sb_poll_ms __read_mostly = CONFIG_IRQ_SBALANCE_POLL_MSEC;
+module_param(sb_poll_ms, uint, 0644);
 #define POLL_MS sb_poll_ms
 
 /*

@@ -1809,7 +1809,6 @@ int ovl_build_cmdq(enum DISP_MODULE_ENUM module, void *cmdq_trigger_handle,
 void ovl_dump_reg(enum DISP_MODULE_ENUM module)
 {
 	if (disp_helper_get_option(DISP_OPT_REG_PARSER_RAW_DUMP)) {
-		unsigned long module_base = ovl_base_addr(module);
 
 		DDPDUMP("== START: DISP %s REGS ==\n",
 				ddp_get_module_name(module));

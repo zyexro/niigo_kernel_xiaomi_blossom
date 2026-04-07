@@ -187,7 +187,7 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	INIT_LIST_HEAD(&buffer->attachments);
 #endif
 	mutex_init(&buffer->lock);
-	if (heap->type == ION_HEAP_TYPE_MULTIMEDIA_SEC)
+	if ((enum mtk_ion_heap_type)heap->type == ION_HEAP_TYPE_MULTIMEDIA_SEC)
 		goto exit;
 	/*
 	 * this will set up dma addresses for the sglist -- it is not

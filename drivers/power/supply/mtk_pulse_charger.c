@@ -90,14 +90,6 @@ enum pcharger_state_enum {
 	CHR_ERROR
 };
 
-static int _uA_to_mA(int uA)
-{
-	if (uA == -1)
-		return -1;
-	else
-		return uA / 1000;
-}
-
 static void pchr_select_cv(struct mtk_charger *info)
 {
 	u32 constant_voltage;
@@ -223,6 +215,7 @@ done:
 	if (ret != -ENOTSUPP && pdata->input_current_limit < aicr1_min)
 		pdata->input_current_limit = 0;
 
+#if 0
 	chr_err("thermal:%d %d setting:%d %d type:%d:%d usb_unlimited:%d usbif:%d usbsm:%d aicl:%d atm:%d bm:%d b:%d\n",
 		_uA_to_mA(pdata->thermal_input_current_limit),
 		_uA_to_mA(pdata->thermal_charging_current_limit),
@@ -233,6 +226,7 @@ done:
 		IS_ENABLED(CONFIG_USBIF_COMPLIANCE), info->usb_state,
 		pdata->input_current_limit_by_aicl, info->atm_enabled,
 		info->bootmode, is_basic);
+#endif
 
 	return is_basic;
 }

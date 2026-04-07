@@ -548,53 +548,8 @@ void msdc_select_clksrc(struct msdc_host *host, int clksrc)
 }
 
 #include <linux/seq_file.h>
-static void msdc_dump_clock_sts_core(char **buff, unsigned long *size,
-	struct seq_file *m, struct msdc_host *host)
-{
-	char buffer[1024];
-	char *buf_ptr = buffer;
-	unsigned int reg_value;
-
-	if (topckgen_base) {
-		regmap_read(topckgen_base, 0x70, &reg_value);
-		buf_ptr += sprintf(buf_ptr,
-		" topckgen 0x%x(should bit[1:0]=01b, bit[7]=0, bit[10:8]=001b, bit[15]=0), bit[18:16]=001b, bit[23]=0\n",
-			reg_value);
-
-#if defined(CONFIG_MTK_HW_FDE) || defined(CONFIG_MMC_CRYPTO)
-		regmap_read(topckgen_base, 0xa0, &reg_value);
-		buf_ptr += sprintf(buf_ptr,
-		" topckgen 0x%x(should bit[26:24]=001b, bit[31]=0)\n",
-			reg_value);
-#endif
-	}
-
-	if (infracfg_ao_base) {
-		regmap_read(infracfg_ao_base, 0x94, &reg_value);
-		buf_ptr += sprintf(buf_ptr,
-		" infracfg_ao 0x%x(should bit[2]=0b,bit[4]=0b)\n", reg_value);
-
-#if defined(CONFIG_MTK_HW_FDE) || defined(CONFIG_MMC_CRYPTO)
-		regmap_read(infracfg_ao_base, 0xac, &reg_value);
-		buf_ptr += sprintf(buf_ptr,
-		" infracfg_ao 0x%x(should bit[29]=0b)\n", reg_value);
-#endif
-		regmap_read(infracfg_ao_base, 0xc8, &reg_value);
-		buf_ptr += sprintf(buf_ptr,
-		" infracfg_ao 0x%x(should bit[10:9]=00b)\n", reg_value);
-	}
-
-	*buf_ptr = '\0';
-	SPREAD_PRINTF(buff, size, m, "%s", buffer);
-}
-
 void msdc_dump_clock_sts(char **buff, unsigned long *size,
-	struct seq_file *m, struct msdc_host *host)
-{
-#if 0
-	msdc_dump_clock_sts_core(buff, size, m, host);
-#endif
-}
+	struct seq_file *m, struct msdc_host *host);
 
 void msdc_clk_enable_and_stable(struct msdc_host *host)
 {

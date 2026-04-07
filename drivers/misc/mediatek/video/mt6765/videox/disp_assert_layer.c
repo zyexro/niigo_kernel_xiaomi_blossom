@@ -422,7 +422,6 @@ unsigned int isAEEEnabled;
 unsigned int dump_output;
 unsigned int dump_output_comp;
 void *composed_buf;
-static MFC_HANDLE mfc_handle;
 MFC_HANDLE show_mfc_handle;
 void *show_layers_va;
 

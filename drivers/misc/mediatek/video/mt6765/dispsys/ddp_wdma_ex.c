@@ -81,32 +81,6 @@ unsigned int ddp_wdma_get_cur_addr(enum DISP_MODULE_ENUM module)
 }
 
 /*****************************************************************************/
-static char *wdma_get_status(unsigned int status)
-{
-	switch (status) {
-	case 0x1:
-		return "idle";
-	case 0x2:
-		return "clear";
-	case 0x4:
-		return "prepare";
-	case 0x8:
-		return "prepare";
-	case 0x10:
-		return "data_running";
-	case 0x20:
-		return "eof_wait";
-	case 0x40:
-		return "soft_reset_wait";
-	case 0x80:
-		return "eof_done";
-	case 0x100:
-		return "soft_reset_done";
-	case 0x200:
-		return "frame_complete";
-	}
-	return "unknown";
-}
 
 int wdma_start(enum DISP_MODULE_ENUM module, void *handle)
 {

@@ -554,8 +554,6 @@ void rdma_set_ultra_l(unsigned int idx, unsigned int bpp, void *handle,
 	unsigned int dvfs_preultra_high;
 	unsigned int dvfs_ultra_low;
 	unsigned int dvfs_ultra_high;
-	unsigned int drs_enter = 0;
-	unsigned int drs_leave = 0;
 
 	unsigned int issue_req_threshold;
 	unsigned int output_valid_fifo_threshold;

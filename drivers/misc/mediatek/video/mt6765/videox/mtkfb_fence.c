@@ -329,7 +329,6 @@ static struct ion_handle *mtkfb_ion_import_handle(struct ion_client *client,
 	int fd)
 {
 	struct ion_handle *handle = NULL;
-	struct ion_mm_data mm_data;
 
 	/* If no need Ion support, do nothing! */
 	if (fd == MTK_FB_NO_ION_FD) {
@@ -376,7 +375,6 @@ static size_t mtkfb_ion_phys_mmu_addr(struct ion_client *client,
 	struct ion_handle *handle, unsigned int *mva)
 {
 	size_t size = 0;
-	ion_phys_addr_t phy_addr = 0;
 	struct ion_mm_data mm_data;
 
 	if (!ion_client) {
@@ -388,7 +386,7 @@ static size_t mtkfb_ion_phys_mmu_addr(struct ion_client *client,
 
 	if (handle->buffer && handle->buffer->heap) {
 		memset((void *)&mm_data, 0, sizeof(mm_data));
-		if (handle->buffer->heap->type == ION_HEAP_TYPE_MULTIMEDIA) {
+		if ((enum mtk_ion_heap_type)handle->buffer->heap->type == ION_HEAP_TYPE_MULTIMEDIA) {
 			mm_data.mm_cmd = ION_MM_GET_IOVA;
 			mm_data.config_buffer_param.kernel_handle = handle;
 			mm_data.config_buffer_param.module_id = 0;

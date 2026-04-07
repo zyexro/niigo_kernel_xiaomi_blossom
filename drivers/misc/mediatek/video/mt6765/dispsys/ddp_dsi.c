@@ -272,79 +272,6 @@ static void _set_condition_and_wake_up(struct t_condition_wq *waitq)
 	wake_up(&(waitq->wq));
 }
 
-static const char *_dsi_cmd_mode_parse_state(unsigned int state)
-{
-	switch (state) {
-	case 0x0001:
-		return "idle";
-	case 0x0002:
-		return "Reading command queue for header";
-	case 0x0004:
-		return "Sending type-0 command";
-	case 0x0008:
-		return "Waiting frame data from RDMA for type-1 command";
-	case 0x0010:
-		return "Sending type-1 command";
-	case 0x0020:
-		return "Sending type-2 command";
-	case 0x0040:
-		return "Reading command queue for type-2 data";
-	case 0x0080:
-		return "Sending type-3 command";
-	case 0x0100:
-		return "Sending BTA";
-	case 0x0200:
-		return "Waiting RX-read data";
-	case 0x0400:
-		return "Waiting SW RACK for RX-read data";
-	case 0x0800:
-		return "Waiting TE";
-	case 0x1000:
-		return "Get TE";
-	case 0x2000:
-		return "Waiting SW RACK for TE";
-	case 0x4000:
-		return "Waiting external TE";
-	case 0x8000:
-		return "Get external TE";
-	default:
-		return "unknown";
-	}
-	return "unknown";
-}
-
-static const char *_dsi_vdo_mode_parse_state(unsigned int state)
-{
-	switch (state) {
-	case 0x0001:
-		return "Video mode idle";
-	case 0x0002:
-		return "Sync start packet";
-	case 0x0004:
-		return "Hsync active";
-	case 0x0008:
-		return "Sync end packet";
-	case 0x0010:
-		return "Hsync back porch";
-	case 0x0020:
-		return "Video data period";
-	case 0x0040:
-		return "Hsync front porch";
-	case 0x0080:
-		return "BLLP";
-	case 0x0100:
-		return "--";
-	case 0x0200:
-		return "Mix mode using command mode transmission";
-	case 0x0400:
-		return "Command transmission in BLLP";
-	default:
-		return "unknown";
-	}
-
-	return "unknown";
-}
-
 enum DSI_STATUS DSI_DumpRegisters(enum DISP_MODULE_ENUM module, int level)
 {
 #if 0
@@ -5936,11 +5863,7 @@ int ddp_dsi_ioctl(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 		if (params == NULL) {
 			DDPERR("[ddp_dsi_ioctl] input pointer is NULL\n");
 		} else {
-			unsigned int *p = (unsigned int *)params;
-			unsigned int addr = p[0];
-
-			DDPMSG("[ddp_dsi_ioctl] DDP_DSI_PORCH_ADDR addr=0x%x\n",
-				addr);
+			DDPMSG("[ddp_dsi_ioctl] DDP_DSI_PORCH_ADDR\n");
 			DSI_Get_Porch_Addr(module, params);
 		}
 		break;
@@ -6191,22 +6114,6 @@ int ddp_dsi_is_idle(enum DISP_MODULE_ENUM module)
 	return !ddp_dsi_is_busy(module);
 }
 
-static const char *dsi_mode_spy(enum LCM_DSI_MODE_CON mode)
-{
-	switch (mode) {
-	case CMD_MODE:
-		return "CMD_MODE";
-	case SYNC_PULSE_VDO_MODE:
-		return "SYNC_PULSE_VDO_MODE";
-	case SYNC_EVENT_VDO_MODE:
-		return "SYNC_EVENT_VDO_MODE";
-	case BURST_VDO_MODE:
-		return "BURST_VDO_MODE";
-	default:
-		return "unknown";
-	}
-}
-
 void dsi_analysis(enum DISP_MODULE_ENUM module)
 {
 	int i = 0, module_num;
@@ -6238,11 +6145,13 @@ void dsi_analysis(enum DISP_MODULE_ENUM module)
 			DSI_REG[i]->DSI_INTSTA.BUSY,
 			DSI_REG[i]->DSI_COM_CTRL.DSI_DUAL_EN);
 
+#if 0
 		DDPDUMP("DSI%d MODE:%s, High Speed:%d, FSM State:%s\n",
 			i, dsi_mode_spy(DSI_REG[i]->DSI_MODE_CTRL.MODE),
 			DSI_REG[i]->DSI_PHY_LCCON.LC_HS_TX_EN,
 			_dsi_cmd_mode_parse_state(
 				DSI_REG[i]->DSI_STATE_DBG6.CMTRL_STATE));
+#endif
 
 		DDPDUMP("DSI%d IRQ,RD_RDY:%d, CMD_DONE:%d, SLEEPOUT_DONE:%d\n",
 			i, DSI_REG[i]->DSI_INTSTA.RD_RDY,

@@ -362,9 +362,6 @@ void msdc_dump_info(char **buff, unsigned long *size, struct seq_file *m,
 	if (!buff)
 		mdelay(10);
 
-	msdc_dump_clock_sts(buff, size, m, host);
-
-	msdc_dump_ldo_sts(buff, size, m, host);
 
 	msdc_dump_padctl(buff, size, m, host);
 
@@ -3624,8 +3621,6 @@ start_tune:
 
 	if (ret) {
 		/* FIX ME, consider to use msdc_dump_info() to replace all */
-		msdc_dump_clock_sts(NULL, 0, NULL, host);
-		msdc_dump_ldo_sts(NULL, 0, NULL, host);
 		pr_info("msdc%d latest_INT_status<0x%.8x>\n", host->id,
 			latest_int_status[host->id]);
 		msdc_dump_register(NULL, 0, NULL, host);
@@ -5190,7 +5185,6 @@ static int msdc_drv_probe(struct platform_device *pdev)
 #ifdef MTK_MSDC_BRINGUP_DEBUG
 	pr_info("[%s]: msdc%d, mmc->caps=0x%x, mmc->caps2=0x%x\n",
 		__func__, host->id, mmc->caps, mmc->caps2);
-	msdc_dump_clock_sts(NULL, 0, NULL, host);
 #endif
 
 	if (host->hw->host_function == MSDC_EMMC)

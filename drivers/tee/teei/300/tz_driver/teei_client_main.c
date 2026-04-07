@@ -58,14 +58,12 @@
 #include <irq_register.h>
 #include <../teei_fp/fp_func.h>
 
-#if (CONFIG_MTPROF)
-
+#if defined(CONFIG_MTPROF) && (CONFIG_MTPROF)
 #if KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE
 #define TEEI_BOOT_FOOTPRINT(str) bootprof_log_boot(str)
 #else
 #define TEEI_BOOT_FOOTPRINT(str) log_boot(str)
 #endif
-
 #else
 #define TEEI_BOOT_FOOTPRINT(str) IMSG_PRINTK("%s\n", str)
 #endif
@@ -192,7 +190,6 @@ struct timeval etime;
 struct task_struct *teei_switch_task;
 struct task_struct *teei_bdrv_task;
 struct task_struct *teei_log_task;
-static struct cpumask mask = { CPU_BITS_NONE };
 static struct class *driver_class;
 static dev_t teei_client_device_no;
 static struct cdev teei_client_cdev;

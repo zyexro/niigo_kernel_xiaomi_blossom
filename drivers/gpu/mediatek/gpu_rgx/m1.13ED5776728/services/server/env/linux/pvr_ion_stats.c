@@ -127,21 +127,12 @@ typedef struct _pvr_ion_stats_state_ {
 
 /* forward declare */
 static IMG_UINT32 StringHashFunc(uintptr_t input);
-static IMG_UINT32 DefaultHashFunc(uintptr_t input);
 
 static PVR_ION_STATS_STATE gPvrIonStatsState = {
-
-	.pfnHashKey =
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)) && \
-	!defined(ION_HAS_QUERY_HEAPS_KERNEL)
-		StringHashFunc,
-#else
-		DefaultHashFunc,
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)) && \
-		  !defined(ION_HAS_QUERY_HEAPS_KERNEL) */
+	.pfnHashKey = StringHashFunc,
 };
 
-static IMG_BOOL isIonBuf(struct dma_buf *psDmaBuf)
+static IMG_BOOL __maybe_unused isIonBuf(struct dma_buf *psDmaBuf)
 {
 	if (!strcmp(psDmaBuf->exp_name, ION_DMA_BUF_EXP_NAME))
 		return IMG_TRUE;
@@ -149,6 +140,7 @@ static IMG_BOOL isIonBuf(struct dma_buf *psDmaBuf)
 	return IMG_FALSE;
 }
 
+#if defined(PVRSRV_ENABLE_PVR_ION_STATS)
 static IMG_UINT32 pvr_ion_stats_query_heaps(PVR_ION_STATS_HEAP *heaps,
 		HashKeypfn pfnHashKey)
 {
@@ -217,8 +209,9 @@ static IMG_UINT32 pvr_ion_stats_query_heaps(PVR_ION_STATS_HEAP *heaps,
 
 	return numHeapsData;
 }
+#endif
 
-static int pvr_ion_stats_show(OSDI_IMPL_ENTRY *s, void *v)
+static int __maybe_unused pvr_ion_stats_show(OSDI_IMPL_ENTRY *s, void *v)
 {
 	PVR_ION_STATS_HEAP *psHeap = (PVR_ION_STATS_HEAP *)DIGetPrivData(s);
 	PVR_ION_STATS_STATE *psState = &gPvrIonStatsState;
@@ -258,6 +251,7 @@ static int pvr_ion_stats_show(OSDI_IMPL_ENTRY *s, void *v)
 	return 0;
 }
 
+#if defined(PVRSRV_ENABLE_PVR_ION_STATS)
 static PVRSRV_ERROR
 ion_stats_init(PVR_ION_STATS_HEAP *heaps, IMG_UINT32 ui32NumHeaps,
 		DI_GROUP **iondir, DI_GROUP **heapsdir, DI_ENTRY *entry[])
@@ -337,6 +331,7 @@ static PVR_ION_STATS_BUF *GetBuf(struct rb_root *root, uintptr_t addr)
 
 	return NULL;
 }
+#endif
 
 static IMG_UINT32 StringHashFunc(uintptr_t input)
 {
@@ -353,11 +348,6 @@ static IMG_UINT32 StringHashFunc(uintptr_t input)
 	hash &= ~(1 << 31);
 
 	return (IMG_UINT32)hash;
-}
-
-static IMG_UINT32 DefaultHashFunc(uintptr_t input)
-{
-	return (IMG_UINT32)input;
 }
 
 #if defined(PVRSRV_ENABLE_PVR_ION_STATS)
@@ -469,7 +459,6 @@ void PVRSRVIonAddMemAllocRecord(struct dma_buf *psDmaBuf)
 
 	if (pfnHashKey == StringHashFunc) {
 		psBuf->ui32HeapKey = pfnHashKey((uintptr_t)psIonBuf->heap->name);
-		PVR_UNREFERENCED_PARAMETER(DefaultHashFunc);
 	}
 	else
 		psBuf->ui32HeapKey = pfnHashKey((uintptr_t)psIonBuf->heap->id);
@@ -531,10 +520,12 @@ void PVRSRVIonRemoveMemAllocRecord(struct dma_buf *psDmaBuf)
 
 	OSLockAcquire(psState->hBuffersLock);
 	psBuf = GetBuf(&psState->buffers, (uintptr_t)psDmaBuf);
+#if defined(PVRSRV_ENABLE_PVR_ION_STATS)
 	if (!psBuf) {
 		PVR_DPF((PVR_DBG_ERROR, "Failed to find dma buffer"));
 		goto out;
 	}
+#endif
 
 	rb_erase(&psBuf->node, &psState->buffers);
 

@@ -322,8 +322,6 @@ static char *ddp_clock_0(int bit)
 
 static void mutex_dump_reg(void)
 {
-	unsigned long module_base = DISPSYS_MUTEX_BASE;
-	char module_name[] = "MUTEX:";
 
 	DDPDUMP("== START: DISP MUTEX registers ==\n");
 	DDPDUMP("%s 0x%04x=0x%08x,0x%04x=0x%08x,0x%04x=0x%08x,0x%04x=0x%08x\n",
@@ -479,8 +477,6 @@ static void mutex_dump_analysis(void)
 
 static void mmsys_config_dump_reg(void)
 {
-	unsigned long module_base = DISPSYS_CONFIG_BASE;
-	char module_name[] = "MMSYS_CONFIG:";
 
 	DDPDUMP("== START: DISP MMSYS_CONFIG registers ==\n");
 	DDPDUMP("%s 0x%04x=0x%08x,0x%04x=0x%08x,0x%04x=0x%08x,0x%04x=0x%08x\n",
@@ -889,7 +885,6 @@ static void mmsys_config_dump_analysis(void)
 static void gamma_dump_reg(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned int offset = 0x1000;
 
 	if (module == DISP_MODULE_GAMMA0)
 		i = 0;
@@ -927,7 +922,6 @@ static void gamma_dump_reg(enum DISP_MODULE_ENUM module)
 static void gamma_dump_analysis(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned int offset = 0x1000;
 
 	if (module == DISP_MODULE_GAMMA0)
 		i = 0;
@@ -954,9 +948,6 @@ static void gamma_dump_analysis(enum DISP_MODULE_ENUM module)
 
 static void color_dump_reg(enum DISP_MODULE_ENUM module)
 {
-	int idx = 0;
-	unsigned long module_base = DISPSYS_COLOR0_BASE;
-
 	DDPDUMP("== START: DISP COLOR%d registers ==\n", idx);
 	DDPDUMP("COLOR%d:0x%x=0x%x,0x%x=0x%x,0x%x=0x%x,0x%x=0x%x\n",
 		idx,
@@ -1197,7 +1188,6 @@ static void color_dump_reg(enum DISP_MODULE_ENUM module)
 
 static void color_dump_analysis(enum DISP_MODULE_ENUM module)
 {
-	int index = 0;
 
 	DDPDUMP("== DISP COLOR%d ANALYSIS ==\n", index);
 	DDPDUMP("color%d: bypass=%d, w=%d, h=%d, pixel_cnt=%d, line_cnt=%d,\n",
@@ -1213,7 +1203,6 @@ static void color_dump_analysis(enum DISP_MODULE_ENUM module)
 static void aal_dump_reg(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned long module_base = DISPSYS_AAL0_BASE;
 
 	if (module == DISP_MODULE_AAL0)
 		i = 0;
@@ -1322,7 +1311,6 @@ static void aal_dump_reg(enum DISP_MODULE_ENUM module)
 static void aal_dump_analysis(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned int offset = 0x1000;
 
 	if (module == DISP_MODULE_AAL0)
 		i = 0;
@@ -1345,7 +1333,6 @@ static void aal_dump_analysis(enum DISP_MODULE_ENUM module)
 
 static void pwm_dump_reg(enum DISP_MODULE_ENUM module)
 {
-	unsigned long module_base = DISPSYS_PWM0_BASE;
 
 	DDPDUMP("== START: DISP PWM0 registers ==\n");
 	DDPDUMP("PWM0:0x%x=0x%x,0x%x=0x%x,0x%x=0x%x,0x%x=0x%x\n",
@@ -1389,7 +1376,6 @@ static void pwm_dump_analysis(enum DISP_MODULE_ENUM module)
 static void ccorr_dump_reg(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned long module_base = DISPSYS_CCORR0_BASE;
 
 	if (module == DISP_MODULE_CCORR0)
 		i = 0;
@@ -1451,7 +1437,6 @@ static void ccorr_dump_analyze(enum DISP_MODULE_ENUM module)
 static void dither_dump_reg(enum DISP_MODULE_ENUM module)
 {
 	int i;
-	unsigned long module_base = DISPSYS_DITHER0_BASE;
 
 	if (module == DISP_MODULE_DITHER0)
 		i = 0;

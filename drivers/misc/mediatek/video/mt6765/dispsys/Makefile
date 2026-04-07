@@ -126,3 +126,4 @@ else ifeq ($(strip $(CONFIG_MTK_PQ_COLOR_MODE)),"OFF")
     ccflags-y += -DDISP_COLOR_ON
 endif
 # EOF
+ccflags-y += -Wno-declaration-after-statement

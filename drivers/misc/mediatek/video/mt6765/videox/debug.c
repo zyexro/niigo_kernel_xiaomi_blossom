@@ -115,10 +115,9 @@ struct layer_statistic {
 	unsigned long cnt_by_layers_with_ext[STATISTIC_MAX_LAYERS];
 	unsigned long cnt_by_layers_with_arm_ext[STATISTIC_MAX_LAYERS];
 };
-static struct layer_statistic layer_stat;
 static int layer_statistic_enable;
 
-static int _is_overlap(unsigned int x1, unsigned int y1,
+static int __maybe_unused _is_overlap(unsigned int x1, unsigned int y1,
 	unsigned int w1, unsigned int h1, unsigned int x2,
 	unsigned int y2, unsigned int w2, unsigned int h2)
 {
@@ -127,87 +126,6 @@ static int _is_overlap(unsigned int x1, unsigned int y1,
 	if (y2 >= y1 + h1 || y1 >= y2 + h2)
 		return 0;
 	return 1;
-}
-
-static int layer_is_overlap(struct disp_frame_cfg_t *cfg,
-	int idx, int from, int to)
-{
-	int i;
-
-	for (i = from; i <= to; i++) {
-		if (_is_overlap(cfg->input_cfg[idx].tgt_offset_x,
-			cfg->input_cfg[idx].tgt_offset_y,
-			cfg->input_cfg[idx].src_width,
-			cfg->input_cfg[idx].src_height,
-			cfg->input_cfg[i].tgt_offset_x,
-			cfg->input_cfg[i].tgt_offset_y,
-			cfg->input_cfg[i].src_width,
-			cfg->input_cfg[i].src_height))
-			return 1;
-	}
-	return 0;
-}
-
-
-static int calc_layer_num_with_arm_ext(struct disp_frame_cfg_t *cfg)
-{
-	int ovl_phy_num[2] = {4, 2};
-	int ovl_ext_num[2] = {3, 3};
-	int ovl_idx = 0;
-	int i, cur_phy_num, cur_ext_num;
-	int cur_phy_idx_in_cfg;
-	int total_phy_layer = 0;
-
-	cur_phy_num = 0;
-	cur_ext_num = 0;
-	cur_phy_idx_in_cfg = 0;
-	for (i = 0; i < cfg->input_layer_num; i++) {
-		int is_overlap;
-
-		if (!cfg->input_cfg[i].layer_enable)
-			continue;
-
-		if (cur_phy_num && cur_ext_num < ovl_ext_num[ovl_idx])
-			is_overlap = layer_is_overlap(cfg, i,
-				cur_phy_idx_in_cfg, i - 1);
-		else
-			is_overlap = 1;
-
-		if (!is_overlap) {
-			/* put it in ext layer */
-			cur_ext_num++;
-			continue;
-		}
-
-		/* now put it into a phy layer */
-		if (cur_phy_num < ovl_phy_num[ovl_idx]) {
-			cur_phy_num++;
-			cur_phy_idx_in_cfg = i;
-		} else if (ovl_idx < ARRAY_SIZE(ovl_phy_num)) {
-			/* dispatch to next ovl */
-			ovl_idx++;
-			cur_phy_num = 1;
-			cur_phy_idx_in_cfg = i;
-			cur_ext_num = 0;
-		} else {
-			/* no ovl layer aviable !! */
-			goto err_out;
-		}
-	}
-
-	for (i = 0; i < ovl_idx; i++)
-		total_phy_layer += ovl_phy_num[i];
-	total_phy_layer += cur_phy_num;
-	return total_phy_layer;
-
-err_out:
-	DISPWARN("%s failed: ovl_idx=%d, cur_phy=%d, cur_ext=%d\n",
-		__func__, ovl_idx, cur_phy_num, cur_ext_num);
-	for (i = 1; i < cfg->input_layer_num; i++)
-		dump_input_cfg_info(&cfg->input_cfg[i],
-			MAKE_DISP_SESSION(DISP_SESSION_PRIMARY, 0), 1);
-
-	return -1;
 }
 
 int disp_layer_info_statistic(struct disp_ddp_path_config *last_config,

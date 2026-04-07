@@ -1534,24 +1534,6 @@ static void kpoc_power_off_check(struct mtk_charger *info)
 	}
 }
 
-static char *dump_charger_type(int type)
-{
-	switch (type) {
-	case POWER_SUPPLY_TYPE_UNKNOWN:
-		return "none";
-	case POWER_SUPPLY_TYPE_USB:
-		return "usb";
-	case POWER_SUPPLY_TYPE_USB_CDP:
-		return "usb-h";
-	case POWER_SUPPLY_TYPE_USB_DCP:
-		return "std";
-	case POWER_SUPPLY_TYPE_USB_FLOAT:
-		return "nonstd";
-	default:
-		return "unknown";
-	}
-}
-
 static int charger_routine_thread(void *arg)
 {
 	struct mtk_charger *info = arg;
@@ -1580,6 +1562,7 @@ static int charger_routine_thread(void *arg)
 		info->charger_thread_timeout = false;
 
 		info->battery_temp = get_battery_temperature(info);
+#if 0
 		chr_err("Vbat=%d vbus:%d ibus:%d I=%d T=%d uisoc:%d type:%s>%s pd:%d\n",
 			get_battery_voltage(info),
 			get_vbus(info),
@@ -1590,6 +1573,7 @@ static int charger_routine_thread(void *arg)
 			dump_charger_type(info->chr_type),
 			dump_charger_type(get_charger_type(info)),
 			info->pd_type);
+#endif
 
 		is_charger_on = mtk_is_charger_on(info);
 

@@ -1411,7 +1411,6 @@ static bool try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 	pte_t pteval;
 	struct page *subpage;
 	bool ret = true;
-	unsigned long start = address, end;
 	enum ttu_flags flags = (enum ttu_flags)(long)arg;
 	struct mmu_notifier_range range;
 

@@ -832,7 +832,6 @@ DecodeHTB(HTB_Sentinel_t *pSentinel, OSDI_IMPL_ENTRY *pvDumpDebugFile,
 	IMG_CHAR	aszOneArgFmt[MAX_STRING_SIZE];
 	IMG_BOOL	bUnrecognizedErrorPrinted = IMG_FALSE;
 
-	IMG_UINT32	uiBufLen = pSentinel->uiBufLen;
 	size_t	nPrinted;
 
 	void	*pNext, *pLast, *pStart, *pData = NULL;

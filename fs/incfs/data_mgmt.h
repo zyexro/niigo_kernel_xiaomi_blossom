@@ -432,6 +432,9 @@ ssize_t incfs_read_data_file_block(struct mem_range dst, struct file *f,
 			struct incfs_read_data_file_timeouts *timeouts,
 			unsigned int *delayed_min_us);
 
+ssize_t incfs_read_merkle_tree_blocks(struct mem_range dst,
+				      struct data_file *df, size_t offset);
+
 int incfs_get_filled_blocks(struct data_file *df,
 			    struct incfs_file_data *fd,
 			    struct incfs_get_filled_blocks_args *arg);

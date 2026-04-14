@@ -125,7 +125,7 @@ extern bool set_uclamp;
  */
 extern struct cpumask cpu_all_masks;
 
-#define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
+#define tsk_cpus_allowed(tsk) ((tsk)->cpus_ptr)
 
 static inline struct cpumask *sched_group_cpus(struct sched_group *sg)
 {

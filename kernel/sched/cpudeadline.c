@@ -124,7 +124,7 @@ int cpudl_find(struct cpudl *cp, struct task_struct *p,
 	const struct sched_dl_entity *dl_se = &p->dl;
 
 	if (later_mask &&
-	    cpumask_and(later_mask, cp->free_cpus, p->cpus_ptr) &&
+	    cpumask_and(later_mask, cp->free_cpus, p->cpus_ptr)) {
 		return 1;
 	} else {
 		int best_cpu = cpudl_maximum(cp);

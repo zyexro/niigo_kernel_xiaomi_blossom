@@ -178,7 +178,7 @@ typedef struct _SYNC_CHECKPOINT_CONTEXT_CTL_
 	IMG_UINT32								ui32SyncCheckpointPoolRp;
 	POS_SPINLOCK							hSyncCheckpointPoolLock; /*! Protects access to the checkpoint pool control data. */
 #endif
-};
+} _SYNC_CHECKPOINT_CONTEXT_CTL;
 
 /* this is the max number of sync checkpoint records we will search or dump
  * at any time.

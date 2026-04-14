@@ -487,7 +487,7 @@ PVRSRV_ERROR PVRSRVRGXTDMSubmitTransferKM(
 	IMG_UINT32          ui32IntJobRef = OSAtomicIncrement(&psDevInfo->iCCBSubmissionOrdinal);
 
 	IMG_UINT32 ui32CmdOffset = 0; (void)ui32CmdOffset;
-	IMG_BOOL bCCBStateOpen;
+	IMG_BOOL bCCBStateOpen = IMG_FALSE;
 
 	IMG_UINT64               uiCheckFenceUID = 0;
 	IMG_UINT64               uiUpdateFenceUID = 0;

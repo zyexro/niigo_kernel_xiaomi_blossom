@@ -2485,7 +2485,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCommonDeviceDestroy(PVRSRV_DEVICE_NODE *psDevice
 #endif
 	{
 		/* Force idle device */
-		eError = PVRSRVDeviceIdleRequestKM(psDeviceNode, NULL, (POLL_FLAGS)IMG_TRUE);
+		eError = PVRSRVDeviceIdleRequestKM(psDeviceNode, NULL, IMG_TRUE);
 		if (eError != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR, "%s: Forced idle request failure (%s)",
@@ -2501,7 +2501,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCommonDeviceDestroy(PVRSRV_DEVICE_NODE *psDevice
 	/* Power down the device if necessary */
 	eError = PVRSRVSetDevicePowerStateKM(psDeviceNode,
 										 PVRSRV_DEV_POWER_STATE_OFF,
-										 (POLL_FLAGS)IMG_TRUE);
+										 IMG_TRUE);
 	PVRSRVPowerUnlock(psDeviceNode);
 
 	if (eError != PVRSRV_OK)
@@ -2907,7 +2907,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDeviceFinalise(PVRSRV_DEVICE_NODE *psDeviceNode,
 		 * and PDUMPPOWCMDEND.
 		 */
 		eError = PVRSRVSetDevicePowerStateKM(psDeviceNode,
-											 PVRSRV_DEV_POWER_STATE_ON, (POLL_FLAGS)IMG_TRUE);
+											 PVRSRV_DEV_POWER_STATE_ON, IMG_TRUE);
 		if (eError != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR,
@@ -2957,7 +2957,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDeviceFinalise(PVRSRV_DEVICE_NODE *psDeviceNode,
 		/* Force the device to idle if its default power state is off */
 		eError = PVRSRVDeviceIdleRequestKM(psDeviceNode,
 										   &PVRSRVDeviceIsDefaultStateOFF,
-										   (POLL_FLAGS)IMG_TRUE);
+										   IMG_TRUE);
 		if (eError != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR, "%s: Forced idle request failure (%s)",
@@ -2972,7 +2972,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDeviceFinalise(PVRSRV_DEVICE_NODE *psDeviceNode,
 		/* Place device into its default power state. */
 		eError = PVRSRVSetDevicePowerStateKM(psDeviceNode,
 											 PVRSRV_DEV_POWER_STATE_DEFAULT,
-											 (POLL_FLAGS)IMG_TRUE);
+											 IMG_TRUE);
 		PDUMPPOWCMDEND();
 
 		if (eError != PVRSRV_OK)

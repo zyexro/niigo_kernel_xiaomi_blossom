@@ -5502,8 +5502,6 @@ static struct {
 
 #endif /* CONFIG_NO_HZ_COMMON */
 
-}
-
 /* CPU only has SCHED_IDLE tasks enqueued */
 static int sched_idle_cpu(int cpu)
 {
@@ -5513,7 +5511,7 @@ static int sched_idle_cpu(int cpu)
 			rq->nr_running);
 }
 
-static unsigned long cpu_runnable_load(struct rq *rq);
+static unsigned long cpu_runnable_load(struct rq *rq)
 {
 	return cfs_rq_runnable_load_avg(&rq->cfs);
 }
@@ -6241,7 +6239,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 	/*
 	 * If the previous CPU is cache affine and idle, don't be stupid:
 	 */
-	if (prev != target && cpus_share_cache(prev, target) && available_idle_cpu(prev) || sched_idle_cpu(prev))
+	if (prev != target && cpus_share_cache(prev, target) && (available_idle_cpu(prev) || sched_idle_cpu(prev)))
 		return prev;
 
 	/* Check a recently used CPU as a potential idle candidate: */
@@ -8793,7 +8791,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		load  += mt_rt_load(i);
 #endif
 
-		sgs->group_load += load;
 		sgs->group_util += cpu_util(i);
 		sgs->sum_nr_running += rq->cfs.h_nr_running;
 

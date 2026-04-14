@@ -10601,7 +10601,7 @@ static void nohz_balancer_kick(struct rq *rq)
 		 * currently idle; in which case, kick the ILB to move tasks
 		 * around.
 		 */
-		for_each_cpu_and(i, sched_domain_span(sd), &cpumask) {
+		for_each_cpu_and(i, sched_domain_span(sd), nohz.idle_cpus_mask) {
 			if (sched_asym_prefer(i, cpu)) {
 				flags = NOHZ_KICK_MASK;
 				goto unlock;

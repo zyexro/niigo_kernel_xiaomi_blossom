@@ -424,8 +424,8 @@ static ssize_t zstd_decompress_safe(struct mount_info *mi,
 				    struct mem_range src, struct mem_range dst)
 {
 	ssize_t result;
-	ZSTD_inBuffer inbuf = {.src = src.data,	.size = src.len};
-	ZSTD_outBuffer outbuf = {.dst = dst.data, .size = dst.len};
+	zstd_in_buffer inbuf = {.src = src.data,	.size = src.len};
+	zstd_out_buffer outbuf = {.dst = dst.data, .size = dst.len};
 
 	result = mutex_lock_interruptible(&mi->mi_zstd_workspace_mutex);
 	if (result)

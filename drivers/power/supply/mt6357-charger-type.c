@@ -786,6 +786,7 @@ static int check_boot_mode(struct mtk_charger_type *info, struct device *dev)
 			info->boottype = tag->boottype;
 		}
 	}
+	of_node_put(boot_node);
 	return 0;
 }
 
@@ -852,7 +853,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	info->usb_desc.get_property = mt_usb_get_property;
 	info->usb_cfg.drv_data = info;
 
-	info->psy = power_supply_register(&pdev->dev, &info->psy_desc,
+	info->psy = devm_power_supply_register(&pdev->dev, &info->psy_desc,
 			&info->psy_cfg);
 
 	if (IS_ERR(info->psy)) {
@@ -875,7 +876,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	pr_notice("%s: bc12_active:%d\n", __func__, info->bc12_active);
 
 	if (info->bc12_active) {
-		info->ac_psy = power_supply_register(&pdev->dev,
+		info->ac_psy = devm_power_supply_register(&pdev->dev,
 				&info->ac_desc, &info->ac_cfg);
 
 		if (IS_ERR(info->ac_psy)) {
@@ -884,7 +885,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 			return PTR_ERR(info->ac_psy);
 		}
 
-		info->usb_psy = power_supply_register(&pdev->dev,
+		info->usb_psy = devm_power_supply_register(&pdev->dev,
 				&info->usb_desc, &info->usb_cfg);
 
 		if (IS_ERR(info->usb_psy)) {
@@ -917,10 +918,6 @@ static const struct of_device_id mt6357_charger_type_of_match[] = {
 
 static int mt6357_charger_type_remove(struct platform_device *pdev)
 {
-	struct mtk_charger_type *info = platform_get_drvdata(pdev);
-
-	if (info)
-		devm_kfree(&pdev->dev, info);
 	return 0;
 }
 

@@ -453,6 +453,7 @@ int disable_hw_ovp(struct mtk_charger *info, int en)
 	}
 
 	pmic_pdev = of_find_device_by_node(pmic_node);
+	of_node_put(pmic_node);
 	if (!pmic_pdev) {
 		chr_err("get pmic_pdev fail\n");
 		return -1;
@@ -461,6 +462,7 @@ int disable_hw_ovp(struct mtk_charger *info, int en)
 
 	if (!chip) {
 		chr_err("get chip fail\n");
+		put_device(&pmic_pdev->dev);
 		return -1;
 	}
 
@@ -472,5 +474,6 @@ int disable_hw_ovp(struct mtk_charger *info, int en)
 		PMIC_RG_VCDT_HV_EN_MASK,
 		en);
 
+	put_device(&pmic_pdev->dev);
 	return 0;
 }

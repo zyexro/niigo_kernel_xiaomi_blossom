@@ -1001,6 +1001,8 @@ static int bq2560x_charger_remove(struct i2c_client *client)
 {
 	struct bq2560x *bq = i2c_get_clientdata(client);
 
+	charger_device_unregister(bq->chg_dev);
+
 	mutex_destroy(&bq->i2c_rw_lock);
 
 	sysfs_remove_group(&bq->dev->kobj, &bq2560x_attr_group);

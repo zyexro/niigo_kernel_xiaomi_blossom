@@ -3010,19 +3010,22 @@ int battery_psy_init(struct platform_device *pdev)
 
 	gm->bs_data.chg_psy = devm_power_supply_get_by_phandle(&pdev->dev,
 							 "charger");
-	if (IS_ERR_OR_NULL(gm->bs_data.chg_psy))
+	if (IS_ERR(gm->bs_data.chg_psy)) {
+		if (PTR_ERR(gm->bs_data.chg_psy) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
 		bm_err("[BAT_probe] %s: fail to get chg_psy !!\n", __func__);
+	}
 
 	battery_service_data_init(gm);
 	gm->bs_data.psy =
-		power_supply_register(
+		devm_power_supply_register(
 			&(pdev->dev), &gm->bs_data.psd, &gm->bs_data.psy_cfg);
 	if (IS_ERR(gm->bs_data.psy)) {
-		bm_err("[BAT_probe] power_supply_register Battery Fail !!\n");
+		bm_err("[BAT_probe] devm_power_supply_register Battery Fail !!\n");
 		ret = PTR_ERR(gm->bs_data.psy);
 		return ret;
 	}
-	bm_err("[BAT_probe] power_supply_register Battery Success !!\n");
+	bm_err("[BAT_probe] devm_power_supply_register Battery Success !!\n");
 	return 0;
 }
 
@@ -3048,6 +3051,7 @@ void fg_check_bootmode(struct device *dev,
 			gm->boottype = tag->boottype;
 		}
 	}
+	of_node_put(boot_node);
 }
 
 void fg_check_lk_swocv(struct device *dev,
@@ -3100,6 +3104,7 @@ void fg_check_lk_swocv(struct device *dev,
 
 	bm_err("swocv_v:%d swocv_i:%d shutdown_time:%d\n",
 		gm->ptim_lk_v, gm->ptim_lk_i, gm->pl_shutdown_time);
+	of_node_put(boot_node);
 }
 
 

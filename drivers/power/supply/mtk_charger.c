@@ -166,6 +166,7 @@ static void mtk_charger_parse_dt(struct mtk_charger *info,
 			info->boottype = tag->boottype;
 		}
 	}
+	of_node_put(boot_node);
 
 	if (of_property_read_string(np, "algorithm_name",
 		&info->algorithm_name) < 0) {
@@ -2077,18 +2078,28 @@ static int mtk_charger_probe(struct platform_device *pdev)
 	info->psy_desc1.external_power_changed =
 		mtk_charger_external_power_changed;
 	info->psy_cfg1.drv_data = info;
-	info->psy1 = power_supply_register(&pdev->dev, &info->psy_desc1,
+	info->psy1 = devm_power_supply_register(&pdev->dev, &info->psy_desc1,
 			&info->psy_cfg1);
+	if (IS_ERR(info->psy1)) {
+		chr_err("register psy1 fail:%ld\n", PTR_ERR(info->psy1));
+		return PTR_ERR(info->psy1);
+	}
 
 	info->chg_psy = devm_power_supply_get_by_phandle(&pdev->dev,
 		"charger");
-	if (IS_ERR_OR_NULL(info->chg_psy))
+	if (IS_ERR(info->chg_psy)) {
+		if (PTR_ERR(info->chg_psy) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
 		chr_err("%s: devm power fail to get chg_psy\n", __func__);
+	}
 
 	info->bat_psy = devm_power_supply_get_by_phandle(&pdev->dev,
 		"gauge");
-	if (IS_ERR_OR_NULL(info->bat_psy))
+	if (IS_ERR(info->bat_psy)) {
+		if (PTR_ERR(info->bat_psy) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
 		chr_err("%s: devm power fail to get bat_psy\n", __func__);
+	}
 
 	if (IS_ERR(info->psy1))
 		chr_err("register psy1 fail:%d\n",
@@ -2103,12 +2114,14 @@ static int mtk_charger_probe(struct platform_device *pdev)
 	info->psy_desc2.property_is_writeable =
 			psy_charger_property_is_writeable;
 	info->psy_cfg2.drv_data = info;
-	info->psy2 = power_supply_register(&pdev->dev, &info->psy_desc2,
+	info->psy2 = devm_power_supply_register(&pdev->dev, &info->psy_desc2,
 			&info->psy_cfg2);
 
-	if (IS_ERR(info->psy2))
-		chr_err("register psy2 fail:%d\n",
+	if (IS_ERR(info->psy2)) {
+		chr_err("register psy2 fail:%ld\n",
 			PTR_ERR(info->psy2));
+		return PTR_ERR(info->psy2);
+	}
 
 	info->log_level = CHRLOG_DEBUG_LEVEL;
 

@@ -1332,6 +1332,8 @@ static int bq25601_driver_probe(struct i2c_client *client,
 	new_client = client;
 	info->dev = &client->dev;
 
+	i2c_set_clientdata(client, info);
+
 	ret = bq25601_parse_dt(info, &client->dev);
 	if (ret < 0)
 		return ret;
@@ -1430,53 +1432,69 @@ static ssize_t bq25601_access_store(struct device *dev,
 
 static DEVICE_ATTR_RW(bq25601_access);
 
-static int bq25601_user_space_probe(struct platform_device *dev)
+static int bq25601_driver_remove(struct i2c_client *client)
 {
-	int ret_device_file = 0;
+	struct bq25601_info *info = i2c_get_clientdata(client);
 
-	pr_info("******** %s!! ********\n", __func__);
-
-	ret_device_file = device_create_file(&(dev->dev),
-					     &dev_attr_bq25601_access);
+	charger_device_unregister(info->chg_dev);
 
 	return 0;
 }
 
+static int bq25601_user_space_probe(struct platform_device *dev)
+{
+        int ret_device_file = 0;
+
+        pr_info("******** %s!! ********\n", __func__);
+
+        ret_device_file = device_create_file(&(dev->dev),
+                                             &dev_attr_bq25601_access);
+
+        return 0;
+}
+
+static int bq25601_user_space_remove(struct platform_device *dev)
+{
+	device_remove_file(&dev->dev, &dev_attr_bq25601_access);
+	return 0;
+}
+
 struct platform_device bq25601_user_space_device = {
-	.name = "bq25601-user",
-	.id = -1,
+        .name = "bq25601-user",
+        .id = -1,
 };
 
 static struct platform_driver bq25601_user_space_driver = {
-	.probe = bq25601_user_space_probe,
-	.driver = {
-		.name = "bq25601-user",
-	},
+        .probe = bq25601_user_space_probe,
+	.remove = bq25601_user_space_remove,
+        .driver = {
+                .name = "bq25601-user",
+        },
 };
 
 #ifdef CONFIG_OF
 static const struct of_device_id bq25601_of_match[] = {
-	{.compatible = "mediatek,bq25601"},
-	{},
+        {.compatible = "mediatek,bq25601"},
+        {},
 };
 #else
 static struct i2c_board_info i2c_bq25601 __initdata = {
-	I2C_BOARD_INFO("bq25601", (bq25601_SLAVE_ADDR_WRITE >> 1))
+        I2C_BOARD_INFO("bq25601", (bq25601_SLAVE_ADDR_WRITE >> 1))
 };
 #endif
 
 static struct i2c_driver bq25601_driver = {
-	.driver = {
-		.name = "bq25601",
-		.owner = THIS_MODULE,
+        .driver = {
+                .name = "bq25601",
+                .owner = THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = bq25601_of_match,
+                .of_match_table = bq25601_of_match,
 #endif
-	},
-	.probe = bq25601_driver_probe,
-	.id_table = bq25601_i2c_id,
+        },
+        .probe = bq25601_driver_probe,
+	.remove = bq25601_driver_remove,
+        .id_table = bq25601_i2c_id,
 };
-
 static int __init bq25601_init(void)
 {
 	int ret = 0;

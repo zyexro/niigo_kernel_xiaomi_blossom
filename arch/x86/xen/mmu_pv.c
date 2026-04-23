@@ -2650,13 +2650,8 @@ int xen_create_contiguous_region(phys_addr_t pstart, unsigned int order,
 	int            success;
 	unsigned long vstart = (unsigned long)phys_to_virt(pstart);
 
-	if (unlikely(order > discontig_frames_order)) {
-		if (!discontig_frames_dyn)
-			return -ENOMEM;
-
-		if (alloc_discontig_frames(order))
-			return -ENOMEM;
-	}
+	if (unlikely(order > MAX_CONTIG_ORDER))
+		return -ENOMEM;
 
 	memset((void *) vstart, 0, PAGE_SIZE << order);
 

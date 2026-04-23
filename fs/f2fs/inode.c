@@ -831,11 +831,6 @@ no_delete:
 	if (likely(!f2fs_cp_error(sbi) &&
 		   !is_sbi_flag_set(sbi, SBI_CP_DISABLED)))
 		f2fs_bug_on(sbi, is_inode_flag_set(inode, FI_DIRTY_INODE));
-
-	/*
-	 * anyway, it needs to remove the inode from sbi->inode_list[DIRTY_META]
-	 * list to avoid UAF in f2fs_sync_inode_meta() during checkpoint.
-	 */
 	f2fs_inode_synced(inode);
 
 	/* for the case f2fs_new_inode() was failed, .i_ino is zero, skip it */
@@ -865,8 +860,6 @@ out_clear:
 	fsverity_cleanup_inode(inode);
 	clear_inode(inode);
 }
-
-/* caller should call f2fs_lock_op() */
 void f2fs_handle_failed_inode(struct inode *inode)
 {
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);

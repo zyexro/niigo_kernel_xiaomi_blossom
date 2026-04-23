@@ -2530,7 +2530,6 @@ static inline void dev_lstats_add(struct net_device *dev, unsigned int len)
 }
 
 void dev_lstats_read(struct net_device *dev, u64 *packets, u64 *bytes);
-
 #define __netdev_alloc_pcpu_stats(type, gfp)				\
 ({									\
 	typeof(type) __percpu *pcpu_stats = alloc_percpu_gfp(type, gfp);\

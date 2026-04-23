@@ -209,9 +209,7 @@ static inline enum cp_reason_type need_do_checkpoint(struct inode *inode)
 		cp_reason = CP_FASTBOOT_MODE;
 	else if (F2FS_OPTION(sbi).active_logs == 2)
 		cp_reason = CP_SPEC_LOG_NUM;
-	else if (F2FS_OPTION(sbi).fsync_mode == FSYNC_MODE_STRICT &&
-		 f2fs_need_dentry_mark(sbi, inode->i_ino) &&
-		 f2fs_exist_written_data(sbi, F2FS_I(inode)->i_pino,
+	else if (f2fs_exist_written_data(sbi, F2FS_I(inode)->i_pino,
 					 TRANS_DIR_INO))
 		cp_reason = CP_RECOVER_DIR;
 	else if (f2fs_exist_written_data(sbi, F2FS_I(inode)->i_pino,

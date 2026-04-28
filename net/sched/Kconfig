@@ -4,7 +4,7 @@
 
 menuconfig NET_SCHED
 	bool "QoS and/or fair queueing"
-	select NET_SCH_FIFO
+	select NET_SCH_CAKE
 	help
 	  When the kernel has several packets to send out over a network
 	  device, it has to decide which ones to send first, which ones to
@@ -371,7 +371,7 @@ if NET_SCH_DEFAULT
 
 choice
 	prompt "Default queuing discipline"
-	default DEFAULT_FQ
+	default DEFAULT_CAKE
 	help
 	  Select the queueing discipline that will be used by default
 	  for all network devices.
@@ -390,6 +390,10 @@ choice
 
 	config DEFAULT_PFIFO_FAST
 		bool "Priority FIFO Fast"
+
+	config DEFAULT_CAKE
+		bool "Common Applications Kept Enhanced" if NET_SCH_CAKE
+
 endchoice
 
 config DEFAULT_NET_SCH
@@ -398,6 +402,7 @@ config DEFAULT_NET_SCH
 	default "fq" if DEFAULT_FQ
 	default "fq_codel" if DEFAULT_FQ_CODEL
 	default "sfq" if DEFAULT_SFQ
+	default "cake" if DEFAULT_CAKE
 	default "fq"
 endif
 

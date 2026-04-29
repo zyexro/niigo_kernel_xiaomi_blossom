@@ -90,7 +90,7 @@ static unsigned long find_victims(int *vindex)
 		 */
 		sig = tsk->signal;
 		adj = READ_ONCE(sig->oom_score_adj);
-		if (adj <= 0 ||
+		if (adj < 0 ||
 		    sig->flags & (SIGNAL_GROUP_EXIT | SIGNAL_GROUP_COREDUMP) ||
 		    (thread_group_empty(tsk) && tsk->flags & PF_EXITING))
 			continue;
@@ -252,11 +252,6 @@ static void scan_and_kill(void)
 	for (i = 0; i < nr_to_kill; i++) {
 		struct victim_info *victim = &victims[i];
 		struct task_struct *t, *vtsk = victim->tsk;
-		/* Never kill foreground apps */
-               if (vtsk->signal->oom_score_adj <= 0) {
-                       task_unlock(vtsk);
-                       continue;
-               }
 		struct mm_struct *mm = victim->mm;
 
 		pr_info("Killing %s with adj %d to free %lu KiB\n", vtsk->comm,
@@ -461,7 +456,7 @@ void simple_lmk_mm_freed(struct mm_struct *mm)
 static int simple_lmk_vmpressure_cb(struct notifier_block *nb,
 				    unsigned long pressure, void *data)
 {
-	if (pressure >= 95) {
+	if (pressure == 100) {
 		atomic_set(&needs_reclaim, 1);
 		smp_mb__after_atomic();
 		if (waitqueue_active(&oom_waitq))

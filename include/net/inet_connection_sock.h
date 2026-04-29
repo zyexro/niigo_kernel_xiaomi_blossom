@@ -141,9 +141,8 @@ struct inet_connection_sock {
 	} icsk_mtup;
 	u32			  icsk_user_timeout;
 
-/* XXX inflated by temporary internal debugging info */
-#define ICSK_CA_PRIV_SIZE      (216)
-	u64			  icsk_ca_priv[ICSK_CA_PRIV_SIZE / sizeof(u64)];
+	u64			  icsk_ca_priv[104 / sizeof(u64)];
+#define ICSK_CA_PRIV_SIZE      (13 * sizeof(u64))
 };
 
 #define ICSK_TIME_RETRANS	1	/* Retransmit timer */
@@ -326,30 +325,5 @@ struct dst_entry *inet_csk_update_pmtu(struct sock *sk, u32 mtu);
 static inline bool inet_csk_has_ulp(struct sock *sk)
 {
 	return inet_sk(sk)->is_icsk && !!inet_csk(sk)->icsk_ulp_ops;
-}
-
-#define TCP_PINGPONG_THRESH	3
-
-static inline void inet_csk_enter_pingpong_mode(struct sock *sk)
-{
-	inet_csk(sk)->icsk_ack.pingpong = TCP_PINGPONG_THRESH;
-}
-
-static inline void inet_csk_exit_pingpong_mode(struct sock *sk)
-{
-	inet_csk(sk)->icsk_ack.pingpong = 0;
-}
-
-static inline bool inet_csk_in_pingpong_mode(struct sock *sk)
-{
-	return inet_csk(sk)->icsk_ack.pingpong >= TCP_PINGPONG_THRESH;
-}
-
-static inline void inet_csk_inc_pingpong_cnt(struct sock *sk)
-{
-	struct inet_connection_sock *icsk = inet_csk(sk);
-
-	if (icsk->icsk_ack.pingpong < U8_MAX)
-		icsk->icsk_ack.pingpong++;
 }
 #endif /* _INET_CONNECTION_SOCK_H */

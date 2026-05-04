@@ -19,13 +19,13 @@
 static bool should_merge(struct fsnotify_event *old_fsn,
 			 struct fsnotify_event *new_fsn)
 {
-	struct fanotify_event *old, *new;
+	struct fanotify_event_info *old, *new;
 
 	pr_debug("%s: old=%p new=%p\n", __func__, old_fsn, new_fsn);
 	old = FANOTIFY_E(old_fsn);
 	new = FANOTIFY_E(new_fsn);
 
-	if (old_fsn->inode == new_fsn->inode && old->tgid == new->tgid &&
+	if (old_fsn->inode == new_fsn->inode && old->pid == new->pid &&
 	    old->path.mnt == new->path.mnt &&
 	    old->path.dentry == new->path.dentry)
 		return true;
@@ -36,22 +36,20 @@ static bool should_merge(struct fsnotify_event *old_fsn,
 static int fanotify_merge(struct list_head *list, struct fsnotify_event *event)
 {
 	struct fsnotify_event *test_event;
-	struct fanotify_event *new;
 
 	pr_debug("%s: list=%p event=%p\n", __func__, list, event);
-	new = FANOTIFY_E(event);
 
 	/*
 	 * Don't merge a permission event with any other event so that we know
 	 * the event structure we have created in fanotify_handle_event() is the
 	 * one we should check for permission response.
 	 */
-	if (fanotify_is_perm_event(new->mask))
+	if (fanotify_is_perm_event(event->mask))
 		return 0;
 
 	list_for_each_entry_reverse(test_event, list, list) {
 		if (should_merge(test_event, event)) {
-			FANOTIFY_E(test_event)->mask |= new->mask;
+			test_event->mask |= event->mask;
 			return 1;
 		}
 	}
@@ -60,7 +58,7 @@ static int fanotify_merge(struct list_head *list, struct fsnotify_event *event)
 }
 
 static int fanotify_get_response(struct fsnotify_group *group,
-				 struct fanotify_perm_event *event,
+				 struct fanotify_perm_event_info *event,
 				 struct fsnotify_iter_info *iter_info)
 {
 	int ret;
@@ -146,11 +144,11 @@ static u32 fanotify_group_event_mask(struct fsnotify_iter_info *iter_info,
 		~marks_ignored_mask;
 }
 
-struct fanotify_event *fanotify_alloc_event(struct fsnotify_group *group,
+struct fanotify_event_info *fanotify_alloc_event(struct fsnotify_group *group,
 						 struct inode *inode, u32 mask,
 						 const struct path *path)
 {
-	struct fanotify_event *event = NULL;
+	struct fanotify_event_info *event = NULL;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
 	/*
@@ -168,7 +166,7 @@ struct fanotify_event *fanotify_alloc_event(struct fsnotify_group *group,
 	memalloc_use_memcg(group->memcg);
 
 	if (fanotify_is_perm_event(mask)) {
-		struct fanotify_perm_event *pevent;
+		struct fanotify_perm_event_info *pevent;
 
 		pevent = kmem_cache_alloc(fanotify_perm_event_cachep, gfp);
 		if (!pevent)
@@ -181,9 +179,11 @@ struct fanotify_event *fanotify_alloc_event(struct fsnotify_group *group,
 	if (!event)
 		goto out;
 init: __maybe_unused
-        fsnotify_init_event(&event->fse, inode);
-        event->mask = mask;
-	event->tgid = get_pid(task_tgid(current));
+	fsnotify_init_event(&event->fse, inode, mask);
+	if (FAN_GROUP_FLAG(group, FAN_REPORT_TID))
+		event->pid = get_pid(task_pid(current));
+	else
+		event->pid = get_pid(task_tgid(current));
 	if (path) {
 		event->path = *path;
 		path_get(&event->path);
@@ -203,7 +203,7 @@ static int fanotify_handle_event(struct fsnotify_group *group,
 				 struct fsnotify_iter_info *iter_info)
 {
 	int ret = 0;
-	struct fanotify_event *event;
+	struct fanotify_event_info *event;
 	struct fsnotify_event *fsn_event;
 
 	BUILD_BUG_ON(FAN_ACCESS != FS_ACCESS);
@@ -217,7 +217,8 @@ static int fanotify_handle_event(struct fsnotify_group *group,
 	BUILD_BUG_ON(FAN_ACCESS_PERM != FS_ACCESS_PERM);
 	BUILD_BUG_ON(FAN_ONDIR != FS_ISDIR);
 	BUILD_BUG_ON(FAN_OPEN_EXEC != FS_OPEN_EXEC);
-	BUILD_BUG_ON(FAN_OPEN_EXEC_PERM != FS_OPEN_EXEC_PERM);
+
+	BUILD_BUG_ON(HWEIGHT32(ALL_FANOTIFY_EVENT_BITS) != 11);
 
 	mask = fanotify_group_event_mask(iter_info, mask, data, data_type);
 	if (!mask)
@@ -251,7 +252,7 @@ static int fanotify_handle_event(struct fsnotify_group *group,
 	ret = fsnotify_add_event(group, fsn_event, fanotify_merge);
 	if (ret) {
 		/* Permission events shouldn't be merged */
-		BUG_ON(ret == 1 && mask & FAN_ALL_PERM_EVENTS);
+		BUG_ON(ret == 1 && mask & FANOTIFY_PERM_EVENTS);
 		/* Our event wasn't used in the end. Free it. */
 		fsnotify_destroy_event(group, fsn_event);
 
@@ -279,12 +280,12 @@ static void fanotify_free_group_priv(struct fsnotify_group *group)
 
 static void fanotify_free_event(struct fsnotify_event *fsn_event)
 {
-	struct fanotify_event *event;
+	struct fanotify_event_info *event;
 
 	event = FANOTIFY_E(fsn_event);
 	path_put(&event->path);
-	put_pid(event->tgid);
-	if (fanotify_is_perm_event(event->mask)) {
+	put_pid(event->pid);
+	if (fanotify_is_perm_event(fsn_event->mask)) {
 		kmem_cache_free(fanotify_perm_event_cachep,
 				FANOTIFY_PE(fsn_event));
 		return;

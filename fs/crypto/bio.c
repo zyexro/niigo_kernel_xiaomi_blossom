@@ -33,7 +33,8 @@ void fscrypt_decrypt_bio(struct bio *bio)
 
 	bio_for_each_segment_all(bv, bio, i) {
 		struct page *page = bv->bv_page;
-		int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
+		int ret = fscrypt_decrypt_pagecache_blocks(page,
+							   bv->bv_len,
 							   bv->bv_offset);
 		if (ret)
 			SetPageError(page);
@@ -77,7 +78,8 @@ static int fscrypt_zeroout_range_inlinecrypt(const struct inode *inode,
 			lblk += blocks_this_page;
 			pblk += blocks_this_page;
 			len -= blocks_this_page;
-		} while (++i != BIO_MAX_PAGES && len != 0);
+		} while (++i != BIO_MAX_PAGES && len != 0 &&
+			 fscrypt_mergeable_bio(bio, inode, lblk));
 
 		err = submit_bio_wait(bio);
 		if (err)

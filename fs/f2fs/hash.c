@@ -32,18 +32,18 @@ static void TEA_transform(unsigned int buf[4], unsigned int const in[])
 
 	do {
 		sum += DELTA;
-		b0 += ((b1 << 4) + a) ^ (b1 + sum) ^ ((b1 >> 5) + b);
-		b1 += ((b0 << 4) + c) ^ (b0 + sum) ^ ((b0 >> 5) + d);
+		b0 += ((b1 << 4)+a) ^ (b1+sum) ^ ((b1 >> 5)+b);
+		b1 += ((b0 << 4)+c) ^ (b0+sum) ^ ((b0 >> 5)+d);
 	} while (--n);
 
 	buf[0] += b0;
 	buf[1] += b1;
 }
 
-static void str2hashbuf(const unsigned char *msg, size_t len, unsigned int *buf,
-			int num)
+static void str2hashbuf(const unsigned char *msg, size_t len,
+				unsigned int *buf, int num)
 {
-	unsigned int pad, val;
+	unsigned pad, val;
 	int i;
 
 	pad = (__u32)len | ((__u32)len << 8);
@@ -92,7 +92,7 @@ static u32 TEA_hash_name(const u8 *p, size_t len)
 /*
  * Compute @fname->hash.  For all directories, @fname->disk_name must be set.
  * For casefolded directories, @fname->usr_fname must be set, and also
- * @fname->cf_name if the filename is valid Unicode.
+ * @fname->cf_name if the filename is valid Unicode and is not "." or "..".
  */
 void f2fs_hash_filename(const struct inode *dir, struct f2fs_filename *fname)
 {
@@ -111,10 +111,11 @@ void f2fs_hash_filename(const struct inode *dir, struct f2fs_filename *fname)
 		/*
 		 * If the casefolded name is provided, hash it instead of the
 		 * on-disk name.  If the casefolded name is *not* provided, that
-		 * should only be because the name wasn't valid Unicode, so fall
-		 * back to treating the name as an opaque byte sequence.  Note
-		 * that to handle encrypted directories, the fallback must use
-		 * usr_fname (plaintext) rather than disk_name (ciphertext).
+		 * should only be because the name wasn't valid Unicode or was
+		 * "." or "..", so fall back to treating the name as an opaque
+		 * byte sequence.  Note that to handle encrypted directories,
+		 * the fallback must use usr_fname (plaintext) rather than
+		 * disk_name (ciphertext).
 		 */
 		WARN_ON_ONCE(!fname->usr_fname->name);
 		if (fname->cf_name.name) {

@@ -5,30 +5,27 @@
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com/
  */
-#define GC_THREAD_MIN_WB_PAGES                                                 \
-	1 /*
+#define GC_THREAD_MIN_WB_PAGES		1	/*
 						 * a threshold to determine
 						 * whether IO subsystem is idle
 						 * or not
 						 */
-#define DEF_GC_THREAD_URGENT_SLEEP_TIME 500 /* 500 ms */
-#define DEF_GC_THREAD_MIN_SLEEP_TIME 30000 /* milliseconds */
-#define DEF_GC_THREAD_MAX_SLEEP_TIME 60000
-#define DEF_GC_THREAD_NOGC_SLEEP_TIME 300000 /* wait 5 min */
+#define DEF_GC_THREAD_URGENT_SLEEP_TIME	5	/* 5 ms */
+#define DEF_GC_THREAD_MIN_SLEEP_TIME	30000	/* milliseconds */
+#define DEF_GC_THREAD_MAX_SLEEP_TIME	60000
+#define DEF_GC_THREAD_NOGC_SLEEP_TIME	300000	/* wait 5 min */
 
 /* choose candidates from sections which has age of more than 7 days */
-#define DEF_GC_THREAD_AGE_THRESHOLD (60 * 60 * 24 * 7)
-#define DEF_GC_THREAD_CANDIDATE_RATIO                                          \
-	20 /* select 20% oldest sections as candidates */
-#define DEF_GC_THREAD_MAX_CANDIDATE_COUNT                                      \
-	10 /* select at most 10 sections as candidates */
-#define DEF_GC_THREAD_AGE_WEIGHT 60 /* age weight */
-#define DEFAULT_ACCURACY_CLASS 10000 /* accuracy class */
+#define DEF_GC_THREAD_AGE_THRESHOLD		(60 * 60 * 24 * 7)
+#define DEF_GC_THREAD_CANDIDATE_RATIO		20	/* select 20% oldest sections as candidates */
+#define DEF_GC_THREAD_MAX_CANDIDATE_COUNT	10	/* select at most 10 sections as candidates */
+#define DEF_GC_THREAD_AGE_WEIGHT		60	/* age weight */
+#define DEFAULT_ACCURACY_CLASS			10000	/* accuracy class */
 
-#define LIMIT_INVALID_BLOCK 40 /* percentage over total user space */
-#define LIMIT_FREE_BLOCK 40 /* percentage over invalid + free space */
+#define LIMIT_INVALID_BLOCK	40 /* percentage over total user space */
+#define LIMIT_FREE_BLOCK	40 /* percentage over invalid + free space */
 
-#define DEF_GC_FAILED_PINNED_FILES 2048
+#define DEF_GC_FAILED_PINNED_FILES	2048
 
 /* Search max. number of dirty segments to select a victim segment */
 #define DEF_MAX_VICTIM_SEARCH 4096 /* covers 8GB */
@@ -45,6 +42,12 @@ struct f2fs_gc_kthread {
 
 	/* for changing gc mode */
 	unsigned int gc_wake;
+
+	/* for GC_MERGE mount option */
+	wait_queue_head_t fggc_wq;		/*
+						 * caller of f2fs_balance_fs()
+						 * will wait on this wait queue.
+						 */
 };
 
 struct gc_inode_list {
@@ -53,21 +56,21 @@ struct gc_inode_list {
 };
 
 struct victim_info {
-	unsigned long long mtime; /* mtime of section */
-	unsigned int segno; /* section No. */
+	unsigned long long mtime;	/* mtime of section */
+	unsigned int segno;		/* section No. */
 };
 
 struct victim_entry {
-	struct rb_node rb_node; /* rb node located in rb-tree */
+	struct rb_node rb_node;		/* rb node located in rb-tree */
 	union {
 		struct {
-			unsigned long long mtime; /* mtime of section */
-			unsigned int segno; /* segment No. */
+			unsigned long long mtime;	/* mtime of section */
+			unsigned int segno;		/* segment No. */
 		};
-		struct victim_info vi; /* victim info */
+		struct victim_info vi;	/* victim info */
 	};
 	struct list_head list;
-};
+} __packed;
 
 /*
  * inline functions
@@ -117,20 +120,18 @@ static inline block_t free_user_blocks(struct f2fs_sb_info *sbi)
 	return free_blks - ovp_blks;
 }
 
-static inline block_t limit_invalid_user_blocks(struct f2fs_sb_info *sbi)
+static inline block_t limit_invalid_user_blocks(block_t user_block_count)
 {
-	return (long)(sbi->user_block_count * LIMIT_INVALID_BLOCK) / 100;
+	return (long)(user_block_count * LIMIT_INVALID_BLOCK) / 100;
 }
 
-static inline block_t limit_free_user_blocks(struct f2fs_sb_info *sbi)
+static inline block_t limit_free_user_blocks(block_t reclaimable_user_blocks)
 {
-	block_t reclaimable_user_blocks =
-		sbi->user_block_count - written_block_count(sbi);
 	return (long)(reclaimable_user_blocks * LIMIT_FREE_BLOCK) / 100;
 }
 
 static inline void increase_sleep_time(struct f2fs_gc_kthread *gc_th,
-				       unsigned int *wait)
+							unsigned int *wait)
 {
 	unsigned int min_time = gc_th->min_sleep_time;
 	unsigned int max_time = gc_th->max_sleep_time;
@@ -145,7 +146,7 @@ static inline void increase_sleep_time(struct f2fs_gc_kthread *gc_th,
 }
 
 static inline void decrease_sleep_time(struct f2fs_gc_kthread *gc_th,
-				       unsigned int *wait)
+							unsigned int *wait)
 {
 	unsigned int min_time = gc_th->min_sleep_time;
 
@@ -160,15 +161,16 @@ static inline void decrease_sleep_time(struct f2fs_gc_kthread *gc_th,
 
 static inline bool has_enough_invalid_blocks(struct f2fs_sb_info *sbi)
 {
-	block_t invalid_user_blocks =
-		sbi->user_block_count - written_block_count(sbi);
+	block_t user_block_count = sbi->user_block_count;
+	block_t invalid_user_blocks = user_block_count -
+		written_block_count(sbi);
 	/*
 	 * Background GC is triggered with the following conditions.
 	 * 1. There are a number of invalid blocks.
 	 * 2. There is not enough free space.
 	 */
-	if (invalid_user_blocks > limit_invalid_user_blocks(sbi) &&
-	    free_user_blocks(sbi) < limit_free_user_blocks(sbi))
-		return true;
-	return false;
+	return (invalid_user_blocks >
+			limit_invalid_user_blocks(user_block_count) &&
+		free_user_blocks(sbi) <
+			limit_free_user_blocks(invalid_user_blocks));
 }

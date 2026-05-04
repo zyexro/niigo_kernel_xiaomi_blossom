@@ -18,8 +18,6 @@
 #include <linux/keyslot-manager.h>
 #include <linux/uio.h>
 
-#include <uapi/linux/magic.h>
-
 #include "fscrypt_private.h"
 
 struct fscrypt_blk_crypto_key {
@@ -44,11 +42,33 @@ static void fscrypt_get_devices(struct super_block *sb, int num_devs,
 		sb->s_cop->get_devices(sb, devs);
 }
 
+#define SDHCI "sdhci"
+
+int fscrypt_find_storage_type(char **device)
+{
+	char boot[20] = {'\0'};
+	char *match = (char *)strnstr(saved_command_line,
+				      "androidboot.bootdevice=",
+				      strlen(saved_command_line));
+	if (match) {
+		memcpy(boot, (match + strlen("androidboot.bootdevice=")),
+			sizeof(boot) - 1);
+
+		if (strnstr(boot, "sdhci", strlen(boot)))
+			*device = SDHCI;
+
+		return 0;
+	}
+	return -EINVAL;
+}
+EXPORT_SYMBOL(fscrypt_find_storage_type);
+
 static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_info *ci)
 {
 	struct super_block *sb = ci->ci_inode->i_sb;
 	unsigned int flags = fscrypt_policy_flags(&ci->ci_policy);
 	int ino_bits = 64, lblk_bits = 64;
+	char *s_type = "ufs";
 
 	if (flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY)
 		return offsetofend(union fscrypt_iv, nonce);
@@ -58,6 +78,15 @@ static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_info *ci)
 
 	if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)
 		return sizeof(__le32);
+
+	if (fscrypt_policy_contents_mode(&ci->ci_policy) ==
+	    FSCRYPT_MODE_PRIVATE) {
+		fscrypt_find_storage_type(&s_type);
+		if (!strcmp(s_type, "sdhci"))
+			return sizeof(__le32);
+		else
+			return sizeof(__le64);
+	}
 
 	/* Default case: IVs are just the file logical block number */
 	if (sb->s_cop->get_ino_and_lblk_bits)
@@ -73,6 +102,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci,
 	struct super_block *sb = inode->i_sb;
 	enum blk_crypto_mode_num crypto_mode = ci->ci_mode->blk_crypto_mode;
 	unsigned int dun_bytes;
+	struct request_queue *devs_onstack;
 	struct request_queue **devs;
 	int num_devs;
 	int i;
@@ -91,6 +121,19 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci,
 		return 0;
 
 	/*
+	 * When a page contains multiple logically contiguous filesystem blocks,
+	 * some filesystem code only calls fscrypt_mergeable_bio() for the first
+	 * block in the page. This is fine for most of fscrypt's IV generation
+	 * strategies, where contiguous blocks imply contiguous IVs. But it
+	 * doesn't work with IV_INO_LBLK_32. For now, simply exclude
+	 * IV_INO_LBLK_32 with blocksize != PAGE_SIZE from inline encryption.
+	 */
+	if ((fscrypt_policy_flags(&ci->ci_policy) &
+	     FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) &&
+	    sb->s_blocksize != PAGE_SIZE)
+		return 0;
+
+	/*
 	 * The needed encryption settings must be supported either by
 	 * blk-crypto-fallback, or by hardware on all the filesystem's devices.
 	 */
@@ -102,10 +145,13 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci,
 	}
 
 	num_devs = fscrypt_get_num_devices(sb);
-	devs = kmalloc_array(num_devs, sizeof(*devs), GFP_NOFS);
-	if (!devs)
-		return -ENOMEM;
-
+	if (num_devs == 1) {
+		devs = &devs_onstack;
+	} else {
+		devs = kmalloc_array(num_devs, sizeof(*devs), GFP_NOFS);
+		if (!devs)
+			return -ENOMEM;
+	}
 	fscrypt_get_devices(sb, num_devs, devs);
 
 	dun_bytes = fscrypt_get_dun_bytes(ci);
@@ -121,7 +167,8 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci,
 
 	ci->ci_inlinecrypt = true;
 out_free_devs:
-	kfree(devs);
+	if (devs != &devs_onstack)
+		kfree(devs);
 	return 0;
 }
 
@@ -165,11 +212,6 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
 		goto fail;
 	}
 
-	/* A flag which will set eMMC crypto data unit size as 512 or 4096 */
-	if (ci->ci_policy.version == FSCRYPT_POLICY_V2 &&
-		S_ISREG(inode->i_mode))
-		blk_key->base.hie_duint_size = 4096;
-
 	/*
 	 * We have to start using blk-crypto on all the filesystem's devices.
 	 * We also have to save all the request_queue's for later so that the
@@ -196,8 +238,10 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
 		}
 	}
 	/*
-	 * Pairs with READ_ONCE() in fscrypt_is_key_prepared().  (Only matters
-	 * for the per-mode keys, which are shared by multiple inodes.)
+	 * Pairs with the smp_load_acquire() in fscrypt_is_key_prepared().
+	 * I.e., here we publish ->blk_key with a RELEASE barrier so that
+	 * concurrent tasks can ACQUIRE it.  Note that this concurrency is only
+	 * possible for per-mode keys, not for per-file keys.
 	 */
 	smp_store_release(&prep_key->blk_key, blk_key);
 	return 0;
@@ -216,7 +260,6 @@ void fscrypt_destroy_inline_crypt_key(struct fscrypt_prepared_key *prep_key)
 
 	if (blk_key) {
 		for (i = 0; i < blk_key->num_devs; i++) {
-			blk_key->base.hie_duint_size = 0;
 			blk_crypto_evict_key(blk_key->devs[i], &blk_key->base);
 			blk_put_queue(blk_key->devs[i]);
 		}
@@ -272,81 +315,18 @@ bool fscrypt_inode_uses_fs_layer_crypto(const struct inode *inode)
 }
 EXPORT_SYMBOL_GPL(fscrypt_inode_uses_fs_layer_crypto);
 
-/*
- * Specially for backward compatible to MTK HWFBE projects upgraded from
- *   Android Q or before. These projects use different iv from Goolge inline
- *   encryption v2.
- *   1. F2FS: iv is mixure of file logical block number (based on block device
- *      sector size) and inode number as iv.
- *   2. EXT4: iv is logical block address (based on block device sector size).
- *      We set dun as 128bit 1's as indication for MMC and UFS layer to set iv
- *      as logical block address.
- */
-static void fscrypt_generate_iv_spec(union fscrypt_iv *iv, u64 lblk_num,
-			 const struct fscrypt_info *ci)
-{
-	u8 flags = fscrypt_policy_flags(&ci->ci_policy);
-	unsigned int bz_bits;
-
-	memset(iv, 0, ci->ci_mode->ivsize);
-
-	if (WARN_ON_ONCE(flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64))
-		pr_notice("Ignore FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 flag\n");
-	else if (WARN_ON_ONCE(flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY))
-		pr_notice("Ignore FSCRYPT_POLICY_FLAG_DIRECT_KEY flag\n");
-
-	if (ci->ci_inode->i_sb->s_magic == F2FS_SUPER_MAGIC) {
-		bz_bits = blksize_bits(queue_physical_block_size(
-				ci->ci_inode->i_sb->s_bdev->bd_queue));
-
-		if (bz_bits < PAGE_SHIFT)
-			lblk_num = lblk_num << (PAGE_SHIFT - bz_bits);
-		else
-			lblk_num = lblk_num >> (bz_bits - PAGE_SHIFT);
-
-		lblk_num = (((u64)ci->ci_inode->i_ino & 0xFFFFFFFF) << 32)
-				| (lblk_num & 0xFFFFFFFF);
-
-		/* eMMC + F2FS security OTA only */
-		if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)
-			lblk_num = (u32)(((u64)(ci->ci_hashed_info) & 0xFFFFFFFF) + lblk_num);
-
-		if (!lblk_num)
-			lblk_num = ~lblk_num;
-
-		iv->lblk_num = cpu_to_le64(lblk_num);
-	} else if (ci->ci_inode->i_sb->s_magic == EXT4_SUPER_MAGIC) {
-		lblk_num = (((u64)ci->ci_inode->i_ino) << 32)
-				| (lblk_num & 0xFFFFFFFF);
-		iv->lblk_num = cpu_to_le64(lblk_num);
-	}
-}
-
 static void fscrypt_generate_dun(const struct fscrypt_info *ci, u64 lblk_num,
 				 u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE])
 {
 	union fscrypt_iv iv;
 	int i;
 
-	if (ci->ci_policy.version == FSCRYPT_POLICY_V1)
-		fscrypt_generate_iv_spec(&iv, lblk_num, ci);
-	else
-		fscrypt_generate_iv(&iv, lblk_num, ci);
+	fscrypt_generate_iv(&iv, lblk_num, ci);
 
 	BUILD_BUG_ON(FSCRYPT_MAX_IV_SIZE > BLK_CRYPTO_MAX_IV_SIZE);
 	memset(dun, 0, BLK_CRYPTO_MAX_IV_SIZE);
 	for (i = 0; i < ci->ci_mode->ivsize/sizeof(dun[0]); i++)
 		dun[i] = le64_to_cpu(iv.dun[i]);
-}
-
-static void fscrypt_check_hie_ext4(struct bio *bio, const struct inode *inode)
-{
-	const struct fscrypt_info *ci = inode->i_crypt_info;
-	struct bio_crypt_ctx *bc = bio->bi_crypt_context;
-
-	if ((ci->ci_policy.version == FSCRYPT_POLICY_V1) &&
-	    (ci->ci_inode->i_sb->s_magic == EXT4_SUPER_MAGIC))
-		bc->hie_ext4 = true;
 }
 
 /**
@@ -381,7 +361,10 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
 
 	fscrypt_generate_dun(ci, first_lblk, dun);
 	bio_crypt_set_ctx(bio, &ci->ci_key.blk_key->base, dun, gfp_mask);
-	fscrypt_check_hie_ext4(bio, inode);
+	if ((fscrypt_policy_contents_mode(&ci->ci_policy) ==
+	    FSCRYPT_MODE_PRIVATE) &&
+	    (!strcmp(inode->i_sb->s_type->name, "ext4")))
+		bio->bi_crypt_context->is_ext4 = true;
 }
 EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx);
 
@@ -474,7 +457,6 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
 		return false;
 
 	fscrypt_generate_dun(inode->i_crypt_info, next_lblk, next_dun);
-	fscrypt_check_hie_ext4(bio, inode);
 	return bio_crypt_dun_is_contiguous(bc, bio->bi_iter.bi_size, next_dun);
 }
 EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
@@ -514,7 +496,6 @@ EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio_bh);
 bool fscrypt_dio_supported(struct kiocb *iocb, struct iov_iter *iter)
 {
 	const struct inode *inode = file_inode(iocb->ki_filp);
-	const struct fscrypt_info *ci = inode->i_crypt_info;
 	const unsigned int blocksize = i_blocksize(inode);
 
 	/* If the file is unencrypted, no veto from us. */
@@ -532,15 +513,6 @@ bool fscrypt_dio_supported(struct kiocb *iocb, struct iov_iter *iter)
 	if (!IS_ALIGNED(iocb->ki_pos | iov_iter_alignment(iter), blocksize))
 		return false;
 
-	/*
-	 * With IV_INO_LBLK_32 and sub-page blocks, the DUN can wrap around in
-	 * the middle of a page.  This isn't handled by the direct I/O code yet.
-	 */
-	if (blocksize != PAGE_SIZE &&
-	    (fscrypt_policy_flags(&ci->ci_policy) &
-	     FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
-		return false;
-
 	return true;
 }
 EXPORT_SYMBOL_GPL(fscrypt_dio_supported);
@@ -555,8 +527,6 @@ EXPORT_SYMBOL_GPL(fscrypt_dio_supported);
  * targeting @pos, in order to avoid crossing a data unit number (DUN)
  * discontinuity.  This is only needed for certain IV generation methods.
  *
- * This assumes block_size == PAGE_SIZE; see fscrypt_dio_supported().
- *
  * Return: the actual number of pages that can be submitted
  */
 int fscrypt_limit_dio_pages(const struct inode *inode, loff_t pos, int nr_pages)
@@ -570,21 +540,20 @@ int fscrypt_limit_dio_pages(const struct inode *inode, loff_t pos, int nr_pages)
 	if (nr_pages <= 1)
 		return nr_pages;
 
-	/* It should be work normally with eMMC + F2FS security fix */
 	if (!(fscrypt_policy_flags(&ci->ci_policy) &
 	      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
 		return nr_pages;
 
+	/*
+	 * fscrypt_select_encryption_impl() ensures that block_size == PAGE_SIZE
+	 * when using FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32.
+	 */
 	if (WARN_ON_ONCE(i_blocksize(inode) != PAGE_SIZE))
 		return 1;
 
 	/* With IV_INO_LBLK_32, the DUN can wrap around from U32_MAX to 0. */
-	if (ci->ci_policy.version == FSCRYPT_POLICY_V1
-		&& (fscrypt_policy_flags(&ci->ci_policy) &
-		FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
-		dun = ci->ci_hashed_info + (pos >> inode->i_blkbits);
-	else
-		dun = ci->ci_hashed_ino + (pos >> inode->i_blkbits);
+
+	dun = ci->ci_hashed_ino + (pos >> inode->i_blkbits);
 
 	return min_t(u64, nr_pages, (u64)U32_MAX + 1 - dun);
 }

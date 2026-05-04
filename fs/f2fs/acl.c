@@ -18,11 +18,11 @@ static inline size_t f2fs_acl_size(int count)
 {
 	if (count <= 4) {
 		return sizeof(struct f2fs_acl_header) +
-		       count * sizeof(struct f2fs_acl_entry_short);
+			count * sizeof(struct f2fs_acl_entry_short);
 	} else {
 		return sizeof(struct f2fs_acl_header) +
-		       4 * sizeof(struct f2fs_acl_entry_short) +
-		       (count - 4) * sizeof(struct f2fs_acl_entry);
+			4 * sizeof(struct f2fs_acl_entry_short) +
+			(count - 4) * sizeof(struct f2fs_acl_entry);
 	}
 }
 
@@ -68,10 +68,11 @@ static struct posix_acl *f2fs_acl_from_disk(const char *value, size_t size)
 		return ERR_PTR(-ENOMEM);
 
 	for (i = 0; i < count; i++) {
+
 		if ((char *)entry > end)
 			goto fail;
 
-		acl->a_entries[i].e_tag = le16_to_cpu(entry->e_tag);
+		acl->a_entries[i].e_tag  = le16_to_cpu(entry->e_tag);
 		acl->a_entries[i].e_perm = le16_to_cpu(entry->e_perm);
 
 		switch (acl->a_entries[i].e_tag) {
@@ -79,24 +80,23 @@ static struct posix_acl *f2fs_acl_from_disk(const char *value, size_t size)
 		case ACL_GROUP_OBJ:
 		case ACL_MASK:
 		case ACL_OTHER:
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry_short));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry_short));
 			break;
 
 		case ACL_USER:
-			acl->a_entries[i].e_uid = make_kuid(
-				&init_user_ns, le32_to_cpu(entry->e_id));
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry));
+			acl->a_entries[i].e_uid =
+				make_kuid(&init_user_ns,
+						le32_to_cpu(entry->e_id));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry));
 			break;
 		case ACL_GROUP:
-			acl->a_entries[i].e_gid = make_kgid(
-				&init_user_ns, le32_to_cpu(entry->e_id));
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry));
+			acl->a_entries[i].e_gid =
+				make_kgid(&init_user_ns,
+						le32_to_cpu(entry->e_id));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry));
 			break;
 		default:
 			goto fail;
@@ -111,17 +111,15 @@ fail:
 }
 
 static void *f2fs_acl_to_disk(struct f2fs_sb_info *sbi,
-			      const struct posix_acl *acl, size_t *size)
+				const struct posix_acl *acl, size_t *size)
 {
 	struct f2fs_acl_header *f2fs_acl;
 	struct f2fs_acl_entry *entry;
 	int i;
 
-	f2fs_acl = f2fs_kmalloc(sbi,
-				sizeof(struct f2fs_acl_header) +
-					acl->a_count *
-						sizeof(struct f2fs_acl_entry),
-				GFP_NOFS);
+	f2fs_acl = f2fs_kmalloc(sbi, sizeof(struct f2fs_acl_header) +
+			acl->a_count * sizeof(struct f2fs_acl_entry),
+			GFP_NOFS);
 	if (!f2fs_acl)
 		return ERR_PTR(-ENOMEM);
 
@@ -129,31 +127,31 @@ static void *f2fs_acl_to_disk(struct f2fs_sb_info *sbi,
 	entry = (struct f2fs_acl_entry *)(f2fs_acl + 1);
 
 	for (i = 0; i < acl->a_count; i++) {
-		entry->e_tag = cpu_to_le16(acl->a_entries[i].e_tag);
+
+		entry->e_tag  = cpu_to_le16(acl->a_entries[i].e_tag);
 		entry->e_perm = cpu_to_le16(acl->a_entries[i].e_perm);
 
 		switch (acl->a_entries[i].e_tag) {
 		case ACL_USER:
-			entry->e_id = cpu_to_le32(from_kuid(
-				&init_user_ns, acl->a_entries[i].e_uid));
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry));
+			entry->e_id = cpu_to_le32(
+					from_kuid(&init_user_ns,
+						acl->a_entries[i].e_uid));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry));
 			break;
 		case ACL_GROUP:
-			entry->e_id = cpu_to_le32(from_kgid(
-				&init_user_ns, acl->a_entries[i].e_gid));
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry));
+			entry->e_id = cpu_to_le32(
+					from_kgid(&init_user_ns,
+						acl->a_entries[i].e_gid));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry));
 			break;
 		case ACL_USER_OBJ:
 		case ACL_GROUP_OBJ:
 		case ACL_MASK:
 		case ACL_OTHER:
-			entry = (struct f2fs_acl_entry
-					 *)((char *)entry +
-					    sizeof(struct f2fs_acl_entry_short));
+			entry = (struct f2fs_acl_entry *)((char *)entry +
+					sizeof(struct f2fs_acl_entry_short));
 			break;
 		default:
 			goto fail;
@@ -168,7 +166,7 @@ fail:
 }
 
 static struct posix_acl *__f2fs_get_acl(struct inode *inode, int type,
-					struct page *dpage)
+						struct page *dpage)
 {
 	int name_index = F2FS_XATTR_INDEX_POSIX_ACL_DEFAULT;
 	void *value = NULL;
@@ -183,8 +181,8 @@ static struct posix_acl *__f2fs_get_acl(struct inode *inode, int type,
 		value = f2fs_kmalloc(F2FS_I_SB(inode), retval, GFP_F2FS_ZERO);
 		if (!value)
 			return ERR_PTR(-ENOMEM);
-		retval = f2fs_getxattr(inode, name_index, "", value, retval,
-				       dpage);
+		retval = f2fs_getxattr(inode, name_index, "", value,
+							retval, dpage);
 	}
 
 	if (retval > 0)
@@ -204,7 +202,7 @@ struct posix_acl *f2fs_get_acl(struct inode *inode, int type)
 }
 
 static int f2fs_acl_update_mode(struct inode *inode, umode_t *mode_p,
-				struct posix_acl **acl)
+			  struct posix_acl **acl)
 {
 	umode_t mode = inode->i_mode;
 	int error;
@@ -224,8 +222,8 @@ static int f2fs_acl_update_mode(struct inode *inode, umode_t *mode_p,
 	return 0;
 }
 
-static int __f2fs_set_acl(struct inode *inode, int type, struct posix_acl *acl,
-			  struct page *ipage)
+static int __f2fs_set_acl(struct inode *inode, int type,
+			struct posix_acl *acl, struct page *ipage)
 {
 	int name_index;
 	void *value = NULL;
@@ -285,13 +283,13 @@ int f2fs_set_acl(struct inode *inode, struct posix_acl *acl, int type)
  * are copied from posix_acl.c
  */
 static struct posix_acl *f2fs_acl_clone(const struct posix_acl *acl,
-					gfp_t flags)
+							gfp_t flags)
 {
 	struct posix_acl *clone = NULL;
 
 	if (acl) {
-		int size = sizeof(struct posix_acl) +
-			   acl->a_count * sizeof(struct posix_acl_entry);
+		int size = sizeof(struct posix_acl) + acl->a_count *
+				sizeof(struct posix_acl_entry);
 		clone = kmemdup(acl, size, flags);
 		if (clone)
 			refcount_set(&clone->a_refcount, 1);
@@ -308,12 +306,11 @@ static int f2fs_acl_create_masq(struct posix_acl *acl, umode_t *mode_p)
 
 	/* assert(atomic_read(acl->a_refcount) == 1); */
 
-	FOREACH_ACL_ENTRY(pa, acl, pe)
-	{
+	FOREACH_ACL_ENTRY(pa, acl, pe) {
 		switch (pa->e_tag) {
 		case ACL_USER_OBJ:
-			pa->e_perm &= (mode >> 6) | ~0007;
-			mode &= (pa->e_perm << 6) | ~0700;
+			pa->e_perm &= (mode >> 6) | ~S_IRWXO;
+			mode &= (pa->e_perm << 6) | ~S_IRWXU;
 			break;
 
 		case ACL_USER:
@@ -326,8 +323,8 @@ static int f2fs_acl_create_masq(struct posix_acl *acl, umode_t *mode_p)
 			break;
 
 		case ACL_OTHER:
-			pa->e_perm &= mode | ~0007;
-			mode &= pa->e_perm | ~0007;
+			pa->e_perm &= mode | ~S_IRWXO;
+			mode &= pa->e_perm | ~S_IRWXO;
 			break;
 
 		case ACL_MASK:
@@ -341,22 +338,22 @@ static int f2fs_acl_create_masq(struct posix_acl *acl, umode_t *mode_p)
 	}
 
 	if (mask_obj) {
-		mask_obj->e_perm &= (mode >> 3) | ~0007;
-		mode &= (mask_obj->e_perm << 3) | ~0070;
+		mask_obj->e_perm &= (mode >> 3) | ~S_IRWXO;
+		mode &= (mask_obj->e_perm << 3) | ~S_IRWXG;
 	} else {
 		if (!group_obj)
 			return -EIO;
-		group_obj->e_perm &= (mode >> 3) | ~0007;
-		mode &= (group_obj->e_perm << 3) | ~0070;
+		group_obj->e_perm &= (mode >> 3) | ~S_IRWXO;
+		mode &= (group_obj->e_perm << 3) | ~S_IRWXG;
 	}
 
-	*mode_p = (*mode_p & ~0777) | mode;
+	*mode_p = (*mode_p & ~S_IRWXUGO) | mode;
 	return not_equiv;
 }
 
 static int f2fs_acl_create(struct inode *dir, umode_t *mode,
-			   struct posix_acl **default_acl,
-			   struct posix_acl **acl, struct page *dpage)
+		struct posix_acl **default_acl, struct posix_acl **acl,
+		struct page *dpage)
 {
 	struct posix_acl *p;
 	struct posix_acl *clone;
@@ -406,10 +403,10 @@ release_acl:
 }
 
 int f2fs_init_acl(struct inode *inode, struct inode *dir, struct page *ipage,
-		  struct page *dpage)
+							struct page *dpage)
 {
 	struct posix_acl *default_acl = NULL, *acl = NULL;
-	int error = 0;
+	int error;
 
 	error = f2fs_acl_create(dir, &inode->i_mode, &default_acl, &acl, dpage);
 	if (error)

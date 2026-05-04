@@ -1710,6 +1710,7 @@ static int can_umount(const struct path *path, int flags)
 		return -EINVAL;
 	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
+
 	return 0;
 }
 
@@ -1726,14 +1727,15 @@ int path_umount(struct path *path, int flags)
 	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
 	dput(path->dentry);
 	mntput_no_expire(mnt);
+
 	return ret;
 }
 
 int ksys_umount(char __user *name, int flags)
 {
-	int lookup_flags = 0;
 	struct path path;
 	int ret;
+	int lookup_flags = 0;
 
 	// basic validity checks done first
 	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
@@ -1741,9 +1743,11 @@ int ksys_umount(char __user *name, int flags)
 
 	if (!(flags & UMOUNT_NOFOLLOW))
 		lookup_flags |= LOOKUP_FOLLOW;
+
 	ret = user_path_mountpoint_at(AT_FDCWD, name, lookup_flags, &path);
 	if (ret)
 		return ret;
+
 	return path_umount(&path, flags);
 }
 
@@ -1854,64 +1858,30 @@ out:
 	return q;
 }
 
-static inline bool extend_array(struct path **res, struct path **to_free,
-				unsigned n, unsigned *count, unsigned new_count)
+/* Caller should check returned pointer for errors */
+
+struct vfsmount *collect_mounts(const struct path *path)
 {
-	struct path *p;
-
-	if (likely(n < *count))
-		return true;
-	p = kmalloc_array(new_count, sizeof(struct path), GFP_KERNEL);
-	if (p && *count)
-		memcpy(p, *res, *count * sizeof(struct path));
-	*count = new_count;
-	kfree(*to_free);
-	*to_free = *res = p;
-	return p;
-}
-struct path *collect_paths(const struct path *path,
-			      struct path *prealloc, unsigned count)
-{
-	struct mount *root = real_mount(path->mnt);
-	struct mount *child, *m;
-	struct path *res = prealloc, *to_free = NULL, *p;
-	unsigned n = 0;
-
-	down_read(&namespace_sem);
-
-	if (!check_mnt(root))
-		return ERR_PTR(-EINVAL);
-	if (!extend_array(&res, &to_free, 0, &count, 32))
-		return ERR_PTR(-ENOMEM);
-	res[n++] = *path;
-	list_for_each_entry(child, &root->mnt_mounts, mnt_child) {
-		if (!is_subdir(child->mnt_mountpoint, path->dentry))
-			continue;
-		for (m = child; m; m = next_mnt(m, child)) {
-			if (!extend_array(&res, &to_free, n, &count, 2 * count))
-				return ERR_PTR(-ENOMEM);
-			res[n].mnt = &m->mnt;
-			res[n].dentry = m->mnt.mnt_root;
-			n++;
-		}
-	}
-	if (!extend_array(&res, &to_free, n, &count, count + 1))
-		return ERR_PTR(-ENOMEM);
-	memset(res + n, 0, (count - n) * sizeof(struct path));
-	for (p = res; p->mnt; p++)
-		path_get(p);
-
-	up_read(&namespace_sem);
-	return res;
+	struct mount *tree;
+	namespace_lock();
+	if (!check_mnt(real_mount(path->mnt)))
+		tree = ERR_PTR(-EINVAL);
+	else
+		tree = copy_tree(real_mount(path->mnt), path->dentry,
+				 CL_COPY_ALL | CL_PRIVATE);
+	namespace_unlock();
+	if (IS_ERR(tree))
+		return ERR_CAST(tree);
+	return &tree->mnt;
 }
 
-void drop_collected_paths(struct path *paths, struct path *prealloc)
+void drop_collected_mounts(struct vfsmount *mnt)
 {
-	struct path *p;
-	for (p = paths; p->mnt; p++)
-		path_put(p);
-	if (paths != prealloc)
-		kfree(paths);
+	namespace_lock();
+	lock_mount_hash();
+	umount_tree(real_mount(mnt), 0);
+	unlock_mount_hash();
+	namespace_unlock();
 }
 
 static bool has_locked_children(struct mount *mnt, struct dentry *dentry)
@@ -1965,6 +1935,21 @@ invalid:
 	return ERR_PTR(-EINVAL);
 }
 EXPORT_SYMBOL_GPL(clone_private_mount);
+
+int iterate_mounts(int (*f)(struct vfsmount *, void *), void *arg,
+		   struct vfsmount *root)
+{
+	struct mount *mnt;
+	int res = f(root, arg);
+	if (res)
+		return res;
+	list_for_each_entry(mnt, &real_mount(root)->mnt_list, mnt_list) {
+		res = f(&mnt->mnt, arg);
+		if (res)
+			return res;
+	}
+	return 0;
+}
 
 static void cleanup_group_ids(struct mount *mnt, struct mount *end)
 {
@@ -2948,9 +2933,9 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 	if (retval)
 		goto dput_out;
 
-	/* Default to relatime unless overriden */
-	if (!(flags & MS_NOATIME))
-		mnt_flags |= MNT_RELATIME;
+	/* Default to noatime unless overriden */
+	if (!(flags & MS_RELATIME))
+		mnt_flags |= MNT_NOATIME;
 
 	/* Separate the per-mountpoint flags */
 	if (flags & MS_NOSUID)
@@ -3441,11 +3426,7 @@ void put_mnt_ns(struct mnt_namespace *ns)
 {
 	if (!atomic_dec_and_test(&ns->count))
 		return;
-	namespace_lock();
-	lock_mount_hash();
-	umount_tree(ns->root, 0);
-	unlock_mount_hash();
-	namespace_unlock();
+	drop_collected_mounts(&ns->root->mnt);
 	free_mnt_ns(ns);
 }
 
@@ -3516,6 +3497,7 @@ static bool mnt_already_visible(struct mnt_namespace *ns,
 	list_for_each_entry(mnt, &ns->list, mnt_list) {
 		struct mount *child;
 		int mnt_flags;
+
 		if (mnt->mnt.mnt_sb->s_type != sb->s_type)
 			continue;
 

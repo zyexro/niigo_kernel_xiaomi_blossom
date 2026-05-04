@@ -1379,15 +1379,23 @@ static int ep_create_wakeup_source(struct epitem *epi)
 {
 	struct name_snapshot n;
 	struct wakeup_source *ws;
+	char task_comm_buf[TASK_COMM_LEN];
+	char buf[64];
+
+	get_task_comm(task_comm_buf, current);
 
 	if (!epi->ep->ws) {
-		epi->ep->ws = wakeup_source_register(NULL, "eventpoll");
+		snprintf(buf, sizeof(buf), "epoll_%.*s_epollfd",
+			 (int)sizeof(task_comm_buf), task_comm_buf);
+		epi->ep->ws = wakeup_source_register(NULL, buf);
 		if (!epi->ep->ws)
 			return -ENOMEM;
 	}
 
 	take_dentry_name_snapshot(&n, epi->ffd.file->f_path.dentry);
-	ws = wakeup_source_register(NULL, n.name);
+	snprintf(buf, sizeof(buf), "epoll_%.*s_file:%s",
+		 (int)sizeof(task_comm_buf), task_comm_buf, n.name);
+	ws = wakeup_source_register(NULL, buf);
 	release_dentry_name_snapshot(&n);
 
 	if (!ws)
@@ -2228,13 +2236,31 @@ static int do_epoll_pwait(int epfd, struct epoll_event __user *events,
 	 * If the caller wants a certain signal mask to be set during the wait,
 	 * we apply it here.
 	 */
-	error = set_user_sigmask(sigmask, &ksigmask, &sigsaved, sigsetsize);
-	if (error)
-		return error;
+	if (sigmask) {
+		if (sigsetsize != sizeof(sigset_t))
+			return -EINVAL;
+		if (copy_from_user(&ksigmask, sigmask, sizeof(ksigmask)))
+			return -EFAULT;
+		sigsaved = current->blocked;
+		set_current_blocked(&ksigmask);
+	}
 
 	error = do_epoll_wait(epfd, events, maxevents, to);
 
-	restore_user_sigmask(sigmask, &sigsaved);
+	/*
+	 * If we changed the signal mask, we need to restore the original one.
+	 * In case we've got a signal while waiting, we do not restore the
+	 * signal mask yet, and we allow do_signal() to deliver the signal on
+	 * the way back to userspace, before the signal mask is restored.
+	 */
+	if (sigmask) {
+		if (error == -EINTR) {
+			memcpy(&current->saved_sigmask, &sigsaved,
+			       sizeof(sigsaved));
+			set_restore_sigmask();
+		} else
+			set_current_blocked(&sigsaved);
+	}
 
 	return error;
 }
@@ -2281,13 +2307,31 @@ static int do_compat_epoll_pwait(int epfd, struct epoll_event __user *events,
 	 * If the caller wants a certain signal mask to be set during the wait,
 	 * we apply it here.
 	 */
-	err = set_compat_user_sigmask(sigmask, &ksigmask, &sigsaved, sigsetsize);
-	if (err)
-		return err;
+	if (sigmask) {
+		if (sigsetsize != sizeof(compat_sigset_t))
+			return -EINVAL;
+		if (get_compat_sigset(&ksigmask, sigmask))
+			return -EFAULT;
+		sigsaved = current->blocked;
+		set_current_blocked(&ksigmask);
+	}
 
 	err = do_epoll_wait(epfd, events, maxevents, timeout);
 
-	restore_user_sigmask(sigmask, &sigsaved);
+	/*
+	 * If we changed the signal mask, we need to restore the original one.
+	 * In case we've got a signal while waiting, we do not restore the
+	 * signal mask yet, and we allow do_signal() to deliver the signal on
+	 * the way back to userspace, before the signal mask is restored.
+	 */
+	if (sigmask) {
+		if (err == -EINTR) {
+			memcpy(&current->saved_sigmask, &sigsaved,
+			       sizeof(sigsaved));
+			set_restore_sigmask();
+		} else
+			set_current_blocked(&sigsaved);
+	}
 
 	return err;
 }

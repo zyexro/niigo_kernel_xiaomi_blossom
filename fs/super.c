@@ -445,7 +445,7 @@ void generic_shutdown_super(struct super_block *sb)
 		sync_filesystem(sb);
 		sb->s_flags &= ~SB_ACTIVE;
 
-		fsnotify_unmount_inodes(sb);
+		fsnotify_sb_delete(sb);
 		cgroup_writeback_umount();
 
 		evict_inodes(sb);
@@ -994,7 +994,6 @@ int reconfigure_super(struct fs_context *fc)
 			     sb->s_type->name, retval);
 		}
 	}
-
 	WRITE_ONCE(sb->s_flags, ((sb->s_flags & ~fc->sb_flags_mask) |
 				 (fc->sb_flags & fc->sb_flags_mask)));
 	/* Needs to be ordered wrt mnt_is_readonly() */

@@ -33,7 +33,6 @@
 #include <linux/pid_namespace.h>
 #include <linux/refcount.h>
 #include <linux/user_namespace.h>
-#include <linux/freezer.h>
 #include <linux/statfs.h>
 
 #define FUSE_SUPER_MAGIC 0x65735546
@@ -442,8 +441,6 @@ struct fuse_req {
 	/** refcount */
 	refcount_t count;
 
-	bool user_pages;
-
 	/* Request flags, updated with test/set/clear_bit() */
 	unsigned long flags;
 
@@ -460,7 +457,7 @@ struct fuse_req {
 	/** Used to wake up the task waiting for completion of request*/
 	wait_queue_head_t waitq;
 
-#ifdef CONFIG_VIRTIO_FS
+#if IS_ENABLED(CONFIG_VIRTIO_FS)
 	/** virtio-fs's physically contiguous buffer for in and out args */
 	void *argbuf;
 #endif
@@ -955,6 +952,16 @@ static inline u64 get_node_id(struct inode *inode)
 	return get_fuse_inode(inode)->nodeid;
 }
 
+static inline int invalid_nodeid(u64 nodeid)
+{
+	return !nodeid || nodeid == FUSE_ROOT_ID;
+}
+
+static inline u64 fuse_get_attr_version(struct fuse_conn *fc)
+{
+	return atomic64_read(&fc->attr_version);
+}
+
 static inline bool fuse_stale_inode(const struct inode *inode, int generation,
 				    struct fuse_attr *attr)
 {
@@ -970,16 +977,6 @@ static inline void fuse_make_bad(struct inode *inode)
 static inline bool fuse_is_bad(struct inode *inode)
 {
 	return unlikely(test_bit(FUSE_I_BAD, &get_fuse_inode(inode)->state));
-}
-
-static inline int invalid_nodeid(u64 nodeid)
-{
-	return !nodeid || nodeid == FUSE_ROOT_ID;
-}
-
-static inline u64 fuse_get_attr_version(struct fuse_conn *fc)
-{
-	return atomic64_read(&fc->attr_version);
 }
 
 /** Device operations */
@@ -1309,18 +1306,9 @@ struct posix_acl;
 struct posix_acl *fuse_get_acl(struct inode *inode, int type);
 int fuse_set_acl(struct inode *inode, struct posix_acl *acl, int type);
 
+
 /* readdir.c */
 int fuse_readdir(struct file *file, struct dir_context *ctx);
-
-/* passthrough.c */
-void fuse_copyattr(struct file *dst_file, struct file *src_file);
-int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd);
-int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
-			   struct fuse_open_out *openarg);
-void fuse_passthrough_release(struct fuse_passthrough *passthrough);
-ssize_t fuse_passthrough_read_iter(struct kiocb *iocb, struct iov_iter *to);
-ssize_t fuse_passthrough_write_iter(struct kiocb *iocb, struct iov_iter *from);
-ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma);
 
 /**
  * Return the number of bytes in an arguments list
@@ -1349,49 +1337,15 @@ void fuse_dax_inode_cleanup(struct inode *inode);
 bool fuse_dax_check_alignment(struct fuse_conn *fc, unsigned int map_alignment);
 void fuse_dax_cancel_work(struct fuse_conn *fc);
 
-#ifdef CONFIG_FREEZER
-static inline void fuse_freezer_do_not_count(void)
-{
-	current->flags |= PF_FREEZER_SKIP;
-}
-
-static inline void fuse_freezer_count(void)
-{
-	current->flags &= ~PF_FREEZER_SKIP;
-}
-#else /* !CONFIG_FREEZER */
-static inline void fuse_freezer_do_not_count(void) {}
-static inline void fuse_freezer_count(void) {}
-#endif
-
-#define fuse_wait_event(wq, condition)						\
-({										\
-	fuse_freezer_do_not_count();						\
-	wait_event(wq, condition);						\
-	fuse_freezer_count();							\
-})
-
-#define fuse_wait_event_killable(wq, condition)					\
-({										\
-	int __ret = 0;								\
-										\
-	fuse_freezer_do_not_count();						\
-	__ret = wait_event_killable(wq, condition);				\
-	fuse_freezer_count();							\
-										\
-	__ret;									\
-})
-
-#define fuse_wait_event_killable_exclusive(wq, condition)			\
-({										\
-	int __ret = 0;								\
-										\
-	fuse_freezer_do_not_count();						\
-	__ret = wait_event_killable_exclusive(wq, condition);			\
-	fuse_freezer_count();							\
-										\
-	__ret;									\
-})
+/* passthrough.c */
+void fuse_copyattr(struct file *dst_file, struct file *src_file);
+int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd);
+int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
+			   struct fuse_open_out *openarg);
+void fuse_passthrough_release(struct fuse_passthrough *passthrough);
+ssize_t fuse_passthrough_read_iter(struct kiocb *iocb, struct iov_iter *to);
+ssize_t fuse_passthrough_write_iter(struct kiocb *iocb, struct iov_iter *from);
+ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma);
 
 /* backing.c */
 
@@ -2036,5 +1990,18 @@ static inline int fuse_bpf_run(struct bpf_prog *prog, struct fuse_bpf_args *fba)
 	fer;								\
 })
 #endif /* CONFIG_FUSE_BPF */
+
+#define __fuse_wait_event_killable(wq_head, condition)				\
+	___wait_event(wq_head, condition, TASK_KILLABLE, 0, 0,			\
+		     freezable_schedule())
+
+#define fuse_wait_event_killable(wq_head, condition)				\
+({										\
+	int __ret = 0;								\
+	might_sleep();								\
+	if (!(condition))							\
+		__ret = __fuse_wait_event_killable(wq_head, condition);		\
+	__ret;									\
+})
 
 #endif /* _FS_FUSE_I_H */

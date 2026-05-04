@@ -50,6 +50,8 @@ config ANDROID_DEFAULT_SETTING
 	select FS_VERITY
 	select FS_VERITY_BUILTIN_SIGNATURES
 	select FUSE_FS
+	select FUSE_BPF
+	select CUSE
 	select FUTEX
 	select HARDENED_USERCOPY
 	select HID_GENERIC

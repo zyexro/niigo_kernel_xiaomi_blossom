@@ -6738,6 +6738,4 @@ err_alloc_shrinker_failed:
 
 device_initcall(binder_init);
 
-#define CREATE_TRACE_POINTS
-
 MODULE_LICENSE("GPL v2");

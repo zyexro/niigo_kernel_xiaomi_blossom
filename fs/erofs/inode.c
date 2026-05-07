@@ -5,7 +5,6 @@
  */
 #include "xattr.h"
 
-#include <trace/events/erofs.h>
 
 /*
  * if inode is successfully read, return its inode page (or sometimes
@@ -236,7 +235,6 @@ static int erofs_fill_inode(struct inode *inode, int isdir)
 	unsigned int ofs;
 	int err = 0;
 
-	trace_erofs_fill_inode(inode, isdir);
 
 	/* read inode base data from disk */
 	page = erofs_read_inode(inode, &ofs);

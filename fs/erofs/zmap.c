@@ -5,7 +5,6 @@
  */
 #include "internal.h"
 #include <asm/unaligned.h>
-#include <trace/events/erofs.h>
 
 int z_erofs_fill_inode(struct inode *inode)
 {
@@ -512,7 +511,6 @@ int z_erofs_map_blocks_iter(struct inode *inode,
 	unsigned long initial_lcn;
 	unsigned long long ofs, end;
 
-	trace_z_erofs_map_blocks_iter_enter(inode, map, flags);
 
 	/* when trying to read beyond EOF, leave it unmapped */
 	if (map->m_la >= inode->i_size) {
@@ -590,7 +588,6 @@ out:
 		  __func__, map->m_la, map->m_pa,
 		  map->m_llen, map->m_plen, map->m_flags);
 
-	trace_z_erofs_map_blocks_iter_exit(inode, map, flags, err);
 
 	/* aggressively BUG_ON iff CONFIG_EROFS_FS_DEBUG is on */
 	DBG_BUGON(err < 0 && err != -ENOMEM);

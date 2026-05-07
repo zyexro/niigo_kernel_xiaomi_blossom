@@ -6,7 +6,6 @@
 #include "internal.h"
 #include <linux/prefetch.h>
 
-#include <trace/events/erofs.h>
 
 static void erofs_readendio(struct bio *bio)
 {
@@ -54,7 +53,6 @@ static int erofs_map_blocks_flatmode(struct inode *inode,
 	struct erofs_inode *vi = EROFS_I(inode);
 	bool tailendpacking = (vi->datalayout == EROFS_INODE_FLAT_INLINE);
 
-	trace_erofs_map_blocks_flatmode_enter(inode, map, flags);
 
 	nblocks = DIV_ROUND_UP(inode->i_size, PAGE_SIZE);
 	lastblk = nblocks - tailendpacking;
@@ -104,7 +102,6 @@ out:
 	map->m_llen = map->m_plen;
 
 err_out:
-	trace_erofs_map_blocks_flatmode_exit(inode, map, flags, 0);
 	return err;
 }
 
@@ -252,7 +249,6 @@ static int erofs_raw_access_readpage(struct file *file, struct page *page)
 	erofs_off_t last_block;
 	struct bio *bio;
 
-	trace_erofs_readpage(page, true);
 
 	bio = erofs_read_raw_page(NULL, page->mapping,
 				  page, &last_block, 1, false);
@@ -274,7 +270,6 @@ static int erofs_raw_access_readpages(struct file *filp,
 	gfp_t gfp = readahead_gfp_mask(mapping);
 	struct page *page = list_last_entry(pages, struct page, lru);
 
-	trace_erofs_readpages(mapping->host, page, nr_pages, true);
 
 	for (; nr_pages; --nr_pages) {
 		page = list_entry(pages->prev, struct page, lru);

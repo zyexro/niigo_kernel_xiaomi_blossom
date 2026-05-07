@@ -11,9 +11,6 @@
 #include <linux/crc32c.h>
 #include "xattr.h"
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/erofs.h>
-
 static struct kmem_cache *erofs_inode_cachep __read_mostly;
 
 void _erofs_err(struct super_block *sb, const char *function,

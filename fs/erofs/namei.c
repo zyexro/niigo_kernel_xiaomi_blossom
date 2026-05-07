@@ -5,7 +5,6 @@
  */
 #include "xattr.h"
 
-#include <trace/events/erofs.h>
 
 struct erofs_qstr {
 	const unsigned char *name;
@@ -218,7 +217,6 @@ static struct dentry *erofs_lookup(struct inode *dir,
 	/* dentry must be unhashed in lookup, no need to worry about */
 	DBG_BUGON(!d_unhashed(dentry));
 
-	trace_erofs_lookup(dir, dentry, flags);
 
 	/* file name exceeds fs limit */
 	if (dentry->d_name.len > EROFS_NAME_LEN)

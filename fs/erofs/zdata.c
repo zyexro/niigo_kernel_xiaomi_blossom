@@ -7,7 +7,6 @@
 #include "compress.h"
 #include <linux/prefetch.h>
 #include <linux/cpuhotplug.h>
-#include <trace/events/erofs.h>
 
 /*
  * since pclustersize is variable for big pcluster feature, introduce slab
@@ -1525,7 +1524,6 @@ static int z_erofs_readpage(struct file *file, struct page *page)
 	int err;
 	LIST_HEAD(pagepool);
 
-	trace_erofs_readpage(page, false);
 
 	f.headoffset = (erofs_off_t)page->index << PAGE_SHIFT;
 
@@ -1558,9 +1556,6 @@ static int z_erofs_readpages(struct file *filp, struct address_space *mapping,
 	gfp_t gfp = mapping_gfp_constraint(mapping, GFP_KERNEL);
 	struct page *head = NULL;
 	LIST_HEAD(pagepool);
-
-	trace_erofs_readpages(mapping->host, lru_to_page(pages),
-			      nr_pages, false);
 
 	f.headoffset = (erofs_off_t)lru_to_page(pages)->index << PAGE_SHIFT;
 

@@ -860,6 +860,7 @@ void bpf_jit_uncharge_modmem(u32 pages)
 	atomic_long_sub(pages, &bpf_jit_current);
 }
 
+#ifdef CONFIG_MODULES
 void *__weak bpf_jit_alloc_exec(unsigned long size)
 {
 	return module_alloc(size);
@@ -869,6 +870,7 @@ void __weak bpf_jit_free_exec(void *addr)
 {
 	module_memfree(addr);
 }
+#endif
 
 struct bpf_binary_header *
 bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
@@ -2287,9 +2289,23 @@ const struct bpf_func_proto bpf_get_ns_current_pid_tgid_proto __weak;
 const struct bpf_func_proto bpf_snprintf_btf_proto __weak;
 const struct bpf_func_proto bpf_seq_printf_btf_proto __weak;
 
+BPF_CALL_5(bpf_trace_printk_dummy, char *, fmt, u32, fmt_size, u64, arg1,
+	   u64, arg2, u64, arg3)
+{
+	return 0;
+}
+
+static const struct bpf_func_proto bpf_trace_printk_dummy_proto = {
+	.func		= bpf_trace_printk_dummy,
+	.gpl_only	= true,
+	.ret_type	= RET_INTEGER,
+	.arg1_type	= ARG_PTR_TO_MEM,
+	.arg2_type	= ARG_CONST_SIZE,
+};
+
 const struct bpf_func_proto * __weak bpf_get_trace_printk_proto(void)
 {
-	return NULL;
+	return &bpf_trace_printk_dummy_proto;
 }
 
 u64 __weak

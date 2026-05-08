@@ -30,7 +30,8 @@ ifneq ($(filter $(CONFIG_MTK_SECURE_MEM_SUPPORT) $(CONFIG_MTK_TRUSTED_MEMORY_SUB
 include $(srctree)/drivers/misc/mediatek/trusted_mem/Makefile.include
 endif
 
-obj-$(CONFIG_MTK_M4U) += m4u.o m4u_mva.o m4u_pgtable.o m4u_debug.o
+obj-$(CONFIG_MTK_M4U) += m4u.o m4u_mva.o m4u_pgtable.o
+obj-$(CONFIG_DEBUG_KERNEL) += m4u_debug.o
 ifeq ($(or $(strip $(CONFIG_TRUSTONIC_TEE_SUPPORT)), $(strip $(CONFIG_MICROTRUST_TEE_SUPPORT))),y)
 obj-$(CONFIG_MTK_M4U) += m4u_sec_gp.o
 endif

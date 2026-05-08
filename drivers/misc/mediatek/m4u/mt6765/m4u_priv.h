@@ -285,7 +285,14 @@ int m4u_query_mva_info(unsigned int mva,
 
 /* ================================= */
 /* ==== define in m4u_debug.c ===== */
+#ifdef CONFIG_DEBUG_KERNEL
 int m4u_debug_init(struct m4u_device *m4u_dev);
+#else
+static inline int m4u_debug_init(struct m4u_device *m4u_dev)
+{
+	return 0;
+}
+#endif
 
 static inline dma_addr_t get_sg_phys(struct scatterlist *sg)
 {

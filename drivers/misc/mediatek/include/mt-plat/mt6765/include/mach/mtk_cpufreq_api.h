@@ -76,6 +76,10 @@ typedef void (*cpuFreqsampler_func)(unsigned int cluster_id, unsigned int freq);
 extern void mt_cpufreq_set_governor_freq_registerCB(cpuFreqsampler_func pCB);
 
 /* CPUFREQ */
+#ifdef CONFIG_DEBUG_KERNEL
 extern void aee_record_cpufreq_cb(unsigned int step);
+#else
+static inline void aee_record_cpufreq_cb(unsigned int step) {}
+#endif
 
 #endif	/* __MTK_CPUFREQ_API_H__ */

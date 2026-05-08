@@ -153,7 +153,7 @@ typedef struct _SYNC_CHECKPOINT_BLOCK_LIST_
 	SYNC_CHECKPOINT_BLOCK **papsSyncCheckpointBlock; /*!< Array of sync checkpoint blocks */
 } SYNC_CHECKPOINT_BLOCK_LIST;
 
-typedef struct _SYNC_CHECKPOINT_CONTEXT_CTL_
+struct _SYNC_CHECKPOINT_CONTEXT_CTL_
 {
 	SHARED_DEV_CONNECTION					psDeviceNode;
 	PFN_SYNC_CHECKPOINT_FENCE_RESOLVE_FN	pfnFenceResolve;
@@ -178,7 +178,7 @@ typedef struct _SYNC_CHECKPOINT_CONTEXT_CTL_
 	IMG_UINT32								ui32SyncCheckpointPoolRp;
 	POS_SPINLOCK							hSyncCheckpointPoolLock; /*! Protects access to the checkpoint pool control data. */
 #endif
-} _SYNC_CHECKPOINT_CONTEXT_CTL;
+};
 
 /* this is the max number of sync checkpoint records we will search or dump
  * at any time.

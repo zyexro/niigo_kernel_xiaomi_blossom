@@ -486,7 +486,7 @@ PVRSRV_ERROR PVRSRVRGXTDMSubmitTransferKM(
 	RGX_CLIENT_CCB      *psClientCCB = FWCommonContextGetClientCCB(psTransferContext->sTDMData.psServerCommonContext);
 	IMG_UINT32          ui32IntJobRef = OSAtomicIncrement(&psDevInfo->iCCBSubmissionOrdinal);
 
-	IMG_UINT32 ui32CmdOffset = 0; (void)ui32CmdOffset;
+	IMG_UINT32 ui32CmdOffset = 0;
 	IMG_BOOL bCCBStateOpen = IMG_FALSE;
 
 	IMG_UINT64               uiCheckFenceUID = 0;
@@ -514,6 +514,7 @@ PVRSRV_ERROR PVRSRVRGXTDMSubmitTransferKM(
 	IMG_UINT32 ui32FenceTimelineUpdateValue = 0;
 	void *pvUpdateFenceFinaliseData = NULL;
 
+	(void)ui32CmdOffset;
 	if (iUpdateTimeline >= 0 && !piUpdateFence)
 	{
 		return PVRSRV_ERROR_INVALID_PARAMS;

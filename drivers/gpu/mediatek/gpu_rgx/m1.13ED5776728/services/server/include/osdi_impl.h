@@ -81,7 +81,7 @@ typedef struct OSDI_IMPL_ENTRY_CB
 } OSDI_IMPL_ENTRY_CB;
 
 /*! Debug Info entry specialisation. */
-typedef struct OSDI_IMPL_ENTRY
+struct OSDI_IMPL_ENTRY
 {
     /*! Pointer to the private data. The data originates from DICreateEntry()
      *  function. */
@@ -90,7 +90,7 @@ typedef struct OSDI_IMPL_ENTRY
     void *pvNative;
     /*! Implementation entry callbacks. */
     OSDI_IMPL_ENTRY_CB *psCb;
-} OSDI_IMPL_ENTRY;
+};
 
 /*! Debug Info implementation callbacks. */
 typedef struct OSDI_IMPL_CB

@@ -1,4 +1,4 @@
-OPTIM = -Os
+OPTIM = -O3
 
 ccflags-y += -DCONFIG_MACH_MT6765
 

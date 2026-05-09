@@ -75,7 +75,6 @@ pvrsrvkm-y += \
 	services/server/devices/rogue/rgxlayer_impl.o \
 	services/server/devices/rogue/rgxtdmtransfer.o \
 	services/server/devices/rogue/rgxbvnc.o \
-	services/server/devices/rogue/rgxdebug.o \
 	services/server/devices/rogue/rgxta3d.o \
 	services/server/devices/rogue/rgxkicksync.o \
 	services/server/devices/rogue/rgxsrvinit.o \
@@ -116,7 +115,6 @@ pvrsrvkm-y += \
 	services/server/common/vz_vmm_vm.o \
 	services/server/common/vmm_pvz_client.o \
 	services/server/common/vmm_pvz_server.o \
-	services/server/common/htb_debug.o \
 	services/server/common/di_server.o \
 	services/server/env/linux/km_apphint.o \
 	services/server/env/linux/osmmap_stub.o \
@@ -124,7 +122,6 @@ pvrsrvkm-y += \
 	services/server/env/linux/allocmem.o \
 	services/server/env/linux/pvr_bridge_k.o \
 	services/server/env/linux/physmem_dmabuf.o \
-	services/server/env/linux/pvr_debugfs.o \
 	services/server/env/linux/osconnection_server.o \
 	services/server/env/linux/handle_idr.o \
 	services/server/env/linux/event.o \
@@ -134,7 +131,6 @@ pvrsrvkm-y += \
 	services/server/env/linux/physmem_osmem_linux.o \
 	services/server/env/linux/osfunc.o \
 	services/server/env/linux/pvr_gputrace.o \
-	services/server/env/linux/pvr_debug.o \
 	services/server/env/linux/pvr_procfs.o \
 	services/server/env/linux/pvr_ion_stats.o \
 	services/shared/devices/rogue/rgx_hwperf_table.o \
@@ -165,6 +161,14 @@ endif
 pvrsrvkm-$(CONFIG_ARM) += services/server/env/linux/osfunc_arm.o
 pvrsrvkm-$(CONFIG_ARM64) += services/server/env/linux/osfunc_arm64.o
 pvrsrvkm-$(CONFIG_EVENT_TRACING) += services/server/env/linux/trace_events.o
+pvrsrvkm-$(CONFIG_DEBUG_KERNEL) += \
+	services/server/devices/rogue/rgxdebug.o \
+	services/server/common/htb_debug.o \
+	services/server/env/linux/pvr_debugfs.o \
+	services/server/env/linux/pvr_debug.o
+ifeq ($(CONFIG_DEBUG_KERNEL),)
+pvrsrvkm-y += services/server/env/linux/pvr_debug_stub.o
+endif
 
 ccflags-y += \
 	-I$(RGX_TOP)/hwdefs/rogue \

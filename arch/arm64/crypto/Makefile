@@ -8,6 +8,12 @@
 # published by the Free Software Foundation.
 #
 
+ifdef CONFIG_INLINE_OPTIMIZATION
+ccflags-y += -mllvm -inline-threshold=15000
+ccflags-y += -mllvm -inlinehint-threshold=10000
+ccflags-y += -funroll-loops
+endif
+
 ccflags-y += -Wno-unneeded-internal-declaration
 
 obj-$(CONFIG_CRYPTO_SHA1_ARM64_CE) += sha1-ce.o

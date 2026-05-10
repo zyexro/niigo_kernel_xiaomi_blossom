@@ -89,6 +89,7 @@
  *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Label-Attributes.html#index-cold-label-attribute
  */
 #define __cold                          __attribute__((__cold__))
+#define __hot 				__attribute__((__hot__))
 
 /*
  * Note the long name.

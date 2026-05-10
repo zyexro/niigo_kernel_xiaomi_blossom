@@ -444,7 +444,7 @@ static PVRSRV_ERROR _WaitForDriverUnsuspend(void)
 	return PVRSRV_OK;
 }
 
-PVRSRV_ERROR PVRSRVDriverThreadEnter(void)
+PVRSRV_ERROR __hot PVRSRVDriverThreadEnter(void)
 {
 	PVRSRV_ERROR eError;
 
@@ -487,7 +487,7 @@ PVRSRV_ERROR PVRSRVDriverThreadEnter(void)
 	return PVRSRV_OK;
 }
 
-void PVRSRVDriverThreadExit(void)
+void __hot PVRSRVDriverThreadExit(void)
 {
 	OSAtomicDecrement(&g_iNumActiveDriverThreads);
 	/* if the driver is being suspended then we need to signal the
@@ -498,7 +498,7 @@ void PVRSRVDriverThreadExit(void)
 	(void) LinuxBridgeSignalIfSuspended();
 }
 
-int
+int __hot
 PVRSRV_BridgeDispatchKM(struct drm_device __maybe_unused *dev, void *arg, struct drm_file *pDRMFile)
 {
 	struct drm_pvr_srvkm_cmd *psSrvkmCmd = (struct drm_pvr_srvkm_cmd *) arg;
@@ -544,7 +544,7 @@ e0:
 	return OSPVRSRVToNativeError(error);
 }
 
-int
+int __hot
 PVRSRV_MMap(struct file *pFile, struct vm_area_struct *ps_vma)
 {
 	CONNECTION_DATA *psConnection = LinuxConnectionFromFile(pFile);

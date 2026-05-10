@@ -189,7 +189,7 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_generic_init);
 
-struct cpufreq_policy *cpufreq_cpu_get_raw(unsigned int cpu)
+struct cpufreq_policy * __hot cpufreq_cpu_get_raw(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
@@ -224,7 +224,7 @@ EXPORT_SYMBOL_GPL(cpufreq_generic_get);
  *
  * Return: A valid policy on success, otherwise NULL on failure.
  */
-struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu)
+struct cpufreq_policy * __hot cpufreq_cpu_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = NULL;
 	unsigned long flags;
@@ -256,7 +256,7 @@ EXPORT_SYMBOL_GPL(cpufreq_cpu_get);
  * This decrements the kobject reference count incremented earlier by calling
  * cpufreq_cpu_get().
  */
-void cpufreq_cpu_put(struct cpufreq_policy *policy)
+void __hot cpufreq_cpu_put(struct cpufreq_policy *policy)
 {
 	kobject_put(&policy->kobj);
 }
@@ -308,9 +308,8 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
  * function. It is called twice on all CPU frequency changes that have
  * external effects.
  */
-static void cpufreq_notify_transition(struct cpufreq_policy *policy,
-				      struct cpufreq_freqs *freqs,
-				      unsigned int state)
+static void __hot cpufreq_notify_transition(struct cpufreq_policy *policy,
+		struct cpufreq_freqs *freqs, unsigned int state)
 {
 	BUG_ON(irqs_disabled());
 
@@ -374,7 +373,7 @@ static void cpufreq_notify_post_transition(struct cpufreq_policy *policy,
 	cpufreq_notify_transition(policy, freqs, CPUFREQ_POSTCHANGE);
 }
 
-void cpufreq_freq_transition_begin(struct cpufreq_policy *policy,
+void __hot cpufreq_freq_transition_begin(struct cpufreq_policy *policy,
 		struct cpufreq_freqs *freqs)
 {
 
@@ -408,7 +407,7 @@ wait:
 }
 EXPORT_SYMBOL_GPL(cpufreq_freq_transition_begin);
 
-void cpufreq_freq_transition_end(struct cpufreq_policy *policy,
+void __hot cpufreq_freq_transition_end(struct cpufreq_policy *policy,
 		struct cpufreq_freqs *freqs, int transition_failed)
 {
 	if (unlikely(WARN_ON(!policy->transition_ongoing)))
@@ -501,10 +500,9 @@ EXPORT_SYMBOL_GPL(cpufreq_disable_fast_switch);
  * Return: Lowest driver-supported frequency greater than or equal to the
  * given target_freq, subject to policy (min/max) and driver limitations.
  */
-unsigned int cpufreq_driver_resolve_freq(struct cpufreq_policy *policy,
-					 unsigned int target_freq)
-{
-	target_freq = clamp_val(target_freq, policy->min, policy->max);
+unsigned int __hot cpufreq_driver_resolve_freq(struct cpufreq_policy *policy,
+					      unsigned int target_freq)
+{	target_freq = clamp_val(target_freq, policy->min, policy->max);
 	policy->cached_target_freq = target_freq;
 
 	if (cpufreq_driver->target_index) {
@@ -1958,7 +1956,7 @@ static int __target_index(struct cpufreq_policy *policy, int index)
 	return retval;
 }
 
-int __cpufreq_driver_target(struct cpufreq_policy *policy,
+int __hot __cpufreq_driver_target(struct cpufreq_policy *policy,
 			    unsigned int target_freq,
 			    unsigned int relation)
 {
@@ -1998,7 +1996,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(__cpufreq_driver_target);
 
-int cpufreq_driver_target(struct cpufreq_policy *policy,
+int __hot cpufreq_driver_target(struct cpufreq_policy *policy,
 			  unsigned int target_freq,
 			  unsigned int relation)
 {

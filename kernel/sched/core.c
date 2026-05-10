@@ -4333,7 +4333,7 @@ restart:
  *
  * WARNING: must be called with preemption disabled!
  */
-static void __sched notrace __schedule(bool preempt)
+static void __sched notrace __hot __schedule(bool preempt)
 {
 	struct task_struct *prev, *next;
 	unsigned long *switch_count;
@@ -4470,7 +4470,7 @@ static void sched_update_worker(struct task_struct *tsk)
 		wq_worker_running(tsk);
 }
 
-asmlinkage __visible void __sched schedule(void)
+asmlinkage __visible void __sched __hot schedule(void)
 {
 	struct task_struct *tsk = current;
 

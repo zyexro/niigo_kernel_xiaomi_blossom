@@ -1132,7 +1132,7 @@ void BridgeDispatcherDeinit(void)
 #endif
 }
 
-PVRSRV_ERROR BridgedDispatchKM(CONNECTION_DATA * psConnection,
+PVRSRV_ERROR __hot BridgedDispatchKM(CONNECTION_DATA * psConnection,
                           PVRSRV_BRIDGE_PACKAGE   * psBridgePackageKM)
 {
 

@@ -509,7 +509,7 @@ static int brcm_avs_resume(struct cpufreq_policy *policy)
  * code that can be re-tried on every core (if it failed before) can go into
  * brcm_avs_cpufreq_init().
  */
-static int brcm_avs_prepare_init(struct platform_device *pdev)
+static int __cold brcm_avs_prepare_init(struct platform_device *pdev)
 {
 	struct private_data *priv;
 	struct device *dev;

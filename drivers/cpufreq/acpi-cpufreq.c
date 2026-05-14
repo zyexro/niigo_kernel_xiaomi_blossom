@@ -639,7 +639,7 @@ static int acpi_cpufreq_blacklist(struct cpuinfo_x86 *c)
 }
 #endif
 
-static int acpi_cpufreq_cpu_init(struct cpufreq_policy *policy)
+static int __cold acpi_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
 	unsigned int i;
 	unsigned int valid_states = 0;
@@ -849,7 +849,7 @@ err_free:
 	return result;
 }
 
-static int acpi_cpufreq_cpu_exit(struct cpufreq_policy *policy)
+static int __cold acpi_cpufreq_cpu_exit(struct cpufreq_policy *policy)
 {
 	struct acpi_cpufreq_data *data = policy->driver_data;
 
@@ -934,7 +934,7 @@ static void __init acpi_cpufreq_boost_init(void)
 	acpi_cpufreq_online = ret;
 }
 
-static void acpi_cpufreq_boost_exit(void)
+static void __cold acpi_cpufreq_boost_exit(void)
 {
 	if (acpi_cpufreq_online > 0)
 		cpuhp_remove_state_nocalls(acpi_cpufreq_online);

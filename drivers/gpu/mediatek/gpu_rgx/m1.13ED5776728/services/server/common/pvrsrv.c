@@ -1020,7 +1020,7 @@ static void _HostMemDeviceDestroy(void)
 	OSFreeMem(psDeviceNode);
 }
 
-static PVRSRV_ERROR InitialiseInfoPageTimeouts(PVRSRV_DATA *psPVRSRVData)
+static PVRSRV_ERROR __cold InitialiseInfoPageTimeouts(PVRSRV_DATA *psPVRSRVData)
 {
 	if (NULL == psPVRSRVData)
 	{
@@ -1078,7 +1078,7 @@ static PVRSRV_ERROR PopulateInfoPageBridges(PVRSRV_DATA *psPVRSRVData)
 	return PVRSRV_OK;
 }
 
-PVRSRV_ERROR IMG_CALLCONV
+PVRSRV_ERROR IMG_CALLCONV __cold
 PVRSRVCommonDriverInit(void)
 {
 	PVRSRV_ERROR eError;
@@ -1320,7 +1320,7 @@ Error:
 	return eError;
 }
 
-void IMG_CALLCONV
+void IMG_CALLCONV __cold
 PVRSRVCommonDriverDeInit(void)
 {
 	PVRSRV_ERROR eError = PVRSRV_OK;
@@ -1720,7 +1720,7 @@ static void _ThreadsDebugRequestNotify(PVRSRV_DBGREQ_HANDLE hDbgReqestHandle,
 	}
 }
 
-PVRSRV_ERROR PVRSRVPhysMemHeapsInit(PVRSRV_DEVICE_NODE *psDeviceNode, PVRSRV_DEVICE_CONFIG *psDevConfig)
+PVRSRV_ERROR __cold PVRSRVPhysMemHeapsInit(PVRSRV_DEVICE_NODE *psDeviceNode, PVRSRV_DEVICE_CONFIG *psDevConfig)
 {
 	IMG_UINT32 ui32RegionId = 0;
 	PVRSRV_ERROR eError;
@@ -1893,7 +1893,7 @@ ErrorDeinit:
 	return eError;
 }
 
-void PVRSRVPhysMemHeapsDeinit(PVRSRV_DEVICE_NODE *psDeviceNode)
+void __cold PVRSRVPhysMemHeapsDeinit(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_DEVICE_PHYS_HEAP ePhysHeapIdx;
 	IMG_UINT32 i;
@@ -2313,7 +2313,7 @@ static PVRSRV_ERROR _ReadStateFlag(const PVRSRV_DEVICE_NODE *psDevice,
 }
 #endif
 
-PVRSRV_ERROR PVRSRVCommonDeviceInitialise(PVRSRV_DEVICE_NODE *psDeviceNode)
+PVRSRV_ERROR __cold PVRSRVCommonDeviceInitialise(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	IMG_BOOL bInitSuccesful = IMG_FALSE;
 #if defined(PVRSRV_ENABLE_PROCESS_STATS) && !defined(PVRSRV_DEBUG_LINUX_MEMORY_STATS)
@@ -3092,7 +3092,7 @@ ErrorExit:
 	return eError;
 }
 
-PVRSRV_ERROR IMG_CALLCONV PVRSRVDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
+PVRSRV_ERROR IMG_CALLCONV __cold PVRSRVDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	/* Only check devices which specify a compatibility check callback */
 	if (psDeviceNode->pfnInitDeviceCompatCheck)

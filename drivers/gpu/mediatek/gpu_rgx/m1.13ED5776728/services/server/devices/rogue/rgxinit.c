@@ -122,7 +122,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pdump_physmem.h"
 #endif
 
-static PVRSRV_ERROR RGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode);
+static PVRSRV_ERROR __cold RGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode);
 static PVRSRV_ERROR RGXDevVersionString(PVRSRV_DEVICE_NODE *psDeviceNode, IMG_CHAR **ppszVersionString);
 static PVRSRV_ERROR RGXDevClockSpeed(PVRSRV_DEVICE_NODE *psDeviceNode, IMG_PUINT32 pui32RGXClockSpeed);
 static PVRSRV_ERROR RGXSoftReset(PVRSRV_DEVICE_NODE *psDeviceNode, IMG_UINT64 ui64ResetValue1, IMG_UINT64 ui64ResetValue2);
@@ -164,7 +164,7 @@ static void RGXDeInitFwRawHeap(DEVMEM_HEAP_BLUEPRINT *psDevMemHeap);
 
 #define VAR(x) #x
 
-static void RGXDeInitHeaps(DEVICE_MEMORY_INFO *psDevMemoryInfo);
+static void __cold RGXDeInitHeaps(DEVICE_MEMORY_INFO *psDevMemoryInfo);
 
 #if defined(PVRSRV_DEBUG_LISR_EXECUTION)
 
@@ -346,7 +346,7 @@ static IMG_BOOL _WaitForInterruptsTimeoutCheck(PVRSRV_RGXDEV_INFO *psDevInfo)
 	return SampleIRQCount(psDevInfo);
 }
 
-void RGX_WaitForInterruptsTimeout(PVRSRV_RGXDEV_INFO *psDevInfo)
+void __cold RGX_WaitForInterruptsTimeout(PVRSRV_RGXDEV_INFO *psDevInfo)
 {
 	IMG_BOOL bScheduleMISR;
 
@@ -2595,7 +2595,7 @@ static PVRSRV_ERROR RGXDevInitCompatCheck_FWProcessorVersion_AgainstDriver(PVRSR
  @Return   PVRSRV_ERROR - depending on mismatch found
 
  ******************************************************************************/
-static PVRSRV_ERROR RGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
+static PVRSRV_ERROR __cold RGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_ERROR		eError;
 	PVRSRV_RGXDEV_INFO	*psDevInfo = psDeviceNode->pvDevice;
@@ -3524,7 +3524,7 @@ static void RGXFreeUFOBlock(PVRSRV_DEVICE_NODE *psDeviceNode,
 /*
 	DevDeInitRGX
  */
-PVRSRV_ERROR DevDeInitRGX(PVRSRV_DEVICE_NODE *psDeviceNode)
+PVRSRV_ERROR __cold DevDeInitRGX(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_RGXDEV_INFO		*psDevInfo = (PVRSRV_RGXDEV_INFO*)psDeviceNode->pvDevice;
 	PVRSRV_ERROR			eError;
@@ -3979,7 +3979,7 @@ static INLINE DEVMEM_HEAP_BLUEPRINT _blueprint_init(IMG_CHAR *name,
 						     psDeviceMemoryHeapCursor++; \
     } while (0)
 
-static PVRSRV_ERROR RGXInitHeaps(PVRSRV_RGXDEV_INFO *psDevInfo,
+static PVRSRV_ERROR __cold RGXInitHeaps(PVRSRV_RGXDEV_INFO *psDevInfo,
 		DEVICE_MEMORY_INFO *psNewMemoryInfo,
 		IMG_UINT32 *pui32Log2DummyPgSize)
 {
@@ -4166,7 +4166,7 @@ e0:
 #undef INIT_HEAP_NAME
 
 
-static void RGXDeInitHeaps(DEVICE_MEMORY_INFO *psDevMemoryInfo)
+static void __cold RGXDeInitHeaps(DEVICE_MEMORY_INFO *psDevMemoryInfo)
 {
 #if (RGX_NUM_OS_SUPPORTED > 1)
 	if (PVRSRV_VZ_MODE_IS(HOST))

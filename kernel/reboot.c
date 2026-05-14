@@ -489,7 +489,7 @@ static DECLARE_WORK(poweroff_work, poweroff_work_func);
  * This may be called from any context to trigger a system shutdown.
  * If the orderly shutdown fails, it will force an immediate shutdown.
  */
-void orderly_poweroff(bool force)
+void __cold orderly_poweroff(bool force)
 {
 	if (force) /* do not override the pending "true" */
 		poweroff_force = true;
@@ -510,7 +510,7 @@ static DECLARE_WORK(reboot_work, reboot_work_func);
  * This may be called from any context to trigger a system reboot.
  * If the orderly reboot fails, it will force an immediate reboot.
  */
-void orderly_reboot(void)
+void __cold orderly_reboot(void)
 {
 	schedule_work(&reboot_work);
 }

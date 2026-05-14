@@ -121,14 +121,14 @@ static int bmips_cpufreq_target_index(struct cpufreq_policy *policy,
 	return 0;
 }
 
-static int bmips_cpufreq_exit(struct cpufreq_policy *policy)
+static int __cold bmips_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	kfree(policy->freq_table);
 
 	return 0;
 }
 
-static int bmips_cpufreq_init(struct cpufreq_policy *policy)
+static int __cold bmips_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *freq_table;
 	int ret;

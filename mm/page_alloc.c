@@ -706,7 +706,7 @@ static bool need_debug_guardpage(void)
 	return true;
 }
 
-static void __cold init_debug_guardpage(void)
+static void init_debug_guardpage(void)
 {
 	if (!debug_pagealloc_enabled())
 		return;

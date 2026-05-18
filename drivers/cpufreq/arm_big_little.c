@@ -455,7 +455,7 @@ put_clusters:
 }
 
 /* Per-CPU initialization */
-static int __cold bL_cpufreq_init(struct cpufreq_policy *policy)
+static int bL_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct em_data_callback em_cb = EM_DATA_CB(of_dev_pm_opp_get_cpu_power);
 	u32 cur_cluster = cpu_to_cluster(policy->cpu);
@@ -504,7 +504,7 @@ static int __cold bL_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
-static int __cold bL_cpufreq_exit(struct cpufreq_policy *policy)
+static int bL_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	struct device *cpu_dev;
 	int cur_cluster = cpu_to_cluster(policy->cpu);

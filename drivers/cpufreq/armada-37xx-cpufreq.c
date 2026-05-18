@@ -214,15 +214,15 @@ static u32 armada_37xx_avs_val_match(int target_vm)
  * - L2 & L3 voltage should be about 150mv smaller than L0 voltage.
  * This function calculates L1 & L2 & L3 AVS values dynamically based
  * on L0 voltage and fill all AVS values to the AVS value table.
- * is 1000 or 1200 MHz then there is additional
+ * When base CPU frequency is 1000 or 1200 MHz then there is additional
  * minimal avs value for load L1.
  */
- static void __init armada37xx_cpufreq_avs_configure(struct regmap *base,
- struct armada_37xx_dvfs *dvfs)
- {
- unsigned int target_vm;
- int load_level = 0;
- u32 l0_vdd_min;
+static void __init armada37xx_cpufreq_avs_configure(struct regmap *base,
+						struct armada_37xx_dvfs *dvfs)
+{
+	unsigned int target_vm;
+	int load_level = 0;
+	u32 l0_vdd_min;
 
 	if (base == NULL)
 		return;

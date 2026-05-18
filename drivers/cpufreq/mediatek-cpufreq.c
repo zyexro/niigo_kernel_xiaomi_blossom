@@ -307,14 +307,14 @@ static int mtk_cpufreq_set_target(struct cpufreq_policy *policy,
 
 #define DYNAMIC_POWER "dynamic-power-coefficient"
 
-static void __cold mtk_cpufreq_ready(struct cpufreq_policy *policy)
+static void mtk_cpufreq_ready(struct cpufreq_policy *policy)
 {
 	struct mtk_cpu_dvfs_info *info = policy->driver_data;
 
 	info->cdev = of_cpufreq_cooling_register(policy);
 }
 
-static int __cold mtk_cpu_dvfs_info_init(struct mtk_cpu_dvfs_info *info, int cpu)
+static int mtk_cpu_dvfs_info_init(struct mtk_cpu_dvfs_info *info, int cpu)
 {
 	struct device *cpu_dev;
 	struct regulator *proc_reg = ERR_PTR(-ENODEV);
@@ -426,7 +426,7 @@ out_free_resources:
 	return ret;
 }
 
-static void __cold mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
+static void mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
 {
 	if (!IS_ERR(info->proc_reg))
 		regulator_put(info->proc_reg);
@@ -440,7 +440,7 @@ static void __cold mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
 	dev_pm_opp_of_cpumask_remove_table(&info->cpus);
 }
 
-static int __cold mtk_cpufreq_init(struct cpufreq_policy *policy)
+static int mtk_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct mtk_cpu_dvfs_info *info;
 	struct cpufreq_frequency_table *freq_table;
@@ -468,7 +468,7 @@ static int __cold mtk_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
-static int __cold mtk_cpufreq_exit(struct cpufreq_policy *policy)
+static int mtk_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	struct mtk_cpu_dvfs_info *info = policy->driver_data;
 

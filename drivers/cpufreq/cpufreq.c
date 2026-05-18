@@ -76,8 +76,8 @@ static inline bool has_target(void)
 
 /* internal prototypes */
 static unsigned int __cpufreq_get(struct cpufreq_policy *policy);
-static int __cold cpufreq_init_governor(struct cpufreq_policy *policy);
-static void __cold cpufreq_exit_governor(struct cpufreq_policy *policy);
+static int cpufreq_init_governor(struct cpufreq_policy *policy);
+static void cpufreq_exit_governor(struct cpufreq_policy *policy);
 static int cpufreq_start_governor(struct cpufreq_policy *policy);
 static void cpufreq_stop_governor(struct cpufreq_policy *policy);
 static void cpufreq_governor_limits(struct cpufreq_policy *policy);
@@ -172,7 +172,7 @@ EXPORT_SYMBOL_GPL(arch_set_max_freq_scale);
  * - set policies transition latency
  * - policy->cpus with all possible CPUs
  */
-int __cold cpufreq_generic_init(struct cpufreq_policy *policy,
+int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency)
 {
@@ -1020,7 +1020,7 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 	return NULL;
 }
 
-static int __cold cpufreq_init_policy(struct cpufreq_policy *policy)
+static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
 	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
@@ -2017,7 +2017,7 @@ __weak struct cpufreq_governor *cpufreq_fallback_governor(void)
 	return NULL;
 }
 
-static int __cold cpufreq_init_governor(struct cpufreq_policy *policy)
+static int cpufreq_init_governor(struct cpufreq_policy *policy)
 {
 	int ret;
 
@@ -2061,7 +2061,7 @@ static int __cold cpufreq_init_governor(struct cpufreq_policy *policy)
 	return 0;
 }
 
-static void __cold cpufreq_exit_governor(struct cpufreq_policy *policy)
+static void cpufreq_exit_governor(struct cpufreq_policy *policy)
 {
 	if (cpufreq_suspended || !policy->governor)
 		return;

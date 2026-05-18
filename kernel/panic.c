@@ -189,7 +189,7 @@ void check_panic_on_warn(const char *origin)
  *
  *	This function never returns.
  */
-void __cold panic(const char *fmt, ...)
+void panic(const char *fmt, ...)
 {
 	static char buf[1024];
 	va_list args;

@@ -293,7 +293,7 @@ static void free_thread_stack(struct task_struct *tsk)
 	kmem_cache_free(thread_stack_cache, tsk->stack);
 }
 
-void __cold thread_stack_cache_init(void)
+void thread_stack_cache_init(void)
 {
 	thread_stack_cache = kmem_cache_create_usercopy("thread_stack",
 					THREAD_SIZE, THREAD_SIZE, 0, 0,

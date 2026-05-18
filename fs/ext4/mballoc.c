@@ -4606,8 +4606,8 @@ repeat:
 			goto errout;
 		}
 	}
-	if (likely(ac->ac_status == AC_STATUS_FOUND)) {
-		*errp = ext4_mb_mark_diskspace_used(ac, handle);
+	if (likely(ac.ac_status == AC_STATUS_FOUND)) {
+		*errp = ext4_mb_mark_diskspace_used(&ac, handle);
 		if (*errp) {
 			ext4_discard_allocated_blocks(&ac);
 			goto errout;

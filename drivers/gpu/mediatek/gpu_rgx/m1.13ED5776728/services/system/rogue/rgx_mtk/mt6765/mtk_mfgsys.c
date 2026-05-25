@@ -58,7 +58,7 @@ void __iomem *topck_base;
 #define MTK_GPU_DVFS					1
 #endif
 #define MTK_DEFER_DVFS_WORK_MS		  10000
-#define MTK_DVFS_SWITCH_INTERVAL_MS	 50
+#define MTK_DVFS_SWITCH_INTERVAL_MS	 20
 #define MTK_SYS_BOOST_DURATION_MS	   50
 #define MTK_WAIT_FW_RESPONSE_TIMEOUT_US 5000
 #define MTK_GPIO_REG_OFFSET			 0x30

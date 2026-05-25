@@ -306,6 +306,18 @@ void DeviceMemSet(void *pvDst, unsigned char ui8Value, size_t uSize)
 #endif /* defined(DEVICE_MEMSETCPY_ARM64) */
 
 #if defined(DEVICE_MEMSETCPY_NON_VECTOR_KM)
+#if DEVICE_MEMSETCPY_ALIGN_IN_BYTES == 32 && !defined(DEVICE_MEMSETCPY_ARM64)
+		uint128_t ui128Value = 0;
+		BLK_t bValue;
+
+		uBlockSize = sizeof(uint128_t) / sizeof(ui8Value);
+		for (i = 0; i < uBlockSize; i++)
+		{
+			ui128Value |= (uint128_t)ui8Value << ((uBlockSize - i - 1) * BITS_PER_BYTE);
+		}
+		bValue.ui128DataFields[0] = ui128Value;
+		bValue.ui128DataFields[1] = ui128Value;
+#else
 		BLK_t bValue = 0;
 
 		uBlockSize = sizeof(BLK_t) / sizeof(ui8Value);
@@ -314,6 +326,7 @@ void DeviceMemSet(void *pvDst, unsigned char ui8Value, size_t uSize)
 		{
 			bValue |= (BLK_t)ui8Value << ((uBlockSize - i - 1) * BITS_PER_BYTE);
 		}
+#endif
 #else
 		BLK_t bValue = {0};
 

@@ -62,17 +62,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 #if defined(__cplusplus) || defined(INTEGRITY_OS)
 	#if	!defined(INLINE)
-		#define INLINE				inline
+		#define INLINE				inline __attribute__((always_inline))
 	#endif
-	#define	FORCE_INLINE			static inline
+	#define	FORCE_INLINE			static inline __attribute__((always_inline))
 #else
 #if	!defined(INLINE)
-	#define	INLINE					__inline
+	#define	INLINE					__inline __attribute__((always_inline))
 #endif
 #if (defined(UNDER_WDDM) || defined(WINDOWS_WDF)) && defined(_X86_)
 	#define	FORCE_INLINE			__forceinline
 #else
-	#define	FORCE_INLINE			static __inline
+	#define	FORCE_INLINE			static __inline __attribute__((always_inline))
 #endif
 #endif
 #endif

@@ -1144,7 +1144,7 @@ int pvr_apphint_init(void)
 	 * contexts
 	 */
 	apphint.workqueue = alloc_workqueue("apphint_workqueue",
-	                                    WQ_UNBOUND | WQ_FREEZABLE, 1);
+	                                    WQ_FREEZABLE, 1);
 	if (!apphint.workqueue) {
 		result = -ENOMEM;
 		goto err_out;

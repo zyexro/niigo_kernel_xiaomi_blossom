@@ -530,6 +530,9 @@ ifneq ($(LLVM_IAS),1)
 CLANG_FLAGS	+= -no-integrated-as
 endif
 CLANG_FLAGS	+= -Werror=unknown-warning-option
+CLANG_FLAGS	+= -Wno-address-of-packed-member
+CLANG_FLAGS	+= -Wno-error=address-of-packed-member
+CLANG_FLAGS	+= -fuse-ld=lld
 KBUILD_CPPFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
 endif

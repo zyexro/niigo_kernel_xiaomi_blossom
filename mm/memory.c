@@ -4560,7 +4560,7 @@ unlock:
  * The mmap_sem may have been released depending on flags and our
  * return value.  See filemap_fault() and __lock_page_or_retry().
  */
-static vm_fault_t __hot __handle_mm_fault(struct vm_area_struct *vma,
+static vm_fault_t __handle_mm_fault(struct vm_area_struct *vma,
 		unsigned long address, unsigned int flags)
 {
 	struct vm_fault vmf = {
@@ -4917,7 +4917,7 @@ out_put:
  * The mmap_sem may have been released depending on flags and our
  * return value.  See filemap_fault() and __lock_page_or_retry().
  */
-vm_fault_t __hot handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
+vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		unsigned int flags)
 {
 	vm_fault_t ret;

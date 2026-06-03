@@ -2382,7 +2382,7 @@ end_io:
  * a lower device by calling into generic_make_request recursively, which
  * means the bio should NOT be touched after the call to ->make_request_fn.
  */
-blk_qc_t __hot generic_make_request(struct bio *bio)
+blk_qc_t generic_make_request(struct bio *bio)
 {
 	/*
 	 * bio_list_on_stack[0] contains bios submitted by the current
@@ -2544,7 +2544,7 @@ EXPORT_SYMBOL_GPL(direct_make_request);
  * interfaces; @bio must be presetup and ready for I/O.
  *
  */
-blk_qc_t __hot submit_bio(struct bio *bio)
+blk_qc_t submit_bio(struct bio *bio)
 {
 	bool workingset_read = false;
 	unsigned long pflags;

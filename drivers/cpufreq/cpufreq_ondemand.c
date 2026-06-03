@@ -134,7 +134,7 @@ static void dbs_freq_increase(struct cpufreq_policy *policy, unsigned int freq)
  * (default), then we try to increase frequency. Else, we adjust the frequency
  * proportional to load.
  */
-static void __hot od_update(struct cpufreq_policy *policy)
+static void od_update(struct cpufreq_policy *policy)
 {
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
 	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy_dbs);
@@ -170,7 +170,7 @@ static void __hot od_update(struct cpufreq_policy *policy)
 	}
 }
 
-static unsigned int __hot od_dbs_update(struct cpufreq_policy *policy)
+static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 {
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
 	struct dbs_data *dbs_data = policy_dbs->dbs_data;

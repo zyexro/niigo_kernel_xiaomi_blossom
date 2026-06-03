@@ -1408,7 +1408,7 @@ PVRSRV_ERROR OSEventObjectSignal(IMG_HANDLE hEventObject)
 	return LinuxEventObjectSignal(hEventObject);
 }
 
-PVRSRV_ERROR __hot OSCopyToUser(void *pvProcess,
+PVRSRV_ERROR OSCopyToUser(void *pvProcess,
 						  void __user *pvDest,
 						  const void *pvSrc,
 						  size_t ui32Bytes)
@@ -1421,7 +1421,7 @@ PVRSRV_ERROR __hot OSCopyToUser(void *pvProcess,
 		return PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 
-PVRSRV_ERROR __hot OSCopyFromUser(void *pvProcess,
+PVRSRV_ERROR OSCopyFromUser(void *pvProcess,
 							void *pvDest,
 							const void __user *pvSrc,
 							size_t ui32Bytes)

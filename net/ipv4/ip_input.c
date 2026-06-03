@@ -417,7 +417,7 @@ static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 /*
  * 	Main IP Receive routine.
  */
-static struct sk_buff * __hot ip_rcv_core(struct sk_buff *skb, struct net *net)
+static struct sk_buff *ip_rcv_core(struct sk_buff *skb, struct net *net)
 {
 	const struct iphdr *iph;
 	u32 len;
@@ -513,7 +513,7 @@ out:
 /*
  * IP receive entry point
  */
-int __hot ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt,
+int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt,
 	   struct net_device *orig_dev)
 {
 	struct net *net = dev_net(dev);

@@ -174,9 +174,10 @@ out:
  *	Buffers may only be allocated from interrupts using a @gfp_mask of
  *	%GFP_ATOMIC.
  */
-struct sk_buff * __hot __alloc_skb(unsigned int size, gfp_t gfp_mask,
-			      int flags, int node)
-{	struct kmem_cache *cache;
+struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
+			    int flags, int node)
+{
+	struct kmem_cache *cache;
 	struct skb_shared_info *shinfo;
 	struct sk_buff *skb;
 	u8 *data;
@@ -681,7 +682,7 @@ static void skb_release_all(struct sk_buff *skb)
  *	always call kfree_skb
  */
 
-void __hot __kfree_skb(struct sk_buff *skb)
+void __kfree_skb(struct sk_buff *skb)
 {
 	skb_release_all(skb);
 	kfree_skbmem(skb);

@@ -2683,7 +2683,7 @@ MMU_Free (MMU_CONTEXT *psMMUContext,
 
 }
 
-PVRSRV_ERROR __hot
+PVRSRV_ERROR
 MMU_MapPages(MMU_CONTEXT *psMMUContext,
              PVRSRV_MEMALLOCFLAGS_T uiMappingFlags,
              IMG_DEV_VIRTADDR sDevVAddrBase,

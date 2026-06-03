@@ -1568,7 +1568,7 @@ u16 tcp_v4_get_syncookie(struct sock *sk, struct iphdr *iph,
  * This is because we cannot sleep with the original spinlock
  * held.
  */
-int __hot tcp_v4_do_rcv(struct sock *sk, struct sk_buff *skb)
+int tcp_v4_do_rcv(struct sock *sk, struct sk_buff *skb)
 {
 	struct sock *rsk;
 
@@ -1738,7 +1738,7 @@ static void tcp_v4_fill_cb(struct sk_buff *skb, const struct iphdr *iph,
  *	From tcp_input.c
  */
 
-int __hot tcp_v4_rcv(struct sk_buff *skb)
+int tcp_v4_rcv(struct sk_buff *skb)
 {
 	struct net *net = dev_net(skb->dev);
 	int sdif = inet_sdif(skb);

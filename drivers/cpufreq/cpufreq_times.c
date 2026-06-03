@@ -394,7 +394,7 @@ int proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
 	return 0;
 }
 
-void __hot cpufreq_acct_update_power(struct task_struct *p, u64 cputime)
+void cpufreq_acct_update_power(struct task_struct *p, u64 cputime)
 {
 	unsigned long flags;
 	unsigned int state;
@@ -540,9 +540,10 @@ void cpufreq_task_times_remove_uids(uid_t uid_start, uid_t uid_end)
 	spin_unlock_irqrestore(&uid_lock, flags);
 }
 
-void __hot cpufreq_times_record_transition(struct cpufreq_policy *policy,
-			unsigned int new_freq)
-{	int index;
+void cpufreq_times_record_transition(struct cpufreq_policy *policy,
+	unsigned int new_freq)
+{
+	int index;
 	struct cpu_freqs *freqs = all_freqs[policy->cpu];
 	if (!freqs)
 		return;

@@ -2944,14 +2944,14 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 		mnt_flags |= MNT_NODEV;
 	if (flags & MS_NOEXEC)
 		mnt_flags |= MNT_NOEXEC;
-	//if (flags & MS_NOATIME)
-		mnt_flags |= MNT_NOATIME;
-	//if (flags & MS_NODIRATIME)
-		mnt_flags |= MNT_NODIRATIME;
 	if (flags & MS_STRICTATIME)
 		mnt_flags &= ~(MNT_RELATIME | MNT_NOATIME);
 	if (flags & MS_RDONLY)
 		mnt_flags |= MNT_READONLY;
+
+	/* Force NOATIME and NODIRATIME */
+	mnt_flags |= MNT_NOATIME | MNT_NODIRATIME;
+	mnt_flags &= ~MNT_RELATIME;
 
 	/* The default atime for remount is preservation */
 	if ((flags & MS_REMOUNT) &&

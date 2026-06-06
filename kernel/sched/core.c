@@ -379,7 +379,7 @@ static bool set_nr_and_not_polling(struct task_struct *p)
 }
 
 #ifdef CONFIG_SMP
-static bool set_nr_if_polling(struct task_struct *p)
+static __maybe_unused bool set_nr_if_polling(struct task_struct *p)
 {
 	return false;
 }

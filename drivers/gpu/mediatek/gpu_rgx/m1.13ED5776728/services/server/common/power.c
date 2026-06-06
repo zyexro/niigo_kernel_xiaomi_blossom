@@ -655,7 +655,7 @@ PVRSRV_ERROR PVRSRVSetDeviceSystemPowerState(PPVRSRV_DEVICE_NODE psDeviceNode,
 											 PVRSRV_SYS_POWER_STATE eNewSysPowerState)
 {
 	PVRSRV_ERROR eError;
-	IMG_UINT uiStage = 0;
+	IMG_UINT uiStage __maybe_unused = 0;
 
 	PVRSRV_DEV_POWER_STATE eNewDevicePowerState =
 	  _IsSystemStatePowered(eNewSysPowerState)? PVRSRV_DEV_POWER_STATE_DEFAULT : PVRSRV_DEV_POWER_STATE_OFF;

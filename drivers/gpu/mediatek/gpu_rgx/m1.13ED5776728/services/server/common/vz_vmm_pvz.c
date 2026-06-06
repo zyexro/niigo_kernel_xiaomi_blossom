@@ -115,7 +115,7 @@ e0:
 PVRSRV_ERROR PvzConnectionInit(PVRSRV_DEVICE_CONFIG *psDevConfig)
 {
 	PVRSRV_ERROR eError;
-	PVRSRV_DATA *psPVRSRVData = PVRSRVGetPVRSRVData();
+	PVRSRV_DATA *psPVRSRVData __maybe_unused = PVRSRVGetPVRSRVData();
 
 #if (RGX_NUM_OS_SUPPORTED == 1)
 	PVR_DPF((PVR_DBG_ERROR, "This kernel driver does not support virtualization. Please rebuild with RGX_NUM_OS_SUPPORTED > 1"));

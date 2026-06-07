@@ -24,7 +24,7 @@
  * A: Field should be accessed / updated in atomic for parallelized code.
  */
 struct z_erofs_collection {
-	struct mutex lock;
+	unsigned long flags;
 
 	/* I: page offset of start position of decompression */
 	unsigned short pageofs;
@@ -43,6 +43,9 @@ struct z_erofs_collection {
 		struct rcu_head rcu;
 	};
 };
+
+#define Z_EROFS_COLLECTION_LOCK_BIT	0
+#define Z_EROFS_COLLECTION_DECOMP_BIT	1
 
 #define Z_EROFS_PCLUSTER_FULL_LENGTH    0x00000001
 #define Z_EROFS_PCLUSTER_LENGTH_BIT     1

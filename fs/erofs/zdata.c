@@ -7,6 +7,18 @@
 #include "compress.h"
 #include <linux/prefetch.h>
 #include <linux/cpuhotplug.h>
+#include <linux/bit_spinlock.h>
+#include <linux/wait.h>
+
+static void z_erofs_collection_lock(struct z_erofs_collection *cl)
+{
+	bit_spin_lock(Z_EROFS_COLLECTION_LOCK_BIT, &cl->flags);
+}
+
+static void z_erofs_collection_unlock(struct z_erofs_collection *cl)
+{
+	bit_spin_unlock(Z_EROFS_COLLECTION_LOCK_BIT, &cl->flags);
+}
 
 /*
  * since pclustersize is variable for big pcluster feature, introduce slab
@@ -590,7 +602,16 @@ static int z_erofs_lookup_collection(struct z_erofs_collector *clt,
 			length = READ_ONCE(pcl->length);
 		}
 	}
-	mutex_lock(&cl->lock);
+
+repeat:
+	z_erofs_collection_lock(cl);
+	if (test_bit(Z_EROFS_COLLECTION_DECOMP_BIT, &cl->flags)) {
+		z_erofs_collection_unlock(cl);
+		wait_on_bit(&cl->flags, Z_EROFS_COLLECTION_DECOMP_BIT,
+			    TASK_UNINTERRUPTIBLE);
+		goto repeat;
+	}
+
 	/* used to check tail merging loop due to corrupted images */
 	if (clt->owned_head == Z_EROFS_PCLUSTER_TAIL)
 		clt->tailpcl = pcl;
@@ -632,17 +653,17 @@ static int z_erofs_register_collection(struct z_erofs_collector *clt,
 
 	cl = z_erofs_primarycollection(pcl);
 	cl->pageofs = map->m_la & ~PAGE_MASK;
+	cl->flags = 0;
 
 	/*
 	 * lock all primary followed works before visible to others
-	 * and mutex_trylock *never* fails for a new pcluster.
+	 * and bit_spin_trylock *never* fails for a new pcluster.
 	 */
-	mutex_init(&cl->lock);
-	DBG_BUGON(!mutex_trylock(&cl->lock));
+	DBG_BUGON(!bit_spin_trylock(Z_EROFS_COLLECTION_LOCK_BIT, &cl->flags));
 
 	err = erofs_register_workgroup(inode->i_sb, &pcl->obj);
 	if (err) {
-		mutex_unlock(&cl->lock);
+		z_erofs_collection_unlock(cl);
 		z_erofs_free_pcluster(pcl);
 		return -EAGAIN;
 	}
@@ -733,7 +754,7 @@ static bool z_erofs_collector_end(struct z_erofs_collector *clt)
 		return false;
 
 	z_erofs_pagevec_ctor_exit(&clt->vector, false);
-	mutex_unlock(&cl->lock);
+	z_erofs_collection_unlock(cl);
 
 	/*
 	 * if all pending pages are added, don't hold its reference
@@ -992,8 +1013,14 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 	cl = z_erofs_primarycollection(pcl);
 	DBG_BUGON(!READ_ONCE(cl->nr_pages));
 
-	mutex_lock(&cl->lock);
+	z_erofs_collection_lock(cl);
+	/*
+	 * If the collection is being decompressed by another thread,
+	 * something is wrong because it should have been claimed only once.
+	 */
+	DBG_BUGON(test_and_set_bit(Z_EROFS_COLLECTION_DECOMP_BIT, &cl->flags));
 	nr_pages = cl->nr_pages;
+	z_erofs_collection_unlock(cl);
 
 	if (nr_pages <= Z_EROFS_VMAP_ONSTACK_PAGES) {
 		pages = pages_onstack;
@@ -1020,6 +1047,7 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 		pages[i] = NULL;
 
 	err = 0;
+	z_erofs_collection_lock(cl);
 	z_erofs_pagevec_ctor_init(&ctor, Z_EROFS_NR_INLINE_PAGEVECS,
 				  cl->pagevec, 0);
 
@@ -1100,8 +1128,10 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 		}
 	}
 
-	if (err)
+	if (err) {
+		z_erofs_collection_unlock(cl);
 		goto out;
+	}
 
 	llen = pcl->length >> Z_EROFS_PCLUSTER_LENGTH_BIT;
 	if (nr_pages << PAGE_SHIFT >= cl->pageofs + llen) {
@@ -1113,6 +1143,7 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 	}
 
 	inputsize = pcl->pclusterpages * PAGE_SIZE;
+	outputsize = outputsize; /* keep as is */
 	err = z_erofs_decompress(&(struct z_erofs_decompress_req) {
 					.sb = sb,
 					.in = compressed_pages,
@@ -1124,6 +1155,7 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 					.inplace_io = overlapped,
 					.partial_decoding = partial
 				 }, pagepool);
+	z_erofs_collection_unlock(cl);
 
 out:
 	/* must handle all compressed pages before ending pages */
@@ -1161,6 +1193,7 @@ out:
 	else if (pages != pages_onstack)
 		kvfree(pages);
 
+	z_erofs_collection_lock(cl);
 	cl->nr_pages = 0;
 	cl->vcnt = 0;
 
@@ -1168,7 +1201,9 @@ out:
 	WRITE_ONCE(pcl->next, Z_EROFS_PCLUSTER_NIL);
 
 	/* all cl locks SHOULD be released right now */
-	mutex_unlock(&cl->lock);
+	clear_bit(Z_EROFS_COLLECTION_DECOMP_BIT, &cl->flags);
+	wake_up_bit(&cl->flags, Z_EROFS_COLLECTION_DECOMP_BIT);
+	z_erofs_collection_unlock(cl);
 
 	z_erofs_collection_put(cl);
 	return err;

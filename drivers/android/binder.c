@@ -244,13 +244,9 @@ enum {
  * Acquires proc->outer_lock. Used to protect binder_ref
  * structures associated with the given proc.
  */
-#define binder_proc_lock(proc) _binder_proc_lock(proc, __LINE__)
-static void
-_binder_proc_lock(struct binder_proc *proc, int line)
+static inline void binder_proc_lock(struct binder_proc *proc)
 	__acquires(&proc->outer_lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_lock(&proc->outer_lock);
 }
 
@@ -260,13 +256,9 @@ _binder_proc_lock(struct binder_proc *proc, int line)
  *
  * Release lock acquired via binder_proc_lock()
  */
-#define binder_proc_unlock(proc) _binder_proc_unlock(proc, __LINE__)
-static void
-_binder_proc_unlock(struct binder_proc *proc, int line)
+static inline void binder_proc_unlock(struct binder_proc *proc)
 	__releases(&proc->outer_lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_unlock(&proc->outer_lock);
 }
 
@@ -276,13 +268,9 @@ _binder_proc_unlock(struct binder_proc *proc, int line)
  *
  * Acquires proc->inner_lock. Used to protect todo lists
  */
-#define binder_inner_proc_lock(proc) _binder_inner_proc_lock(proc, __LINE__)
-static void
-_binder_inner_proc_lock(struct binder_proc *proc, int line)
+static inline void binder_inner_proc_lock(struct binder_proc *proc)
 	__acquires(&proc->inner_lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_lock(&proc->inner_lock);
 }
 
@@ -292,13 +280,9 @@ _binder_inner_proc_lock(struct binder_proc *proc, int line)
  *
  * Release lock acquired via binder_inner_proc_lock()
  */
-#define binder_inner_proc_unlock(proc) _binder_inner_proc_unlock(proc, __LINE__)
-static void
-_binder_inner_proc_unlock(struct binder_proc *proc, int line)
+static inline void binder_inner_proc_unlock(struct binder_proc *proc)
 	__releases(&proc->inner_lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_unlock(&proc->inner_lock);
 }
 
@@ -308,13 +292,9 @@ _binder_inner_proc_unlock(struct binder_proc *proc, int line)
  *
  * Acquires node->lock. Used to protect binder_node fields
  */
-#define binder_node_lock(node) _binder_node_lock(node, __LINE__)
-static void
-_binder_node_lock(struct binder_node *node, int line)
+static inline void binder_node_lock(struct binder_node *node)
 	__acquires(&node->lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_lock(&node->lock);
 }
 
@@ -324,13 +304,9 @@ _binder_node_lock(struct binder_node *node, int line)
  *
  * Release lock acquired via binder_node_lock()
  */
-#define binder_node_unlock(node) _binder_node_unlock(node, __LINE__)
-static void
-_binder_node_unlock(struct binder_node *node, int line)
+static inline void binder_node_unlock(struct binder_node *node)
 	__releases(&node->lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_unlock(&node->lock);
 }
 
@@ -341,13 +317,9 @@ _binder_node_unlock(struct binder_node *node, int line)
  * Acquires node->lock. If node->proc also acquires
  * proc->inner_lock. Used to protect binder_node fields
  */
-#define binder_node_inner_lock(node) _binder_node_inner_lock(node, __LINE__)
-static void
-_binder_node_inner_lock(struct binder_node *node, int line)
+static inline void binder_node_inner_lock(struct binder_node *node)
 	__acquires(&node->lock) __acquires(&node->proc->inner_lock)
 {
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	spin_lock(&node->lock);
 	if (node->proc)
 		binder_inner_proc_lock(node->proc);
@@ -362,15 +334,11 @@ _binder_node_inner_lock(struct binder_node *node, int line)
  *
  * Release lock acquired via binder_node_lock()
  */
-#define binder_node_inner_unlock(node) _binder_node_inner_unlock(node, __LINE__)
-static void
-_binder_node_inner_unlock(struct binder_node *node, int line)
+static inline void binder_node_inner_unlock(struct binder_node *node)
 	__releases(&node->lock) __releases(&node->proc->inner_lock)
 {
 	struct binder_proc *proc = node->proc;
 
-	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d\n", __func__, line);
 	if (proc)
 		binder_inner_proc_unlock(proc);
 	else

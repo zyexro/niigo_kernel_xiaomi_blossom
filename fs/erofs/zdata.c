@@ -1143,7 +1143,8 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 	}
 
 	inputsize = pcl->pclusterpages * PAGE_SIZE;
-	outputsize = outputsize; /* keep as is */
+	z_erofs_collection_unlock(cl);
+
 	err = z_erofs_decompress(&(struct z_erofs_decompress_req) {
 					.sb = sb,
 					.in = compressed_pages,
@@ -1155,7 +1156,6 @@ static int z_erofs_decompress_pcluster(struct super_block *sb,
 					.inplace_io = overlapped,
 					.partial_decoding = partial
 				 }, pagepool);
-	z_erofs_collection_unlock(cl);
 
 out:
 	/* must handle all compressed pages before ending pages */

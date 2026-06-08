@@ -1784,7 +1784,9 @@ static int __write_checkpoint_sync(struct f2fs_sb_info *sbi)
 	struct cp_control cpc = { .reason = CP_SYNC, };
 	int err;
 
-	f2fs_down_write(&sbi->gc_lock);
+	if (!f2fs_down_write_trylock(&sbi->gc_lock))
+		return -EBUSY;
+
 	err = f2fs_write_checkpoint(sbi, &cpc);
 	f2fs_up_write(&sbi->gc_lock);
 
@@ -1874,7 +1876,12 @@ int f2fs_issue_checkpoint(struct f2fs_sb_info *sbi)
 	if (!test_opt(sbi, MERGE_CHECKPOINT) || cpc.reason != CP_SYNC) {
 		int ret;
 
-		f2fs_down_write(&sbi->gc_lock);
+		if (cpc.reason == CP_SYNC && !f2fs_down_write_trylock(&sbi->gc_lock))
+			return -EBUSY;
+
+		if (cpc.reason != CP_SYNC)
+			f2fs_down_write(&sbi->gc_lock);
+
 		ret = f2fs_write_checkpoint(sbi, &cpc);
 		f2fs_up_write(&sbi->gc_lock);
 

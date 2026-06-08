@@ -1627,7 +1627,8 @@ static int __write_node_page(struct page *page, bool atomic, bool *submitted,
 	if (f2fs_get_node_info(sbi, nid, &ni, !do_balance))
 		goto redirty_out;
 
-	if (wbc->for_reclaim) {
+	if (wbc->for_reclaim || (wbc->sync_mode == WB_SYNC_NONE &&
+				f2fs_rwsem_is_contended(&sbi->node_write))) {
 		if (!f2fs_down_read_trylock(&sbi->node_write))
 			goto redirty_out;
 	} else {

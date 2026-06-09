@@ -9801,7 +9801,8 @@ redo:
 		env.loop_max  = min(sysctl_sched_nr_migrate, busiest->nr_running);
 
 more_balance:
-		rq_lock_irqsave(busiest, &rf);
+		if (!rq_lock_trylock_irqsave(busiest, &rf))
+			goto out_balanced;
 		update_rq_clock(busiest);
 
 		/*
@@ -10924,7 +10925,7 @@ void trigger_load_balance(struct rq *rq)
 	if (unlikely(on_null_domain(rq)) || cpu_isolated(cpu_of(rq)))
 		return;
 
-	if (time_after_eq(jiffies, rq->next_balance))
+	if (time_after_eq(jiffies, rq->next_balance) && !raw_spin_is_locked(&rq->lock))
 		raise_softirq(SCHED_SOFTIRQ);
 
 	nohz_balancer_kick(rq);
@@ -11031,7 +11032,9 @@ void task_check_for_rotation(struct rq *src_rq)
 
 	dst_rq = cpu_rq(dst_cpu);
 
-	double_rq_lock(src_rq, dst_rq);
+	if (!double_rq_trylock(src_rq, dst_rq))
+		return;
+
 	if (dst_rq->curr->sched_class == &fair_sched_class) {
 		if (!cpumask_test_cpu(dst_cpu,
 					&(src_rq->curr)->cpus_allowed) ||

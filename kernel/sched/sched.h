@@ -2026,6 +2026,30 @@ unsigned long arch_scale_max_freq_capacity(int cpu)
 
 static inline void double_rq_lock(struct rq *rq1, struct rq *rq2);
 
+static inline int double_rq_trylock(struct rq *rq1, struct rq *rq2)
+{
+	if (rq1 == rq2) {
+		if (raw_spin_trylock(&rq1->lock)) {
+			__acquire(rq2->lock);
+			return 1;
+		}
+	} else if (rq1 < rq2) {
+		if (raw_spin_trylock(&rq1->lock)) {
+			if (raw_spin_trylock_nested(&rq2->lock, SINGLE_DEPTH_NESTING))
+				return 1;
+			raw_spin_unlock(&rq1->lock);
+		}
+	} else {
+		if (raw_spin_trylock(&rq2->lock)) {
+			if (raw_spin_trylock_nested(&rq1->lock, SINGLE_DEPTH_NESTING))
+				return 1;
+			raw_spin_unlock(&rq2->lock);
+		}
+	}
+
+	return 0;
+}
+
 /*
  * fair double_lock_balance: Safely acquires both rq->locks in a fair
  * way at the expense of forcing extra atomic operations in all

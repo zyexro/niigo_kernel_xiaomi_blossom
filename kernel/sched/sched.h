@@ -1242,6 +1242,28 @@ rq_lock(struct rq *rq, struct rq_flags *rf)
 	rq_pin_lock(rq, rf);
 }
 
+static inline bool
+rq_lock_trylock(struct rq *rq, struct rq_flags *rf)
+	__cond_acquires(rq->lock)
+{
+	if (raw_spin_trylock(&rq->lock)) {
+		rq_pin_lock(rq, rf);
+		return true;
+	}
+	return false;
+}
+
+static inline bool
+rq_lock_trylock_irqsave(struct rq *rq, struct rq_flags *rf)
+	__cond_acquires(rq->lock)
+{
+	if (raw_spin_trylock_irqsave(&rq->lock, rf->flags)) {
+		rq_pin_lock(rq, rf);
+		return true;
+	}
+	return false;
+}
+
 static inline void
 rq_relock(struct rq *rq, struct rq_flags *rf)
 	__acquires(rq->lock)

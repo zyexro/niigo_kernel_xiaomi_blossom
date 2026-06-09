@@ -8449,7 +8449,13 @@ static void update_blocked_averages(int cpu)
 	struct rq *rq = cpu_rq(cpu);
 	struct rq_flags rf;
 
-	rq_lock_irqsave(rq, &rf);
+	if (cpu != smp_processor_id()) {
+		if (!rq_lock_trylock_irqsave(rq, &rf))
+			return;
+	} else {
+		rq_lock_irqsave(rq, &rf);
+	}
+
 	update_rq_clock(rq);
 
 	decayed |= __update_blocked_others(rq, &done);
@@ -9510,6 +9516,10 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		enum fbq_type rt;
 
 		rq = cpu_rq(i);
+
+		if (env->idle == CPU_IDLE && raw_spin_is_locked(&rq->lock))
+			continue;
+
 		rt = fbq_classify_rq(rq);
 
 		/*
@@ -10630,7 +10640,8 @@ static bool _nohz_idle_balance(struct rq *this_rq, unsigned int flags,
 		if (time_after_eq(jiffies, rq->next_balance)) {
 			struct rq_flags rf;
 
-			rq_lock_irqsave(rq, &rf);
+			if (!rq_lock_trylock_irqsave(rq, &rf))
+				continue;
 			update_rq_clock(rq);
 			rq_unlock_irqrestore(rq, &rf);
 

@@ -323,7 +323,9 @@ static void mark_idle(struct zram *zram, ktime_t cutoff)
 		 * Do not mark ZRAM_UNDER_WB slot as ZRAM_IDLE to close race.
 		 * See the comment in writeback_store.
 		 */
-		zram_slot_lock(zram, index);
+		if (!zram_slot_trylock(zram, index))
+			continue;
+
 		if (zram_allocated(zram, index) &&
 				!zram_test_flag(zram, index, ZRAM_UNDER_WB)) {
 #ifdef CONFIG_ZRAM_MEMORY_TRACKING
@@ -722,7 +724,12 @@ static ssize_t writeback_store(struct device *dev,
 			}
 		}
 
-		zram_slot_lock(zram, index);
+		if (!zram_slot_trylock(zram, index)) {
+			if (mode == IDLE_WRITEBACK)
+				continue;
+			zram_slot_lock(zram, index);
+		}
+
 		if (!zram_allocated(zram, index))
 			goto next;
 
@@ -948,7 +955,9 @@ static ssize_t read_block_state(struct file *file, char __user *buf,
 	for (index = *ppos; index < nr_pages; index++) {
 		int copied;
 
-		zram_slot_lock(zram, index);
+		if (!zram_slot_trylock(zram, index))
+			continue;
+
 		if (!zram_allocated(zram, index))
 			goto next;
 
@@ -1893,7 +1902,8 @@ static ssize_t recompress_store(struct device *dev,
 	for (index = 0; index < nr_pages; index++) {
 		int err = 0;
 
-		zram_slot_lock(zram, index);
+		if (!zram_slot_trylock(zram, index))
+			continue;
 
 		if (!zram_allocated(zram, index))
 			goto next;
@@ -1961,10 +1971,14 @@ static void zram_bio_discard(struct zram *zram, u32 index,
 	}
 
 	while (n >= PAGE_SIZE) {
-		zram_slot_lock(zram, index);
+		atomic64_inc(&zram->stats.notify_free);
+		if (!zram_slot_trylock(zram, index)) {
+			atomic64_inc(&zram->stats.miss_free);
+			goto skip;
+		}
 		zram_free_page(zram, index);
 		zram_slot_unlock(zram, index);
-		atomic64_inc(&zram->stats.notify_free);
+skip:
 		index++;
 		n -= PAGE_SIZE;
 	}

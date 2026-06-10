@@ -642,12 +642,13 @@ sugov_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
 	unsigned int next_f;
 	int cid;
 
-	raw_spin_lock(&sg_policy->update_lock);
-
 	sugov_iowait_boost(sg_cpu, time, flags);
 	sg_cpu->last_update = time;
 
 	ignore_dl_rate_limit(sg_cpu, sg_policy);
+
+	if (!raw_spin_trylock(&sg_policy->update_lock))
+		return;
 
 	cid = arch_cpu_cluster_id(sg_policy->policy->cpu);
 
@@ -720,7 +721,9 @@ static DEFINE_MUTEX(min_rate_lock);
 
 static void update_min_rate_limit_ns(struct sugov_policy *sg_policy)
 {
-	mutex_lock(&min_rate_lock);
+	if (!mutex_trylock(&min_rate_lock))
+		return;
+
 	sg_policy->min_rate_limit_ns = min(sg_policy->up_rate_delay_ns,
 					   sg_policy->down_rate_delay_ns);
 	mutex_unlock(&min_rate_lock);

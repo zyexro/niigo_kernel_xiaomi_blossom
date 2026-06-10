@@ -639,7 +639,7 @@ sugov_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
 {
 	struct sugov_cpu *sg_cpu = container_of(hook, struct sugov_cpu, update_util);
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
-	unsigned int next_f;
+	unsigned int next_f = sg_policy->next_freq;
 	int cid;
 
 	sugov_iowait_boost(sg_cpu, time, flags);

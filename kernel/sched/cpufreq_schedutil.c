@@ -639,18 +639,19 @@ sugov_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
 {
 	struct sugov_cpu *sg_cpu = container_of(hook, struct sugov_cpu, update_util);
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
-	unsigned int next_f = sg_policy->next_freq;
+	unsigned int next_f;
 	int cid;
+
+	if (!raw_spin_trylock(&sg_policy->update_lock))
+		return;
 
 	sugov_iowait_boost(sg_cpu, time, flags);
 	sg_cpu->last_update = time;
 
 	ignore_dl_rate_limit(sg_cpu, sg_policy);
 
-	if (!raw_spin_trylock(&sg_policy->update_lock))
-		return;
-
 	cid = arch_cpu_cluster_id(sg_policy->policy->cpu);
+	next_f = sg_policy->next_freq;
 
 	if (sugov_should_update_freq(sg_policy, time)) {
 		next_f = sugov_next_freq_shared(sg_cpu, time);

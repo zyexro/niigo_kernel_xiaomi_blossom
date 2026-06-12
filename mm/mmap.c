@@ -46,6 +46,7 @@
 #include <linux/pkeys.h>
 #include <linux/oom.h>
 #include <linux/sched/mm.h>
+#include <linux/sched/signal.h>
 
 #include <linux/uaccess.h>
 #include <asm/cacheflush.h>
@@ -3868,3 +3869,54 @@ static int __meminit init_reserve_notifier(void)
 	return 0;
 }
 subsys_initcall(init_reserve_notifier);
+
+bool mmap_read_lock_opportunistic(struct mm_struct *mm)
+{
+	int retry = 8;
+
+	if (unlikely(rwsem_is_locked(&mm->mmap_sem) &&
+		     rwsem_is_contended(&mm->mmap_sem)))
+		return false;
+
+	while (retry--) {
+		if (mmap_read_trylock(mm))
+			return true;
+
+		if (unlikely(rwsem_is_contended(&mm->mmap_sem)))
+			break;
+
+		cpu_relax();
+	}
+
+	if (current->mm == mm)
+		count_vm_event(MMAP_LOCK_CONTENTION);
+
+	return false;
+}
+
+int mmap_read_lock_killable_opportunistic(struct mm_struct *mm)
+{
+	int retry = 8;
+
+	if (unlikely(rwsem_is_locked(&mm->mmap_sem) &&
+		     rwsem_is_contended(&mm->mmap_sem)))
+		return -EBUSY;
+
+	while (retry--) {
+		if (mmap_read_trylock(mm))
+			return 0;
+
+		if (unlikely(fatal_signal_pending(current)))
+			return -EINTR;
+
+		if (unlikely(rwsem_is_contended(&mm->mmap_sem)))
+			break;
+
+		cpu_relax();
+	}
+
+	if (current->mm == mm)
+		count_vm_event(MMAP_LOCK_CONTENTION);
+
+	return -EBUSY;
+}

@@ -5246,9 +5246,17 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
 	struct vm_area_struct *vma;
 	void *old_buf = buf;
 	int write = gup_flags & FOLL_WRITE;
+	int ret;
 
-	if (down_read_killable(&mm->mmap_sem))
-		return 0;
+	ret = mmap_read_lock_killable_opportunistic(mm);
+	if (ret) {
+		if (ret == -EBUSY) {
+			if (mmap_read_lock_killable(mm))
+				return 0;
+		} else {
+			return 0;
+		}
+	}
 
 	/* ignore errors, just check how much was successfully transferred */
 	while (len) {
@@ -5298,11 +5306,10 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
 		buf += bytes;
 		addr += bytes;
 	}
-	up_read(&mm->mmap_sem);
+	mmap_read_unlock(mm);
 
 	return buf - old_buf;
 }
-
 /**
  * access_remote_vm - access another process' address space
  * @mm:		the mm_struct of the target address space

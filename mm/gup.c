@@ -1015,12 +1015,17 @@ retry:
 			break;
 		}
 
-		ret = down_read_killable(&mm->mmap_sem);
+		ret = mmap_read_lock_killable_opportunistic(mm);
 		if (ret) {
-			BUG_ON(ret > 0);
-			if (!pages_done)
-				pages_done = ret;
-			break;
+			if (ret == -EBUSY)
+				ret = mmap_read_lock_killable(mm);
+
+			if (ret) {
+				BUG_ON(ret > 0);
+				if (!pages_done)
+					pages_done = ret;
+				break;
+			}
 		}
 
 		*locked = 1;
@@ -1049,7 +1054,7 @@ retry:
 		 * We must let the caller know we temporarily dropped the lock
 		 * and so the critical section protected by it was lost.
 		 */
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 		*locked = 0;
 	}
 	return pages_done;

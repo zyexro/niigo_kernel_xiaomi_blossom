@@ -1,6 +1,12 @@
 #ifndef _LINUX_MMAP_LOCK_H
 #define _LINUX_MMAP_LOCK_H
 
+#include <linux/mmdebug.h>
+#include <linux/mm_types.h>
+#include <linux/rwsem.h>
+#include <linux/vm_event_item.h>
+#include <linux/vmstat.h>
+
 static inline void mmap_init_lock(struct mm_struct *mm)
 {
 	init_rwsem(&mm->mmap_sem);
@@ -45,6 +51,9 @@ static inline bool mmap_read_trylock(struct mm_struct *mm)
 {
 	return down_read_trylock(&mm->mmap_sem) != 0;
 }
+
+extern bool mmap_read_lock_opportunistic(struct mm_struct *mm);
+extern int mmap_read_lock_killable_opportunistic(struct mm_struct *mm);
 
 static inline void mmap_read_unlock(struct mm_struct *mm)
 {

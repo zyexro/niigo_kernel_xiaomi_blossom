@@ -843,10 +843,11 @@ SYSCALL_DEFINE3(madvise, unsigned long, start, size_t, len_in, int, behavior)
 
 	write = madvise_need_mmap_write(behavior);
 	if (write) {
-		if (down_write_killable(&current->mm->mmap_sem))
+		if (mmap_write_lock_killable(current->mm))
 			return -EINTR;
 	} else {
-		down_read(&current->mm->mmap_sem);
+		if (!mmap_read_lock_opportunistic(current->mm))
+			mmap_read_lock(current->mm);
 	}
 
 	/*
@@ -896,9 +897,9 @@ SYSCALL_DEFINE3(madvise, unsigned long, start, size_t, len_in, int, behavior)
 out:
 	blk_finish_plug(&plug);
 	if (write)
-		up_write(&current->mm->mmap_sem);
+		mmap_write_unlock(current->mm);
 	else
-		up_read(&current->mm->mmap_sem);
+		mmap_read_unlock(current->mm);
 
 	return error;
 }

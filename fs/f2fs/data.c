@@ -3365,12 +3365,7 @@ static int __f2fs_write_data_pages(struct address_space *mapping,
 	}
 
 	if (__should_serialize_io(inode, wbc)) {
-		if (wbc->sync_mode != WB_SYNC_ALL) {
-			if (!mutex_trylock(&sbi->writepages))
-				goto skip_write;
-		} else {
-			mutex_lock(&sbi->writepages);
-		}
+		mutex_lock(&sbi->writepages);
 		locked = true;
 	}
 

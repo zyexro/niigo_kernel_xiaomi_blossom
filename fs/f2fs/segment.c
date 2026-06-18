@@ -420,10 +420,8 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi, bool need)
 				.should_migrate_blocks = false,
 				.err_gc_skipped = false,
 				.nr_free_secs = 1 };
-
-			if (f2fs_down_write_trylock(&sbi->gc_lock)) {
-				f2fs_gc(sbi, &gc_control);
-			}
+			f2fs_down_write(&sbi->gc_lock);
+			f2fs_gc(sbi, &gc_control);
 		}
 	}
 }
@@ -477,8 +475,7 @@ void f2fs_balance_fs_bg(struct f2fs_sb_info *sbi, bool from_bg)
 
 	/* there is background inflight IO or foreground operation recently */
 	if (is_inflight_io(sbi, REQ_TIME) ||
-		(!f2fs_time_over(sbi, REQ_TIME) && f2fs_rwsem_is_locked(&sbi->cp_rwsem)) ||
-		f2fs_rwsem_is_contended(&sbi->cp_rwsem))
+		(!f2fs_time_over(sbi, REQ_TIME) && f2fs_rwsem_is_locked(&sbi->cp_rwsem)))
 		return;
 
 	/* exceed periodical checkpoint timeout threshold */
@@ -494,8 +491,7 @@ do_sync:
 	if (test_opt(sbi, DATA_FLUSH) && from_bg) {
 		struct blk_plug plug;
 
-		if (!mutex_trylock(&sbi->flush_lock))
-			return;
+		mutex_lock(&sbi->flush_lock);
 
 		blk_start_plug(&plug);
 		f2fs_sync_dirty_inodes(sbi, FILE_INODE, false);

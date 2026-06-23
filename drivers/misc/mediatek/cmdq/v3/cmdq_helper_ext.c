@@ -3337,10 +3337,8 @@ static void cmdq_core_attach_engine_error(
 		CMDQ_FOREACH_GROUP(GENERATE_STRING)
 	};
 
-#ifndef CONFIG_FPGA_EARLY_PORTING
 	CMDQ_ERR("============ [CMDQ] SMI Status ============\n");
 	cmdq_get_func()->dumpSMI(1);
-#endif
 
 	if (short_log) {
 		CMDQ_ERR("============ skip detail error dump ============\n");

@@ -4011,7 +4011,6 @@ int primary_display_init(char *lcm_name, unsigned int lcm_fps,
 		_cmdq_flush_config_handle(1, NULL, 0);
 		_cmdq_reset_config_handle();
 	}
-
 #ifdef CONFIG_MTK_M4U
 	config_display_m4u_port();
 #endif
@@ -4196,9 +4195,11 @@ int primary_display_set_lcm_refresh_rate(int fps)
 	 * bound.
 	 * Switch to 120HZ mode when the first 120 frame update request coming.
 	 */
+#ifdef CONFIG_MTK_DISPLAY_120HZ_SUPPORT
 	if (fps == 120)
 		ret = request_lcm_refresh_rate_change(fps);
 	else
+#endif
 		ret = _display_set_lcm_refresh_rate(fps);
 	_primary_path_unlock(__func__);
 	return ret;
@@ -5955,7 +5956,6 @@ void add_round_corner_layers(
 		input_ext->dst_h = h_bot;
 	}
 }
-#endif
 
 static bool disp_rsz_frame_has_rsz_layer(struct disp_frame_cfg_t *cfg)
 {
@@ -6044,16 +6044,12 @@ static void rsz_in_out_roi(struct disp_frame_cfg_t *cfg,
 static int _is_overlap(struct disp_input_config *src,
 			       struct disp_input_config *dst)
 {
-	if ((src->tgt_offset_y + src->tgt_height <=
-			dst->tgt_offset_y) ||
-	    (dst->tgt_offset_y + dst->tgt_height <=
-		src->tgt_offset_y))
-		return 0;
-	else if ((src->tgt_offset_x + src->tgt_width <=
-			dst->tgt_offset_x) ||
-		(dst->tgt_offset_x + dst->tgt_width <=
-		src->tgt_offset_x))
-		return 0;
+	return !(
+		(src->tgt_offset_y + src->tgt_height <= dst->tgt_offset_y) ||
+		(dst->tgt_offset_y + dst->tgt_height <= src->tgt_offset_y) ||
+		(src->tgt_offset_x + src->tgt_width <= dst->tgt_offset_x) ||
+		(dst->tgt_offset_x + dst->tgt_width <= src->tgt_offset_x)
+	);
 
 	return 1;
 }
@@ -6063,7 +6059,7 @@ static int _is_overlap(struct disp_input_config *src,
 static inline int _is_yuv_overlap
 	(struct disp_frame_cfg_t *cfg)
 {
-	int i = 0, j = 0, is_yuv_overlap = 0;
+	int i = 0, j = 0;
 	unsigned int yuv_num = 0;
 	struct disp_input_config *yuv_cfg[cfg->input_layer_num];
 
@@ -6095,11 +6091,9 @@ static inline int _is_yuv_overlap
 	for (i = 0; i < yuv_num - 1; i++)
 		for (j = i + 1; j < yuv_num; j++)
 			if (_is_overlap(yuv_cfg[i], yuv_cfg[j]))
-				is_yuv_overlap = 1;
+				return 1;
 
-	DISPDBG("%s yuv_num=%d, is_yuv_overlap=%d\n",
-		__func__, yuv_num, is_yuv_overlap);
-	return is_yuv_overlap;
+	return 0;
 }
 
 static void _ovl_yuv_throughput_freq_request
@@ -6277,8 +6271,6 @@ static int _config_ovl_input(struct disp_frame_cfg_t *cfg,
 #endif
 	/*=== create new data_config for ovl input ===*/
 	data_config = dpmgr_path_get_last_config(disp_handle);
-
-	disp_layer_info_statistic(data_config, cfg);
 
 	if (disp_partial_is_support()) {
 		if (primary_display_is_directlink_mode())

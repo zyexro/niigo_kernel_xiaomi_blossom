@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/pm_wakeup.h>
+#include <linux/workqueue.h>
 
 #include "disp_drv_platform.h"
 #ifdef MTK_FB_ION_SUPPORT
@@ -142,7 +143,6 @@ static ktime_t cmd_mode_update_timer_period;
 #endif
 static int is_fake_timer_inited;
 
-static struct task_struct *primary_display_switch_dst_mode_task;
 #ifdef MTK_FB_ION_SUPPORT
 static struct task_struct *present_fence_release_worker_task;
 #endif
@@ -151,7 +151,6 @@ static struct task_struct *primary_delay_trigger_task;
 static struct task_struct *primary_od_trigger_task;
 static struct task_struct *decouple_update_rdma_config_thread;
 static struct task_struct *decouple_trigger_thread;
-static struct task_struct *init_decouple_buffer_thread;
 #ifdef MTK_FB_MMDVFS_SUPPORT
 struct mtk_pm_qos_request primary_display_qos_request;
 struct mtk_pm_qos_request primary_display_emi_opp_request;
@@ -211,8 +210,11 @@ struct wakeup_source *pri_wk_lock;
 
 static int smart_ovl_try_switch_mode_nolock(void);
 
+static struct display_primary_path_context g_context = {0};
+
 struct display_primary_path_context *_get_context(void)
 {
+#ifdef THR
 	static int is_context_inited;
 	static struct display_primary_path_context g_context;
 
@@ -224,6 +226,7 @@ struct display_primary_path_context *_get_context(void)
 		g_context.first_cfg = 1;
 #endif
 	}
+#endif
 
 	return &g_context;
 }
@@ -365,6 +368,7 @@ int primary_display_config_full_roi(struct disp_ddp_path_config *pconfig,
 	return 0;
 }
 
+#ifdef THR
 static int _disp_primary_path_switch_dst_mode_thread(void *data)
 {
 	while (1) {
@@ -382,6 +386,18 @@ static int _disp_primary_path_switch_dst_mode_thread(void *data)
 	}
 	return 0;
 }
+#else
+static void _disp_primary_path_switch_dst_mode_work(struct work_struct *work)
+{
+	if (((sched_clock() - last_primary_trigger_time) / 1000) > 500000) {
+		primary_display_switch_dst_mode(0);
+		is_switched_dst_mode = true;
+	} else {
+		schedule_delayed_work(to_delayed_work(work), msecs_to_jiffies(1000));
+	}
+}
+static DECLARE_DELAYED_WORK(primary_display_switch_dst_mode_work, _disp_primary_path_switch_dst_mode_work);
+#endif
 
 static DECLARE_WAIT_QUEUE_HEAD(display_state_wait_queue);
 
@@ -1126,61 +1142,40 @@ enum DISP_MODULE_ENUM _get_dst_module_by_lcm(struct disp_lcm_handle *plcm)
  ****************************************************************
  */
 
-int _should_wait_path_idle(void)
+static inline int _should_wait_path_idle(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 1.wait idle:        N         N        Y        Y
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode())
-			return 0;
-		else
-			return 0;
-	} else {
-		if (primary_display_is_video_mode())
-			return dpmgr_path_is_busy(pgc->dpmgr_handle);
-		else
-			return dpmgr_path_is_busy(pgc->dpmgr_handle);
-	}
+	if (primary_display_cmdq_enabled())
+		return 0;
+
+	return dpmgr_path_is_busy(pgc->dpmgr_handle);
 }
 
-int _should_update_lcm(void)
+static inline int _should_update_lcm(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 2.lcm update:          N         Y       N        Y
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode())
-			return 0;
-
-		/* lcm_update can't use cmdq now */
+	if (primary_display_cmdq_enabled())
 		return 0;
-	}
 	if (primary_display_is_video_mode())
 		return 0;
 
 	return 1;
 }
 
-int _should_start_path(void)
+static inline int _should_start_path(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 3.path start:	idle->Y      Y    idle->Y     Y
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode()) {
-			return 0;
-			/* return dpmgr_path_is_idle(pgc->dpmgr_handle); */
-		} else {
-			return 0;
-		}
-	} else {
-		if (primary_display_is_video_mode())
-			return dpmgr_path_is_idle(pgc->dpmgr_handle);
-		else
-			return 1;
-
-	}
+	if (primary_display_cmdq_enabled())
+		return 0;
+	if (primary_display_is_video_mode())
+		return dpmgr_path_is_idle(pgc->dpmgr_handle);
+	return 1;
 }
 
 int _should_trigger_path(void)
@@ -1195,22 +1190,15 @@ int _should_trigger_path(void)
 	 * but it's lucky because path trigger and mutex enable is the same w/o
 	 * cmdq, and it's correct w/ CMDQ(Y+N).
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode()) {
-			return 0;
-			/* return dpmgr_path_is_idle(pgc->dpmgr_handle); */
-		} else {
-			return 0;
-		}
-	} else {
-		if (primary_display_is_video_mode())
-			return dpmgr_path_is_idle(pgc->dpmgr_handle);
-		else
-			return 1;
-	}
+	if (primary_display_cmdq_enabled())
+		return 0;
+	if (primary_display_is_video_mode())
+		return dpmgr_path_is_idle(pgc->dpmgr_handle);
+
+	return 1;
 }
 
-int _should_set_cmdq_dirty(void)
+static inline int _should_set_cmdq_dirty(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 6.set cmdq dirty:	   N         Y       N        N
@@ -1220,81 +1208,57 @@ int _should_set_cmdq_dirty(void)
 			return 0;
 		else
 			return 1;
-	} else {
-		if (primary_display_is_video_mode())
-			return 0;
-		else
-			return 0;
 	}
+
+	return 0;
 }
 
-int _should_flush_cmdq_config_handle(void)
+static inline int _should_flush_cmdq_config_handle(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 7.flush cmdq:          Y         Y       N        N
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode())
-			return 1;
-		else
-			return 1;
-	} else {
-		if (primary_display_is_video_mode())
-			return 0;
-		else
-			return 0;
-	}
+	if (primary_display_cmdq_enabled())
+		return 1;
+
+	return 0;
 }
 
-int _should_reset_cmdq_config_handle(void)
+static inline int _should_reset_cmdq_config_handle(void)
 {
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode())
-			return 1;
-		else
-			return 1;
-	} else {
-		if (primary_display_is_video_mode())
-			return 0;
-		else
-			return 0;
-	}
+	if (primary_display_cmdq_enabled())
+		return 1;
+
+	return 0;
 }
 
-int _should_insert_wait_frame_done_token(void)
+static inline int _should_insert_wait_frame_done_token(void)
 {
 	/* trigger operation:  VDO+CMDQ  CMD+CMDQ VDO+CPU  CMD+CPU
 	 * 7.flush cmdq:          Y         Y       N        N
 	 */
-	if (primary_display_cmdq_enabled()) {
-		if (primary_display_is_video_mode())
-			return 1;
-		else
-			return 1;
-	} else {
-		if (primary_display_is_video_mode())
-			return 0;
-		else
-			return 0;
-	}
+	if (primary_display_cmdq_enabled())
+		return 1;
+
+	return 0;
 }
 
-int _should_trigger_interface(void)
+static inline int _should_trigger_interface(void)
 {
 	if (pgc->mode == DECOUPLE_MODE)
 		return 0;
-	else
-		return 1;
+
+	return 1;
 }
 
-int _should_config_ovl_input(void)
+static inline int _should_config_ovl_input(void)
 {
 	/* should extend this when display path dynamic switch is ready */
 	if (pgc->mode == SINGLE_LAYER_MODE ||
 		pgc->mode == DEBUG_RDMA1_DSI0_MODE)
 		return 0;
-	else
-		return 1;
+
+	return 1;
 }
 
 static long get_current_time_us(void)
@@ -2719,12 +2683,6 @@ static int init_decouple_buffers(void)
 	return 0;
 }
 
-static int _init_decouple_buffers_thread(void *data)
-{
-	init_decouple_buffers();
-	return 0;
-}
-
 static int _build_path_direct_link(void)
 {
 	int ret = 0;
@@ -3111,12 +3069,6 @@ unsigned int cmdqDdpDumpInfo(uint64_t engineFlag, char *pOutBuf,
 
 	return 0;
 }
-
-unsigned int cmdqDdpResetEng(uint64_t engineFlag)
-{
-	return 0;
-}
-
 
 int primary_display_change_lcm_resolution(unsigned int width,
 	unsigned int height)
@@ -3839,10 +3791,10 @@ int primary_display_init(char *lcm_name, unsigned int lcm_fps,
 	/* Part2: CMDQ */
 	if (use_cmdq) {
 		ret = cmdqCoreRegisterCB(CMDQ_GROUP_DISP,
-			(CmdqClockOnCB)cmdqDdpClockOn,
+			NULL,
 			(CmdqDumpInfoCB)cmdqDdpDumpInfo,
-			(CmdqResetEngCB)cmdqDdpResetEng,
-			(CmdqClockOffCB)cmdqDdpClockOff);
+			NULL,
+			NULL);
 		if (ret) {
 			DISPERR("cmdqCoreRegisterCB failed, ret=%d\n", ret);
 			ret = DISP_STATUS_ERROR;
@@ -3915,12 +3867,16 @@ int primary_display_init(char *lcm_name, unsigned int lcm_fps,
 
 	primary_display_set_max_layer(PRIMARY_SESSION_INPUT_LAYER_COUNT);
 
+#ifdef THR
 	init_decouple_buffer_thread =
 		kthread_run(_init_decouple_buffers_thread,
 			NULL, "init_decouple_buffer");
 	if (IS_ERR(init_decouple_buffer_thread))
 		DISPERR("kthread_run init_decouple_buffer_thread err = %d",
 			IS_ERR(init_decouple_buffer_thread));
+#else
+	init_decouple_buffers();
+#endif
 
 	dpmgr_path_set_video_mode(pgc->dpmgr_handle,
 		primary_display_is_video_mode());
@@ -4041,11 +3997,15 @@ int primary_display_init(char *lcm_name, unsigned int lcm_fps,
 	primary_display_check_recovery_init();
 
 	if (disp_helper_get_option(DISP_OPT_SWITCH_DST_MODE)) {
+#ifdef THR
 		primary_display_switch_dst_mode_task =
 			kthread_create(
 				_disp_primary_path_switch_dst_mode_thread,
 				NULL, "display_switch_dst_mode");
 		wake_up_process(primary_display_switch_dst_mode_task);
+#else
+		schedule_delayed_work(&primary_display_switch_dst_mode_work, msecs_to_jiffies(1000));
+#endif
 	}
 
 	if (decouple_update_rdma_config_thread == NULL) {
@@ -4176,6 +4136,7 @@ static void _primary_protect_mode_switch(void)
 }
 
 static int request_lcm_refresh_rate_change(int fps);
+#ifdef CONFIG_MTK_DISPLAY_120HZ_SUPPORT
 int primary_display_set_lcm_refresh_rate(int fps)
 {
 	int ret = 0;
@@ -4215,6 +4176,7 @@ int primary_display_set_lcm_refresh_rate(int fps)
 	_primary_path_unlock(__func__);
 	return ret;
 }
+#endif
 
 int primary_display_get_lcm_refresh_rate(void)
 {
@@ -4423,6 +4385,7 @@ int primary_display_deinit(void)
 	return 0;
 }
 
+#if 0
 /* register rdma done event */
 int primary_display_wait_for_idle(void)
 {
@@ -4440,6 +4403,7 @@ int primary_display_wait_for_dump(void)
 {
 	return 0;
 }
+#endif
 
 int primary_display_release_fence_fake(void)
 {
@@ -5966,6 +5930,7 @@ void add_round_corner_layers(
 		input_ext->dst_h = h_bot;
 	}
 }
+#endif
 
 static bool disp_rsz_frame_has_rsz_layer(struct disp_frame_cfg_t *cfg)
 {

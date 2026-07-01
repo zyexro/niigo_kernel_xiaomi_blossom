@@ -1197,9 +1197,6 @@ static int cmdq_probe(struct platform_device *pDevice)
 
 	CMDQ_LOG("CMDQ driver probe begin\n");
 
-	/* Function link */
-	cmdq_virtual_function_setting();
-
 	/* init cmdq device related data */
 	cmdq_dev_init(pDevice);
 

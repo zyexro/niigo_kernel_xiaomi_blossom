@@ -313,6 +313,9 @@ void smi_ostd_update(const struct plist_head *head, const char *user)
 			ostd = SMI_OSTD_MAX;
 		else
 			ostd = req->ostd;
+		req->updated = false;
+		if (smi_scen_pair[larb][SMI_ESL_INIT][port].val == ostd)
+			continue;
 		smi_scen_pair[larb][SMI_ESL_INIT][port].val = ostd;
 
 		if (ATOMR_CLK(larb)) {
@@ -321,7 +324,6 @@ void smi_ostd_update(const struct plist_head *head, const char *user)
 				smi_scen_pair[larb][SMI_ESL_INIT][port].off);
 			smi_bus_disable_unprepare(larb, user);
 		}
-		req->updated = false;
 	}
 }
 EXPORT_SYMBOL_GPL(smi_ostd_update);

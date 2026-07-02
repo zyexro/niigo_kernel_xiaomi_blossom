@@ -37,6 +37,8 @@
 #include "bq2560x_reg.h"
 #include "bq2560x.h"
 
+#define BQ2560X_TERM_CURRENT_LIMIT_MA	120
+
 enum bq2560x_part_no {
 	BQ25600 = 0x00,
 	BQ25601 = 0x02,
@@ -443,6 +445,9 @@ static struct bq2560x_platform_data *bq2560x_parse_dt(struct device *dev,
 	if (ret) {
 		pr_err
 		    ("Failed to read node of ti,bq2560x,termination-current\n");
+	} else {
+		pdata->iterm = min_t(int, pdata->iterm,
+				     BQ2560X_TERM_CURRENT_LIMIT_MA);
 	}
 
 	ret =

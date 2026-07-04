@@ -63,86 +63,37 @@ enum {
 #define N_MSG(evt, fmt, args...) \
 do {    \
 	if ((DBG_EVT_##evt) & sd_debug_zone[host->id]) { \
-		pr_info(TAGMSDC"%d -> "fmt" <- %s() : L<%d> PID<%s><0x%x>\n", \
-			host->id, ##args, __func__, __LINE__, \
-			current->comm, current->pid); \
+		pr_debug(TAGMSDC"%d: "fmt"\n", host->id, ##args); \
 	}   \
 } while (0)
 
-#ifndef MTK_MMC_PRINT_PERIOD
 #define ERR_MSG(fmt, args...) \
-	pr_info(TAGMSDC"%d -> "fmt" <- %s() : L<%d> PID<%s><0x%x>\n", \
-		host->id, ##args, __func__, __LINE__, current->comm, \
-		current->pid)
-
-#else
-#define MAX_PRINT_PERIOD            (500000000)  /* 500ms */
-#define MAX_PRINT_NUMS_OVER_PERIOD  (50)
-#define ERR_MSG(fmt, args...) \
-do { \
-	if (print_nums == 0) { \
-		print_nums++; \
-		msdc_print_start_time = sched_clock(); \
-		pr_info(TAGMSDC"MSDC", TAG"%d -> "fmt" <- %s() : L<%d> " \
-			"PID<%s><0x%x>\n", \
-			host->id, ##args, __func__, __LINE__, \
-			current->comm, current->pid); \
-	} else { \
-		msdc_print_end_time = sched_clock();    \
-		if ((msdc_print_end_time - msdc_print_start_time) >= \
-			MAX_PRINT_PERIOD) { \
-			pr_info( \
-			TAGMSDC"MSDC", TAG"%d -> "fmt" <- %s() : L<%d> " \
-				"PID<%s><0x%x>\n", \
-				host->id, ##args, __func__, __LINE__, \
-				current->comm, current->pid); \
-			print_nums = 0; \
-		} \
-		if (print_nums <= MAX_PRINT_NUMS_OVER_PERIOD) { \
-			pr_info(TAGMSDC"MSDC", TAG"%d -> "fmt" <- %s() : " \
-				"L<%d> PID<%s><0x%x>\n", \
-				host->id, ##args, __func__, \
-				__LINE__, current->comm, current->pid); \
-			print_nums++;   \
-		} \
-	} \
-} while (0)
-#endif
+	pr_err_ratelimited(TAGMSDC"%d: "fmt"\n", host->id, ##args)
 
 #define INIT_MSG(fmt, args...) \
-	pr_info(TAGMSDC"%d -> "fmt" <- %s() : L<%d> PID<%s><0x%x>\n", \
-		host->id, ##args, __func__, __LINE__, current->comm, \
-		current->pid)
+	pr_info(TAGMSDC"%d: "fmt"\n", host->id, ##args)
 
 #define INFO_MSG(fmt, args...) \
-	pr_debug(TAGMSDC"%d -> "fmt" <- %s() : L<%d> PID<%s><0x%x>\n", \
-		host->id, ##args, __func__, __LINE__, current->comm, \
-		current->pid)
+	pr_debug(TAGMSDC"%d: "fmt"\n", host->id, ##args)
 
 #ifdef MTK_MMC_PRINT_IRQ_MSG
 /* PID in ISR in not corrent */
 #define IRQ_MSG(fmt, args...) \
-	pr_info(TAGMSDC"%d -> "fmt" <- %s() : L<%d>\n", \
-		host->id, ##args, __func__, __LINE__)
+	pr_debug(TAGMSDC"%d: "fmt"\n", host->id, ##args)
 #else
 #define IRQ_MSG(fmt, args...)
 #endif
 
 /*
- * snprintf may return a value of size or "more" to indicate
- * that the output was truncated, thus be careful of "more"
- * case.
+ * scnprintf returns the number of bytes copied, which keeps the buffer
+ * accounting exact when output is truncated.
  */
 #define SPREAD_PRINTF(buff, size, evt, fmt, args...) \
 do { \
 	if (buff && size && *(size)) { \
-		unsigned long var = snprintf(*(buff), *(size), fmt, ##args); \
-		if (var > 0) { \
-			if (var > *(size)) \
-				var = *(size); \
-			*(size) -= var; \
-			*(buff) += var; \
-		} \
+		unsigned long var = scnprintf(*(buff), *(size), fmt, ##args); \
+		*(size) -= var; \
+		*(buff) += var; \
 	} \
 	if (evt) \
 		seq_printf(evt, fmt, ##args); \

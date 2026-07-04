@@ -13,8 +13,8 @@
 /* #define MTK_MSDC_BRINGUP_DEBUG */
 #endif
 
-#include <mt-plat/sync_write.h>
 #include <linux/bitops.h>
+#include <linux/io.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/pm_qos.h>
@@ -484,12 +484,12 @@ static inline unsigned int uffs(unsigned int x)
 	return r;
 }
 
-#define MSDC_READ8(reg)           __raw_readb(reg)
-#define MSDC_READ16(reg)          __raw_readw(reg)
-#define MSDC_READ32(reg)          __raw_readl(reg)
-#define MSDC_WRITE8(reg, val)     mt_reg_sync_writeb(val, reg)
-#define MSDC_WRITE16(reg, val)    mt_reg_sync_writew(val, reg)
-#define MSDC_WRITE32(reg, val)    mt_reg_sync_writel(val, reg)
+#define MSDC_READ8(reg)           readb_relaxed(reg)
+#define MSDC_READ16(reg)          readw_relaxed(reg)
+#define MSDC_READ32(reg)          readl_relaxed(reg)
+#define MSDC_WRITE8(reg, val)     writeb((val), (reg))
+#define MSDC_WRITE16(reg, val)    writew((val), (reg))
+#define MSDC_WRITE32(reg, val)    writel((val), (reg))
 
 #define UNSTUFF_BITS(resp, start, size) \
 ({ \

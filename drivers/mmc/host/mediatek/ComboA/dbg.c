@@ -210,8 +210,7 @@ static void msdc_init_dma_latest_address(void)
 #endif
 #define MSDC_AEE_BUFFER_SIZE (300 * 1024)
 struct dbg_run_host_log {
-	unsigned long long time_sec;
-	unsigned long long time_usec;
+	unsigned long long time_ns;
 	int type;
 	int cmd;
 	int arg;
@@ -266,7 +265,6 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 			int cmd, int arg, int cpu, unsigned long reserved)
 {
 	unsigned long long t, tn;
-	unsigned long long nanosec_rem;
 #ifdef CONFIG_MTK_EMMC_HW_CQ
 	unsigned long flags;
 #endif
@@ -290,7 +288,6 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 	switch (type) {
 	case 0: /* normal - cmd */
 		tn = t;
-		nanosec_rem = do_div(t, 1000000000)/1000;
 		if (cmd == 44) {
 			tag = (arg >> 16) & 0x1f;
 			dbg_task_log_dat[tag].size = arg & 0xffff;
@@ -302,8 +299,7 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 			dbg_dma_cmd_log_dat.arg = arg;
 		}
 
-		dbg_run_host_log_dat[dbg_host_cnt].time_sec = t;
-		dbg_run_host_log_dat[dbg_host_cnt].time_usec = nanosec_rem;
+		dbg_run_host_log_dat[dbg_host_cnt].time_ns = t;
 		dbg_run_host_log_dat[dbg_host_cnt].type = type;
 		dbg_run_host_log_dat[dbg_host_cnt].cmd = cmd;
 		dbg_run_host_log_dat[dbg_host_cnt].arg = arg;
@@ -316,7 +312,6 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 	case 5: /* cqhci - data */
 	case 60: /* cqhci - dcmd */
 	case 61: /* cqhci - dcmd resp */
-		nanosec_rem = do_div(t, 1000000000)/1000;
 		/*skip log if last cmd rsp are the same*/
 		if (last_cmd == cmd &&
 			last_arg == arg && cmd == 13) {
@@ -332,8 +327,7 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 		l_skip = skip;
 		skip = 0;
 
-		dbg_run_host_log_dat[dbg_host_cnt].time_sec = t;
-		dbg_run_host_log_dat[dbg_host_cnt].time_usec = nanosec_rem;
+		dbg_run_host_log_dat[dbg_host_cnt].time_ns = t;
 		dbg_run_host_log_dat[dbg_host_cnt].type = type;
 		dbg_run_host_log_dat[dbg_host_cnt].cmd = cmd;
 		dbg_run_host_log_dat[dbg_host_cnt].arg = arg;
@@ -381,11 +375,7 @@ inline void __dbg_add_host_log(struct mmc_host *mmc, int type,
 #endif
 	/* add softirq record */
 	case MAGIC_CQHCI_DBG_TYPE_SIRQ:
-		tn = t;
-		nanosec_rem = do_div(t, 1000000000)/1000;
-
-		dbg_run_host_log_dat[dbg_host_cnt].time_sec = t;
-		dbg_run_host_log_dat[dbg_host_cnt].time_usec = nanosec_rem;
+		dbg_run_host_log_dat[dbg_host_cnt].time_ns = t;
 		dbg_run_host_log_dat[dbg_host_cnt].type = type;
 		dbg_run_host_log_dat[dbg_host_cnt].cmd = cmd;
 		dbg_run_host_log_dat[dbg_host_cnt].arg = arg;
@@ -478,7 +468,7 @@ void mmc_cmd_dump(char **buff, unsigned long *size, struct seq_file *m,
 	int i, j;
 	int tag = -1;
 	int is_read, is_rel, is_fprg;
-	unsigned long long time_sec, time_usec;
+	unsigned long long time_ns, time_sec, time_usec;
 	int type, cmd, arg, skip, cnt, cpu;
 	unsigned long active_reqs;
 	struct msdc_host *host;
@@ -502,8 +492,9 @@ void mmc_cmd_dump(char **buff, unsigned long *size, struct seq_file *m,
 		i = dbg_max_cnt - 1;
 
 	for (j = 0; j < dump_cnt; j++) {
-		time_sec = dbg_run_host_log_dat[i].time_sec;
-		time_usec = dbg_run_host_log_dat[i].time_usec;
+		time_ns = dbg_run_host_log_dat[i].time_ns;
+		time_usec = do_div(time_ns, 1000000000) / 1000;
+		time_sec = time_ns;
 		type = dbg_run_host_log_dat[i].type;
 		cmd = dbg_run_host_log_dat[i].cmd;
 		arg = dbg_run_host_log_dat[i].arg;

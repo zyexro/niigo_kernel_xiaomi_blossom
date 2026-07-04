@@ -455,35 +455,6 @@ struct dma_addr {
 	struct dma_addr *next;
 };
 
-static inline unsigned int uffs(unsigned int x)
-{
-	unsigned int r = 1;
-
-	if (!x)
-		return 0;
-	if (!(x & 0xffff)) {
-		x >>= 16;
-		r += 16;
-	}
-	if (!(x & 0xff)) {
-		x >>= 8;
-		r += 8;
-	}
-	if (!(x & 0xf)) {
-		x >>= 4;
-		r += 4;
-	}
-	if (!(x & 3)) {
-		x >>= 2;
-		r += 2;
-	}
-	if (!(x & 1)) {
-		x >>= 1;
-		r += 1;
-	}
-	return r;
-}
-
 #define MSDC_READ8(reg)           readb_relaxed(reg)
 #define MSDC_READ16(reg)          readw_relaxed(reg)
 #define MSDC_READ32(reg)          readl_relaxed(reg)
@@ -520,16 +491,18 @@ static inline unsigned int uffs(unsigned int x)
 
 #define MSDC_SET_FIELD(reg, field, val) \
 	do { \
-		unsigned int tv = MSDC_READ32(reg); \
-		tv &= ~(field); \
-		tv |= ((val) << (uffs((unsigned int)field) - 1)); \
-		MSDC_WRITE32(reg, tv); \
+		u32 tv = MSDC_READ32(reg); \
+		u32 field_mask = (u32)(field); \
+		tv &= ~field_mask; \
+		tv |= (((u32)(val) << __ffs(field_mask)) & field_mask); \
+		MSDC_WRITE32((reg), tv); \
 	} while (0)
 
 #define MSDC_GET_FIELD(reg, field, val) \
 	do { \
-		unsigned int tv = MSDC_READ32(reg); \
-		val = ((tv & (field)) >> (uffs((unsigned int)field) - 1)); \
+		u32 tv = MSDC_READ32(reg); \
+		u32 field_mask = (u32)(field); \
+		val = ((tv & field_mask) >> __ffs(field_mask)); \
 	} while (0)
 
 #define GET_FIELD(reg, field_shift, field_mask, val) \

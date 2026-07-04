@@ -61,11 +61,7 @@ enum {
 
 #define TAGMSDC "msdc"
 #define N_MSG(evt, fmt, args...) \
-do {    \
-	if ((DBG_EVT_##evt) & sd_debug_zone[host->id]) { \
-		pr_debug(TAGMSDC"%d: "fmt"\n", host->id, ##args); \
-	}   \
-} while (0)
+	pr_debug(TAGMSDC"%d: "fmt"\n", host->id, ##args)
 
 #define ERR_MSG(fmt, args...) \
 	pr_err_ratelimited(TAGMSDC"%d: "fmt"\n", host->id, ##args)

@@ -669,27 +669,11 @@ void get_msdc_aee_buffer(unsigned long *vaddr, unsigned long *size)
 }
 EXPORT_SYMBOL(get_msdc_aee_buffer);
 #else
-inline void dbg_add_host_log(struct mmc_host *mmc, int type, int cmd, int arg)
-{
-	//pr_info("config MTK_MMC_DEBUG is not set: %s!\n",__func__);
-}
-void mmc_cmd_dump(char **buff, unsigned long *size, struct seq_file *m,
-	struct mmc_host *mmc, u32 latest_cnt)
-{
-	//pr_info("config MTK_MMC_DEBUG is not set: %s!\n",__func__);
-}
-void msdc_dump_host_state(char **buff, unsigned long *size,
-		struct seq_file *m, struct msdc_host *host)
-{
-	//pr_info("config MTK_MMC_DEBUG is not set: %s!\n",__func__);
-}
 static void msdc_proc_dump(struct seq_file *m, u32 id)
 {
-	//pr_info("config MTK_MMC_DEBUG is not set : %s!\n",__func__);
 }
 void get_msdc_aee_buffer(unsigned long *vaddr, unsigned long *size)
 {
-	//pr_info("config MTK_MMC_DEBUG is not set : %s!\n",__func__);
 }
 #endif
 

@@ -57,33 +57,33 @@ extern INT32 gStpDbgLvl;
 
 #define STP_DBG_FUNC(fmt, arg...)    do {\
 	if (gStpDbgLvl >= STP_LOG_DBG)\
-		osal_warn_print(PFX "%s: " fmt, __func__, ##arg);\
+		pr_debug(PFX "%s: " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_INFO_FUNC(fmt, arg...)   do {\
 	if (gStpDbgLvl >= STP_LOG_INFO)\
-		osal_warn_print(PFX "%s:[I] " fmt, __func__, ##arg);\
+		pr_info(PFX "%s:[I] " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_WARN_RATELIMITED_FUNC(fmt, arg...)   do {\
 	static DEFINE_RATELIMIT_STATE(_rs, HZ, 5);\
 	if (gStpDbgLvl >= STP_LOG_WARN && __ratelimit(&_rs))\
-		osal_warn_print(PFX "%s:[W] " fmt, __func__, ##arg);\
+		pr_warn(PFX "%s:[W] " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_WARN_FUNC(fmt, arg...)   do {\
 	if (gStpDbgLvl >= STP_LOG_WARN)\
-		osal_warn_print(PFX "%s:[W] " fmt, __func__, ##arg);\
+		pr_warn(PFX "%s:[W] " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_ERR_FUNC(fmt, arg...)    do {\
 	if (gStpDbgLvl >= STP_LOG_ERR)\
-		osal_err_print(PFX "%s:[E] " fmt, __func__, ##arg);\
+		pr_err(PFX "%s:[E] " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_TRC_FUNC(f)              do {\
 	if (gStpDbgLvl >= STP_LOG_DBG)\
-		osal_warn_print(PFX "<%s> <%d>\n", __func__, __LINE__);\
+		pr_debug(PFX "<%s> <%d>\n", __func__, __LINE__);\
 } while (0)
 
 #define STP_DUMP_PACKET_HEAD(a, b, c)     do {\
@@ -93,7 +93,7 @@ extern INT32 gStpDbgLvl;
 
 #define STP_TRACE_FUNC(fmt, arg...)       do {\
 	if (gStpDbgLvl >= STP_LOG_DBG)\
-		osal_warn_print(PFX "%s: " fmt, __func__, ##arg);\
+		pr_debug(PFX "%s: " fmt, __func__, ##arg);\
 } while (0)
 
 #define STP_MODE_BIT(x) (0x1UL << x)

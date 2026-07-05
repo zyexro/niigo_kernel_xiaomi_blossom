@@ -43,32 +43,32 @@
 #define WMT_LOUD_FUNC(fmt, arg...) \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_LOUD) \
-		osal_warn_print(DFT_TAG "[L]%s:"  fmt, __func__, ##arg); \
+		pr_debug(DFT_TAG "[L]%s:" fmt, __func__, ##arg); \
 } while (0)
 #define WMT_INFO_FUNC(fmt, arg...)  \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_INFO) \
-		osal_warn_print(DFT_TAG "[I]%s:"  fmt, __func__, ##arg); \
+		pr_info(DFT_TAG "[I]%s:" fmt, __func__, ##arg); \
 } while (0)
 #define WMT_WARN_FUNC(fmt, arg...) \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_WARN) \
-		osal_warn_print(DFT_TAG "[W]%s:"  fmt, __func__, ##arg); \
+		pr_warn(DFT_TAG "[W]%s:" fmt, __func__, ##arg); \
 } while (0)
 #define WMT_ERR_FUNC(fmt, arg...) \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_ERR) \
-		osal_err_print(DFT_TAG "[E]%s(%d):"  fmt, __func__, __LINE__, ##arg); \
+		pr_err(DFT_TAG "[E]%s(%d):" fmt, __func__, __LINE__, ##arg); \
 } while (0)
 #define WMT_DBG_FUNC(fmt, arg...) \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_DBG) \
-		osal_warn_print(DFT_TAG "[D]%s:"  fmt, __func__, ##arg); \
+		pr_debug(DFT_TAG "[D]%s:" fmt, __func__, ##arg); \
 } while (0)
 #define WMT_TRC_FUNC(f) \
 do { \
 	if (gWmtDbgLvl >= WMT_LOG_DBG) \
-		osal_warn_print(DFT_TAG "<%s> <%d>\n", __func__, __LINE__); \
+		pr_debug(DFT_TAG "<%s> <%d>\n", __func__, __LINE__); \
 } while (0)
 
 #endif

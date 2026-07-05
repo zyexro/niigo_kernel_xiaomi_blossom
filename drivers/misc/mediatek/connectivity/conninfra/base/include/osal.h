@@ -20,6 +20,8 @@
 #ifndef _OSAL_H_
 #define _OSAL_H_
 
+#include <linux/io.h>
+#include <linux/string.h>
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
 #include <linux/completion.h>
@@ -300,6 +302,27 @@ void *osal_memcpy(void *dst, const void *src, unsigned int len);
 void osal_memcpy_fromio(void *dst, const void *src, unsigned int len);
 void osal_memcpy_toio(void *dst, const void *src, unsigned int len);
 int osal_memcmp(const void *buf1, const void *buf2, unsigned int len);
+
+#ifndef OSAL_KEEP_COMPAT_FUNCTIONS
+#define osal_strlen(str) strlen(str)
+#define osal_strcmp(dst, src) strcmp(dst, src)
+#define osal_strncmp(dst, src, len) strncmp(dst, src, len)
+#define osal_strcpy(dst, src) strcpy(dst, src)
+#define osal_strncpy(dst, src, len) strncpy(dst, src, len)
+#define osal_strcat(dst, src) strcat(dst, src)
+#define osal_strncat(dst, src, len) strncat(dst, src, len)
+#define osal_strchr(str, c) strchr(str, c)
+#define osal_strsep(str, c) strsep(str, c)
+#define osal_strstr(str1, str2) strstr(str1, str2)
+#define osal_strnstr(str1, str2, n) strnstr(str1, str2, n)
+#define osal_snprintf(buf, len, fmt, ...) snprintf(buf, len, fmt, ##__VA_ARGS__)
+#define osal_sprintf(str, fmt, ...) snprintf(str, DBG_LOG_STR_SIZE, fmt, ##__VA_ARGS__)
+#define osal_memset(buf, i, len) memset(buf, i, len)
+#define osal_memcpy(dst, src, len) memcpy(dst, src, len)
+#define osal_memcpy_fromio(dst, src, len) memcpy_fromio(dst, src, len)
+#define osal_memcpy_toio(dst, src, len) memcpy_toio(dst, src, len)
+#define osal_memcmp(buf1, buf2, len) memcmp(buf1, buf2, len)
+#endif
 
 unsigned short osal_crc16(const unsigned char *buffer, const unsigned int length);
 void osal_thread_show_stack(P_OSAL_THREAD pThread);

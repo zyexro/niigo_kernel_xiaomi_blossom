@@ -40,6 +40,7 @@
 #include <asm/current.h>
 #include <linux/kfifo.h>
 #include "connectivity_build_in_adapter.h"
+#define OSAL_KEEP_COMPAT_FUNCTIONS
 #include "osal.h"
 
 /*******************************************************************************
@@ -1641,4 +1642,3 @@ void osal_systrace_minor_c(int val, const char *fmt, ...)
 	va_end(args);
 	osal_systrace_c(val, log);
 }
-

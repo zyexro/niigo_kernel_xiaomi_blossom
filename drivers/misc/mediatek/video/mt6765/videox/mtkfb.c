@@ -77,8 +77,6 @@ static u32 MTK_FB_BPP;
 static u32 MTK_FB_PAGES;
 static u32 fb_xres_update;
 static u32 fb_yres_update;
-static size_t mtkfb_log_on = true;
-
 static int sem_flipping_cnt = 1;
 static int sem_early_suspend_cnt = 1;
 static int vsync_cnt;
@@ -110,27 +108,15 @@ do {                   \
 #else
 #define CHECK_RET(expr)
 #endif
-#define MTKFB_LOG(fmt, arg...) \
-	do { \
-		if (mtkfb_log_on) \
-			DISP_LOG_PRINT(ANDROID_LOG_WARN, "MTKFB", fmt, ##arg); \
-	} while (0)
+#define MTKFB_LOG(fmt, arg...) no_printk(fmt, ##arg)
 /* always show this debug info while the global debug log is off */
-#define MTKFB_LOG_DBG(fmt, arg...) \
-	do { \
-		if (!mtkfb_log_on) \
-			DISP_LOG_PRINT(ANDROID_LOG_WARN, "MTKFB", fmt, ##arg); \
-	} while (0)
+#define MTKFB_LOG_DBG(fmt, arg...) no_printk(fmt, ##arg)
 
 #define MTKFB_FUNC()	\
-	do { \
-		if (mtkfb_log_on) \
-			DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", \
-				"[Func]%s\n", __func__); \
-	} while (0)
+	no_printk("%s\n", __func__)
 
 #define PRNERR(fmt, args...) \
-	DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", fmt, ## args)
+	no_printk(fmt, ##args)
 
 /* ------------------------------------------------------------------------- */
 /* local variables */
@@ -188,7 +174,6 @@ static void mtkfb_early_suspend(void);
 
 void mtkfb_log_enable(int enable)
 {
-	mtkfb_log_on = enable;
 	MTKFB_LOG("mtkfb log %s\n", enable ? "enabled" : "disabled");
 }
 
@@ -226,7 +211,7 @@ static int mtkfb_release(struct fb_info *info, int user)
 	(CONFIG_MTK_DUAL_DISPLAY_SUPPORT == 2)
 static int mtkfb1_blank(int blank_mode, struct fb_info *info)
 {
-	pr_debug("mtkfb1_blank blank mode :%d\n", blank_mode);
+	no_printk("mtkfb1_blank blank mode :%d\n", blank_mode);
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 	case FB_BLANK_NORMAL:

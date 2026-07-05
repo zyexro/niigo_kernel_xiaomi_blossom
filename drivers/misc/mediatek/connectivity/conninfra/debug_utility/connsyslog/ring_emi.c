@@ -23,8 +23,6 @@ void ring_emi_init(void *base, unsigned int max_size, void *read, void *write, s
 	EMI_WRITE32(ring_emi->write, 0);
 	EMI_WRITE32(ring_emi->read, 0);
 	ring_emi->max_size = max_size;
-	pr_info("write(%p) as 0, read(%p) as 0\n", ring_emi->write, ring_emi->read);
-	pr_info("base: %p, read: %p, write: %p, max_size: %d\n", base, read, write, max_size);
 }
 
 void ring_emi_dump(const char *title, struct ring_emi *ring_emi)
@@ -148,4 +146,3 @@ void _ring_emi_write_commit(struct ring_emi_segment *seg, struct ring_emi *ring_
 	/* ring_emi_dump(__func__, ring_emi); */
 	/* ring_emi_dump_segment(__func__, seg); */
 }
-

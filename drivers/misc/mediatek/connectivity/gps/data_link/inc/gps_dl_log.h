@@ -183,18 +183,10 @@ void gps_dl_log_info_show(void);
 #define GDL_LOGI_INI(...) GDL_LOGI2(GPS_DL_LOG_MOD_INIT, __VA_ARGS__)
 #define GDL_LOGD_INI(...) GDL_LOGD2(GPS_DL_LOG_MOD_INIT, __VA_ARGS__)
 
-#define GDL_LOGXE2(mod, ...) \
-	do { if (1) \
-		_GDL_LOGXE(mod, __VA_ARGS__); } while (0)
-#define GDL_LOGXW2(mod, ...) \
-	do { if (1) \
-		_GDL_LOGXW(mod, __VA_ARGS__); } while (0)
-#define GDL_LOGXI2(mod, ...) \
-	do { if (gps_dl_log_mod_is_on(mod)) \
-		_GDL_LOGXI(mod, __VA_ARGS__); } while (0)
-#define GDL_LOGXD2(mod, ...) \
-	do { if (gps_dl_log_mod_is_on(mod)) \
-		_GDL_LOGXD(mod, __VA_ARGS__); } while (0)
+#define GDL_LOGXE2(mod, ...) ((void)0)
+#define GDL_LOGXW2(mod, ...) ((void)0)
+#define GDL_LOGXI2(mod, ...) ((void)0)
+#define GDL_LOGXD2(mod, ...) ((void)0)
 
 #define GDL_LOGXE(...) GDL_LOGXE2(GPS_DL_LOG_MOD_DEFAULT, __VA_ARGS__)
 #define GDL_LOGXW(...) GDL_LOGXW2(GPS_DL_LOG_MOD_DEFAULT, __VA_ARGS__)
@@ -252,4 +244,3 @@ void GDL_VOIDF(void);
 	GDL_ASSERT(LINK_ID_IS_VALID(link_id), ret, "invalid link_id: %d", link_id)
 
 #endif /* _GPS_DL_LOG_H */
-

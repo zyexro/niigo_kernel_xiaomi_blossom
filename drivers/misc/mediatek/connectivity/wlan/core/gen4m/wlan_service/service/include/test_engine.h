@@ -5,6 +5,8 @@
 #ifndef __TEST_ENGINE_H__
 #define __TEST_ENGINE_H__
 
+#include <linux/kernel.h>
+
 #include "operation.h"
 
 /*****************************************************************************
@@ -14,7 +16,7 @@
 
 #define engine_max(_a, _b) ((_a > _b) ? _a : _b)
 
-#define engine_ceil(_a, _b) (((_a%_b) > 0) ? ((_a/_b)+1) : (_a/_b))
+#define engine_ceil(_a, _b) DIV_ROUND_UP(_a, _b)
 
 #define TEST_ANT_USER_DEF 0x80000000
 

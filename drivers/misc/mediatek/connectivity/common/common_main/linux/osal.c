@@ -31,6 +31,7 @@
 ********************************************************************************
 */
 
+#define OSAL_KEEP_COMPAT_FUNCTIONS
 #include "osal.h"
 #include "connectivity_build_in_adapter.h"
 

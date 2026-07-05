@@ -13,15 +13,10 @@
 void log_ring_init(void *base, unsigned int max_size, unsigned int read,
 	unsigned int write, struct ring *ring)
 {
-	pr_info("base=0x%lx max_size=%x read=%x write=%x", base, max_size, read, write);
-
 	WARN_ON(!base);
-	pr_info("xxxx-1");
 	LOG_RING_VALIDATE_SIZE(max_size);
-	pr_info("xxx-2");
 	/* making sure write largger than read */
 	WARN_ON(read > write);
-	pr_info("xxx-3");
 	ring->base = base;
 	ring->read = read;
 	ring->write = write;
@@ -138,4 +133,3 @@ void _log_ring_write_commit(struct ring_segment *seg, struct ring *ring)
 	/* log_ring_dump(__func__, ring); */
 	/* log_ring_dump_segment(__func__, seg); */
 }
-

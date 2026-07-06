@@ -2149,7 +2149,7 @@ static void hi259_fusion_id_read(void)
 	int i;
 	for (i=0; i<9; i++) {
 		fusion_id_back2[i] =read_cmos_sensor_hi259(0x10+i);
-		pr_devel("%s %d fusion_id_front[%d]=0x%2x\n",__func__, __LINE__, i, fusion_id_back2[i]);
+		no_printk("%s %d fusion_id_front[%d]=0x%2x\n",__func__, __LINE__, i, fusion_id_back2[i]);
 	}
 }
 static int hi259_vendor_id_read(int addr)

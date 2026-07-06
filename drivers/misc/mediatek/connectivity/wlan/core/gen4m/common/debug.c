@@ -759,6 +759,7 @@ void wlanDriverDbgLevelSync(void)
 	wlanDbgSetGlobalLogLevel(ENUM_WIFI_LOG_MODULE_DRIVER, u4DriverLogLevel);
 }
 
+#if !DBG_DISABLE_ALL_LOG
 static void
 firmwareHexDump(const uint8_t *pucPreFix,
 		int32_t i4PreFixType,
@@ -801,11 +802,15 @@ firmwareHexDump(const uint8_t *pucPreFix,
 #undef KBUILD_MODNAME
 #define KBUILD_MODNAME OLD_KBUILD_MODNAME
 }
+#endif
 
 void wlanPrintFwLog(uint8_t *pucLogContent,
 		    uint16_t u2MsgSize, uint8_t ucMsgType,
 		    const uint8_t *pucFmt, ...)
 {
+#if DBG_DISABLE_ALL_LOG
+	return;
+#else
 #define OLD_KBUILD_MODNAME KBUILD_MODNAME
 #define OLD_LOG_FUNC LOG_FUNC
 #undef KBUILD_MODNAME
@@ -863,6 +868,7 @@ void wlanPrintFwLog(uint8_t *pucLogContent,
 #define LOG_FUNC OLD_LOG_FUNC
 #undef OLD_KBUILD_MODNAME
 #undef OLD_LOG_FUNC
+#endif
 }
 
 /* Begin: Functions used to breakdown packet jitter, for test case VoE 5.7 */

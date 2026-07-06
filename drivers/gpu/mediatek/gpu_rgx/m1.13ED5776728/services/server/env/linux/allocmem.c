@@ -45,6 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/mm.h>
 #include <linux/string.h>
 #include <linux/kmemleak.h>
+#include <linux/printk.h>
 
 #include "img_defs.h"
 #include "allocmem.h"
@@ -103,7 +104,8 @@ static inline void OSTryDecreaseKmallocThreshold(void)
 		if (g_ui32kmallocThreshold > PAGE_SIZE)
 		{
 			g_ui32kmallocThreshold >>= 1;
-			printk(KERN_INFO "Threshold is now set to %d\n", g_ui32kmallocThreshold);
+			no_printk(KERN_INFO "Threshold is now set to %d\n",
+				  g_ui32kmallocThreshold);
 		}
 	}
 

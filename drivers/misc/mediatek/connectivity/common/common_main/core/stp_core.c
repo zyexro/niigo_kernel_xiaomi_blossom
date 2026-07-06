@@ -2230,7 +2230,8 @@ static INT32 stp_parser_data_in_full_mode(UINT32 length, UINT8 *p_data)
 				else
 					STP_WARN_FUNC("inband reset state,drop the packet\n");
 			} else {
-				STP_ERR_FUNC("[%d]CRC error, drop the packet\n", gCrcErrorCount++);
+				gCrcErrorCount++;
+				STP_ERR_FUNC("[%d]CRC error, drop the packet\n", gCrcErrorCount - 1);
 				osal_buffer_dump(&stp_core_ctx.rx_buf[0], "CRC data", stp_core_ctx.rx_counter, 0);
 				stp_change_rx_state(MTKSTP_SYNC);
 				stp_core_ctx.rx_counter = 0;

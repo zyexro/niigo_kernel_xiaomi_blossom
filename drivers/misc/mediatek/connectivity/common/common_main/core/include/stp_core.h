@@ -20,6 +20,7 @@
 
 #ifndef _STP_CORE_H
 #define _STP_CORE_H
+#include <linux/printk.h>
 #include "osal_typedef.h"
 #include "osal.h"
 #include "stp_exp.h"
@@ -55,46 +56,14 @@
 
 extern INT32 gStpDbgLvl;
 
-#define STP_DBG_FUNC(fmt, arg...)    do {\
-	if (gStpDbgLvl >= STP_LOG_DBG)\
-		pr_debug(PFX "%s: " fmt, __func__, ##arg);\
-} while (0)
-
-#define STP_INFO_FUNC(fmt, arg...)   do {\
-	if (gStpDbgLvl >= STP_LOG_INFO)\
-		pr_info(PFX "%s:[I] " fmt, __func__, ##arg);\
-} while (0)
-
-#define STP_WARN_RATELIMITED_FUNC(fmt, arg...)   do {\
-	static DEFINE_RATELIMIT_STATE(_rs, HZ, 5);\
-	if (gStpDbgLvl >= STP_LOG_WARN && __ratelimit(&_rs))\
-		pr_warn(PFX "%s:[W] " fmt, __func__, ##arg);\
-} while (0)
-
-#define STP_WARN_FUNC(fmt, arg...)   do {\
-	if (gStpDbgLvl >= STP_LOG_WARN)\
-		pr_warn(PFX "%s:[W] " fmt, __func__, ##arg);\
-} while (0)
-
-#define STP_ERR_FUNC(fmt, arg...)    do {\
-	if (gStpDbgLvl >= STP_LOG_ERR)\
-		pr_err(PFX "%s:[E] " fmt, __func__, ##arg);\
-} while (0)
-
-#define STP_TRC_FUNC(f)              do {\
-	if (gStpDbgLvl >= STP_LOG_DBG)\
-		pr_debug(PFX "<%s> <%d>\n", __func__, __LINE__);\
-} while (0)
-
-#define STP_DUMP_PACKET_HEAD(a, b, c)     do {\
-	if (gStpDbgLvl >= STP_LOG_PKHEAD)\
-		stp_dump_data(a, b, c);\
-} while (0)
-
-#define STP_TRACE_FUNC(fmt, arg...)       do {\
-	if (gStpDbgLvl >= STP_LOG_DBG)\
-		pr_debug(PFX "%s: " fmt, __func__, ##arg);\
-} while (0)
+#define STP_DBG_FUNC(fmt, arg...) no_printk(PFX "%s: " fmt, __func__, ##arg)
+#define STP_INFO_FUNC(fmt, arg...) no_printk(PFX "%s:[I] " fmt, __func__, ##arg)
+#define STP_WARN_RATELIMITED_FUNC(fmt, arg...) no_printk(PFX "%s:[W] " fmt, __func__, ##arg)
+#define STP_WARN_FUNC(fmt, arg...) no_printk(PFX "%s:[W] " fmt, __func__, ##arg)
+#define STP_ERR_FUNC(fmt, arg...) no_printk(PFX "%s:[E] " fmt, __func__, ##arg)
+#define STP_TRC_FUNC(f) no_printk(PFX "<%s> <%d>\n", __func__, __LINE__)
+#define STP_DUMP_PACKET_HEAD(a, b, c) do { } while (0)
+#define STP_TRACE_FUNC(fmt, arg...) no_printk(PFX "%s: " fmt, __func__, ##arg)
 
 #define STP_MODE_BIT(x) (0x1UL << x)
 #define MTKSTP_UART_FULL_MODE	  STP_MODE_BIT(0)

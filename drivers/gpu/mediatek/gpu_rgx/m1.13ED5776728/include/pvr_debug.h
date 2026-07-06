@@ -48,6 +48,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "img_types.h"
 #include "pvrsrv_error.h"
 
+#if defined(__KERNEL__)
+#include <linux/printk.h>
+#endif
+
 /*! @cond Doxygen_Suppress */
 #if defined(_MSC_VER)
 #	define MSC_SUPPRESS_4127 __pragma(warning(suppress:4127))
@@ -560,7 +564,11 @@ IMG_EXPORT void IMG_CALLCONV PVRSRVDebugPrintfDumpCCB(void);
 
 #if defined(__KERNEL__) || defined(DOXYGEN) || defined(__QNXNTO__)
 /*Use PVR_DPF() unless message is necessary in release build */
+#if defined(__KERNEL__)
+#define PVR_LOG(X) no_printk X
+#else
 #define PVR_LOG(X) PVRSRVReleasePrintf X
+#endif
 
 /*************************************************************************/ /*!
 @Function       PVRSRVReleasePrintf

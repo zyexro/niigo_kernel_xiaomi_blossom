@@ -404,7 +404,7 @@
 
 #define CFG_MULTI_ECOVER_SUPPORT	1
 
-#define CFG_ENABLE_CAL_LOG		1
+#define CFG_ENABLE_CAL_LOG		0
 #define CFG_REPORT_RFBB_VERSION		1
 
 #define MAX_BSSID_NUM			4	/* MAX BSSID number */
@@ -631,7 +631,7 @@
  */
 /*!< 1: Debug statistics usage of MGMT Buffer */
 /* 0: Disable */
-#define CFG_DBG_MGT_BUF                         1
+#define CFG_DBG_MGT_BUF                         0
 
 #define CFG_HIF_STATISTICS                      0
 
@@ -639,11 +639,11 @@
 
 #define CFG_RX_PKTS_DUMP                        0
 
-#define CFG_SUPPORT_STATISTICS			1
+#define CFG_SUPPORT_STATISTICS			0
 
-#define CFG_ASSERT_DUMP                         1
+#define CFG_ASSERT_DUMP                         0
 
-#define CFG_SUPPORT_TRACE_TC4			1
+#define CFG_SUPPORT_TRACE_TC4			0
 /*------------------------------------------------------------------------------
  * Flags of Firmware Download Option.
  *------------------------------------------------------------------------------
@@ -1015,12 +1015,12 @@
  * Flags of Packet Lifetime Profiling Mechanism
  *------------------------------------------------------------------------------
  */
-#define CFG_ENABLE_PKT_LIFETIME_PROFILE     1
+#define CFG_ENABLE_PKT_LIFETIME_PROFILE     0
 #define CFG_PRINT_PKT_LIFETIME_PROFILE      0
 
-#define CFG_ENABLE_PER_STA_STATISTICS       1
+#define CFG_ENABLE_PER_STA_STATISTICS       0
 
-#define CFG_ENABLE_PER_STA_STATISTICS_LOG 1
+#define CFG_ENABLE_PER_STA_STATISTICS_LOG 0
 
 /*------------------------------------------------------------------------------
  * Flags for prepare the FW compile flag

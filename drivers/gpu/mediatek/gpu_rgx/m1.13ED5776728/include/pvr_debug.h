@@ -185,7 +185,7 @@ PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 	#if defined(__KLOCWORK__)
 		#define PVR_ASSERT(EXPR) do { if (!(EXPR)) {abort();} } while (0)
 	#else
-		#define PVR_ASSERT(EXPR) (void)(EXPR) /*!< Null Implementation of PVR_ASSERT (does nothing) */
+		#define PVR_ASSERT(EXPR) do	{} while(0) /*!< Null Implementation of PVR_ASSERT (does nothing) */
 	#endif
 
 	#define PVR_DBG_BREAK    /*!< Null Implementation of PVR_DBG_BREAK (does nothing) */

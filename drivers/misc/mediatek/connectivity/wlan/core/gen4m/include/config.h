@@ -639,9 +639,9 @@
 
 #define CFG_RX_PKTS_DUMP                        0
 
-#define CFG_SUPPORT_STATISTICS			0
+#define CFG_SUPPORT_STATISTICS			1
 
-#define CFG_ASSERT_DUMP                         0
+#define CFG_ASSERT_DUMP                         1
 
 #define CFG_SUPPORT_TRACE_TC4			0
 /*------------------------------------------------------------------------------
@@ -1015,10 +1015,10 @@
  * Flags of Packet Lifetime Profiling Mechanism
  *------------------------------------------------------------------------------
  */
-#define CFG_ENABLE_PKT_LIFETIME_PROFILE     0
+#define CFG_ENABLE_PKT_LIFETIME_PROFILE     1
 #define CFG_PRINT_PKT_LIFETIME_PROFILE      0
 
-#define CFG_ENABLE_PER_STA_STATISTICS       0
+#define CFG_ENABLE_PER_STA_STATISTICS       1
 
 #define CFG_ENABLE_PER_STA_STATISTICS_LOG 0
 

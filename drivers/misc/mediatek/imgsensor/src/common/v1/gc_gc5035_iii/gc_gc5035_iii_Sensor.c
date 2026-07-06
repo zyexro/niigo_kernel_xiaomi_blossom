@@ -38,7 +38,7 @@ extern unsigned char fusion_id_front[48];
 #define gc5035_vendor_id  0x41 //0x41 for aac
 
 #define cam_pr_debug(format, args...) \
-	pr_devel(PFX "[%s]:[%d] " format, __func__, __LINE__, ##args)
+	no_printk(PFX "[%s]:[%d] " format, __func__, __LINE__, ##args)
 
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
 /* used for shutter compensation */
@@ -1750,14 +1750,14 @@ static void gc5035_fusion_id_read(void)
 	int i;
 	for (i=0; i<9; i++) {
 		fusion_id_front[i] = read_cmos_sensor_gc5035(0x24+i);
-		pr_devel("%s %d fusion_id_front[%d]=0x%2x\n",__func__, __LINE__, i, fusion_id_front[i]);
+		no_printk("%s %d fusion_id_front[%d]=0x%2x\n",__func__, __LINE__, i, fusion_id_front[i]);
 	}
 }
 static int gc5035_vendor_id_read(int addr)
 {
 	int  flag = 0;
 	flag = read_cmos_sensor_gc5035(addr);
-    pr_info("GC_GC5035_III  read vendor id , form 0x%x  is: 0x%x\n", addr,flag);
+    no_printk("GC_GC5035_III  read vendor id , form 0x%x  is: 0x%x\n", addr,flag);
 	return flag;
 }
 
@@ -1769,7 +1769,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 	cam_pr_debug("E\n");
     flag=gc5035_vendor_id_read(0x10);
     if(flag != gc5035_vendor_id){
-       pr_info("GC_GC5035_III  match vendor id fail, reead vendor id is: 0x%x,expect vendor id is 0x%x \n", flag,gc5035_vendor_id);
+       no_printk("GC_GC5035_III  match vendor id fail, reead vendor id is: 0x%x,expect vendor id is 0x%x \n", flag,gc5035_vendor_id);
         return ERROR_SENSOR_CONNECT_FAIL;
     }else{
         gc5035_fusion_id_read();
@@ -1822,11 +1822,11 @@ static kal_uint32 open(void)
 		do {
 			sensor_id = return_sensor_id();
 			if (sensor_id == imgsensor_info.sensor_id) {
-				pr_debug("i2c write id: 0x%x, sensor id: 0x%x\n",
+				no_printk("i2c write id: 0x%x, sensor id: 0x%x\n",
 					imgsensor.i2c_write_id, sensor_id);
 				break;
 			}
-			pr_debug("Read sensor id fail, write id: 0x%x, id: 0x%x\n",
+			no_printk("Read sensor id fail, write id: 0x%x, id: 0x%x\n",
 				imgsensor.i2c_write_id, sensor_id);
 			retry--;
 		} while (retry > 0);
@@ -1872,7 +1872,7 @@ static kal_uint32 close(void)
 static kal_uint32 preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    pr_info("[gc5035] preview mode start\n");
+    no_printk("[gc5035] preview mode start\n");
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.sensor_mode = IMGSENSOR_MODE_PREVIEW;
 	imgsensor.pclk = imgsensor_info.pre.pclk;
@@ -1892,7 +1892,7 @@ static kal_uint32 preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 static kal_uint32 capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    pr_info("[gc5035] capture mode start\n");
+    no_printk("[gc5035] capture mode start\n");
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.sensor_mode = IMGSENSOR_MODE_CAPTURE;
 	if (imgsensor.current_fps == imgsensor_info.cap1.max_framerate) {
@@ -1920,7 +1920,7 @@ static kal_uint32 capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 static kal_uint32 normal_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    pr_info("[gc5035] normal video mode start\n");
+    no_printk("[gc5035] normal video mode start\n");
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.sensor_mode = IMGSENSOR_MODE_VIDEO;
 	imgsensor.pclk = imgsensor_info.normal_video.pclk;
@@ -1939,7 +1939,7 @@ static kal_uint32 normal_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 static kal_uint32 hs_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    pr_info("[gc5035] hs video mode start\n");
+    no_printk("[gc5035] hs video mode start\n");
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.sensor_mode = IMGSENSOR_MODE_HIGH_SPEED_VIDEO;
 	imgsensor.pclk = imgsensor_info.hs_video.pclk;
@@ -1958,7 +1958,7 @@ static kal_uint32 hs_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 static kal_uint32 slim_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    pr_info("[gc5035] slim video mode start\n");
+    no_printk("[gc5035] slim video mode start\n");
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.sensor_mode = IMGSENSOR_MODE_SLIM_VIDEO;
 	imgsensor.pclk = imgsensor_info.slim_video.pclk;

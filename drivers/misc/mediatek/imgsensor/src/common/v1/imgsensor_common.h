@@ -11,6 +11,8 @@
 
 #define pr_fmt(fmt) PREFIX "[%s] " fmt, __func__
 
+#include <linux/printk.h>
+
 #include "kd_camera_feature.h"
 #include "kd_imgsensor_define.h"
 
@@ -20,11 +22,11 @@
 #define PREFIX "[imgsensor]"
 #define DEBUG_CAMERA_HW_K
 #ifdef DEBUG_CAMERA_HW_K
-#define PK_DBG(fmt, arg...)  pr_debug(PREFIX fmt, ##arg)
-#define PK_INFO(fmt, arg...) pr_debug(PREFIX fmt, ##arg)
+#define PK_DBG(fmt, arg...)  no_printk(PREFIX fmt, ##arg)
+#define PK_INFO(fmt, arg...) no_printk(PREFIX fmt, ##arg)
 #else
-#define PK_DBG(fmt, arg...)
-#define PK_INFO(fmt, arg...) pr_debug(PREFIX fmt, ##arg)
+#define PK_DBG(fmt, arg...)  no_printk(PREFIX fmt, ##arg)
+#define PK_INFO(fmt, arg...) no_printk(PREFIX fmt, ##arg)
 #endif
 
 #define PLATFORM_POWER_SEQ_NAME "platform_power_seq"
@@ -47,4 +49,3 @@ enum IMGSENSOR_RETURN {
 
 #define LENGTH_FOR_SNPRINTF 256
 #endif
-

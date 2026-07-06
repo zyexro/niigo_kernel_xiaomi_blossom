@@ -10,6 +10,7 @@
 #include <linux/skbuff.h>
 #include <linux/utsname.h>
 #include <linux/delay.h>
+#include <linux/printk.h>
 
 /*****************************************************************************
  *	Type definition
@@ -234,18 +235,24 @@ typedef uint32_t (*wlan_oid_handler_t) (void *winfos,
 #define SERV_DBG_CAT_ENGN	2	/* service engine */
 #define SERV_DBG_CAT_ADAPT	3	/* service adaption */
 #define SERV_DBG_CAT_ALL	SERV_DBG_CAT_MISC
-#define SERV_DBG_CAT_EN_ALL_MASK	0xFFFFFFFFu
 
 /* Debugging and printing related definitions and prototypes */
-#define SERV_PRINT		printk
 #define SERV_PRINT_MAC(addr)	\
 	(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5])
 
-#define SERV_LOG(category, level, fmt)					\
-	do {								\
-		if ((0x1 << category) & (SERV_DBG_CAT_EN_ALL_MASK))	\
-			if (level <= SERV_DBG_LVL_WARN)			\
-				SERV_PRINT fmt;				\
+#define SERV_LOG(category, level, fmt)				\
+	do {							\
+		switch (level) {				\
+		case SERV_DBG_LVL_ERROR:			\
+			pr_err_ratelimited fmt;			\
+			break;					\
+		case SERV_DBG_LVL_WARN:				\
+			pr_warn_ratelimited fmt;		\
+			break;					\
+		default:					\
+			no_printk fmt;				\
+			break;					\
+		}						\
 	} while (0)
 
 /* OS task related data structure and definition */

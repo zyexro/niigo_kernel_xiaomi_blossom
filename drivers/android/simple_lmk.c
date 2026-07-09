@@ -17,13 +17,17 @@
 #include <uapi/linux/sched/types.h>
 
 /* The minimum number of pages to free per reclaim */
-#define MIN_FREE_PAGES (CONFIG_ANDROID_SIMPLE_LMK_MINFREE * SZ_1M / PAGE_SIZE)
+static unsigned short slmk_minfree __read_mostly = CONFIG_ANDROID_SIMPLE_LMK_MINFREE;
+module_param(slmk_minfree, short, 0644);
+#define MIN_FREE_PAGES (slmk_minfree * SZ_1M / PAGE_SIZE)
 
 /* Kill up to this many victims per reclaim */
 #define MAX_VICTIMS 1024
 
 /* Timeout in jiffies for each reclaim */
-#define RECLAIM_EXPIRES msecs_to_jiffies(CONFIG_ANDROID_SIMPLE_LMK_TIMEOUT_MSEC)
+static unsigned short slmk_timeout __read_mostly = CONFIG_ANDROID_SIMPLE_LMK_TIMEOUT_MSEC;
+module_param(slmk_timeout, short, 0644);
+#define RECLAIM_EXPIRES msecs_to_jiffies(slmk_timeout)
 
 struct victim_info {
 	struct task_struct *tsk;
@@ -286,13 +290,13 @@ static void scan_and_kill(void)
 			set_tsk_thread_flag(t, TIF_MEMDIE);
 		for_each_thread(vtsk, t)
 			set_task_rt_prio(t, 1);
+		/* Signals can't wake frozen tasks; only a thaw operation can */
+		for_each_thread(vtsk, t)
+			__thaw_task(t);
 		rcu_read_unlock();
 
 		/* Allow the victim to run on any CPU. This won't schedule. */
 		set_cpus_allowed_ptr(vtsk, cpu_all_mask);
-
-		/* Signals can't wake frozen tasks; only a thaw operation can */
-		__thaw_task(vtsk);
 
 		/* Store the number of anon pages to sort victims for reaping */
 		victim->size = get_mm_counter(mm, MM_ANONPAGES);
@@ -358,7 +362,7 @@ static struct mm_struct *next_reap_victim(void)
 			continue;
 
 		/* Do a trylock so the reaper thread doesn't sleep */
-		if (!down_read_trylock(&mm->mmap_sem)) {
+		if (!mmap_read_trylock(mm)) {
 			should_retry = true;
 			continue;
 		}
@@ -374,7 +378,7 @@ static struct mm_struct *next_reap_victim(void)
 		 */
 		if (!test_bit(MMF_OOM_SKIP, &mm->flags))
 			break;
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 	}
 
 	if (!mm) {
@@ -413,7 +417,7 @@ static void reap_victims(void)
 			clear_bit(MMF_OOM_VICTIM, &mm->flags);
 			set_bit(MMF_OOM_SKIP, &mm->flags);
 		}
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 	}
 }
 
@@ -462,10 +466,13 @@ void simple_lmk_mm_freed(struct mm_struct *mm)
 	read_unlock(&mm_free_lock);
 }
 
+static unsigned short slmk_vmpressure __read_mostly = 95;
+module_param(slmk_vmpressure, short, 0644);
+
 static int simple_lmk_vmpressure_cb(struct notifier_block *nb,
 				    unsigned long pressure, void *data)
 {
-	if (pressure == 100) {
+	if (pressure >= slmk_vmpressure) {
 		atomic_set(&needs_reclaim, 1);
 		smp_mb__after_atomic();
 		if (waitqueue_active(&oom_waitq))
@@ -497,7 +504,7 @@ static int simple_lmk_init_set(const char *val, const struct kernel_param *kp)
 		BUG_ON(vmpressure_notifier_register(&vmpressure_notif));
 	}
 
-	total_mb = totalram_pages >> (20 - PAGE_SHIFT);
+	total_mb = totalram_pages() >> (20 - PAGE_SHIFT);
 	if (total_mb > 3072) {
 		// 4GB+ variant
 		slmk_minfree = 155;

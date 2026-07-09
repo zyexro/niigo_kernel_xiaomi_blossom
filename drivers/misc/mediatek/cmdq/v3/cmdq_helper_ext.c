@@ -41,6 +41,9 @@
 #define CMDQ_PROFILE_LIMIT_1	10000000
 #define CMDQ_PROFILE_LIMIT_2	20000000
 #define CMDQ_SRAM_POOL_BASE	1UL
+#define CMDQ_POISON_PATTERN_AA	(~0UL / 0xff * 0xaa)
+#define CMDQ_POISON_PATTERN_5A	(~0UL / 0xff * 0x5a)
+#define CMDQ_POISON_PATTERN_6B	(~0UL / 0xff * 0x6b)
 
 struct cmdq_cmd_struct {
 	void *p_va_base;	/* VA: denote CMD virtual address space */
@@ -4491,34 +4494,69 @@ static void cmdq_core_group_end_task(struct cmdqRecStruct *handle,
 	}
 }
 
+static bool cmdq_core_is_pmqos_handle_poisoned(
+	const struct cmdqRecStruct *handle)
+{
+	unsigned long addr = (unsigned long)handle;
+
+	return addr == CMDQ_POISON_PATTERN_AA ||
+		addr == CMDQ_POISON_PATTERN_5A ||
+		addr == CMDQ_POISON_PATTERN_6B;
+}
+
 static s32 cmdq_core_get_pmqos_handle_list(struct cmdqRecStruct *handle,
-	struct cmdqRecStruct **handle_out, u32 handle_list_size)
+	struct cmdqRecStruct **handle_out, u32 handle_list_size,
+	u32 *handle_count_out)
 {
 	struct cmdq_client *client;
-	struct cmdq_pkt **pkt_list = NULL;
-	u32 i;
-	u32 pkt_count;
+	struct cmdq_pkt *pkt_list[CMDQ_MAX_TASK_IN_THREAD + 1] = { NULL };
+	struct cmdqRecStruct *cur_handle;
+	u32 i, pkt_count = 0, handle_count = 0;
+	s32 status;
 
-	if (!handle || !handle_out || !handle_list_size)
+	if (!handle || !handle_out || !handle_list_size || !handle_count_out)
 		return -EINVAL;
 
-	pkt_list = kcalloc(handle_list_size, sizeof(*pkt_list), GFP_KERNEL);
-	if (!pkt_list)
-		return -ENOMEM;
+	memset(handle_out, 0, sizeof(*handle_out) * handle_list_size);
+	*handle_count_out = 0;
+
+	if (handle_list_size > ARRAY_SIZE(pkt_list)) {
+		CMDQ_ERR("PMQoS snapshot overflow:%u\n", handle_list_size);
+		handle_list_size = ARRAY_SIZE(pkt_list);
+	}
+
+	if (handle->thread < 0 || handle->thread >= CMDQ_MAX_THREAD_COUNT)
+		return -EINVAL;
 
 	client = cmdq_clients[(u32)handle->thread];
+	if (!client || !client->chan)
+		return -EINVAL;
 
-	cmdq_task_get_pkt_from_thread(client->chan, pkt_list,
+	status = cmdq_task_get_pkt_from_thread(client->chan, pkt_list,
 		handle_list_size, &pkt_count);
+	if (status < 0)
+		return status;
 
 	/* get handle from user_data */
 	for (i = 0; i < pkt_count; i++) {
 		if (!pkt_list[i])
 			continue;
-		handle_out[i] = pkt_list[i]->user_data;
+
+		cur_handle = pkt_list[i]->user_data;
+		if (!cur_handle || cur_handle == handle)
+			continue;
+
+		if (cmdq_core_is_pmqos_handle_poisoned(cur_handle)) {
+			CMDQ_ERR(
+				"skip poisoned PMQoS handle:0x%p thread:%d pkt:0x%p\n",
+				cur_handle, handle->thread, pkt_list[i]);
+			continue;
+		}
+
+		handle_out[handle_count++] = cur_handle;
 	}
 
-	kfree(pkt_list);
+	*handle_count_out = handle_count;
 	return 0;
 }
 
@@ -4526,8 +4564,9 @@ void cmdq_pkt_release_handle(struct cmdqRecStruct *handle)
 {
 	s32 ref;
 	struct ContextStruct *ctx;
-	struct cmdqRecStruct *pmqos_handle_list[CMDQ_MAX_TASK_IN_THREAD];
-	u32 handle_count;
+	struct cmdqRecStruct *pmqos_handle_list[CMDQ_MAX_TASK_IN_THREAD] = { NULL };
+	u32 handle_count, request_count = 0, snapshot_count = 0;
+	s32 status;
 
 	CMDQ_MSG("release handle:0x%p pkt:0x%p thread:%d engine:0x%llx\n",
 		handle, handle->pkt, handle->thread,
@@ -4552,22 +4591,46 @@ void cmdq_pkt_release_handle(struct cmdqRecStruct *handle)
 		/* PMQoS Implement */
 		mutex_lock(&cmdq_thread_mutex);
 		ctx = cmdq_core_get_context();
-		handle_count =
-			--ctx->thread[(u32)handle->thread].handle_count;
 
-		if (handle_count > ARRAY_SIZE(pmqos_handle_list)) {
-			CMDQ_ERR("PMQoS handle_count overflow:%u\n",
-				handle_count);
-			handle_count = ARRAY_SIZE(pmqos_handle_list);
+		handle_count = ctx->thread[(u32)handle->thread].handle_count;
+		if (!handle_count) {
+			CMDQ_ERR("PMQoS handle_count underflow thread:%d handle:0x%p\n",
+				handle->thread, handle);
+		} else {
+			ctx->thread[(u32)handle->thread].handle_count =
+				handle_count - 1;
+			request_count = handle_count;
 		}
-		if (handle_count) {
-			cmdq_core_get_pmqos_handle_list(handle,
-				pmqos_handle_list, handle_count);
+
+		if (request_count > ARRAY_SIZE(pmqos_handle_list)) {
+			CMDQ_ERR("PMQoS handle_count overflow:%u\n",
+				request_count);
+			request_count = ARRAY_SIZE(pmqos_handle_list);
+		}
+
+		if (request_count) {
+			status = cmdq_core_get_pmqos_handle_list(handle,
+				pmqos_handle_list, request_count,
+				&snapshot_count);
+			if (status < 0) {
+				CMDQ_ERR(
+					"PMQoS snapshot failed:%d thread:%d handle:0x%p\n",
+					status, handle->thread, handle);
+				snapshot_count = 0;
+			}
+			if (snapshot_count !=
+				ctx->thread[(u32)handle->thread].handle_count) {
+				CMDQ_LOG(
+					"PMQoS release count mismatch thread:%d sw:%u snap:%u request:%u\n",
+					handle->thread,
+					ctx->thread[(u32)handle->thread].handle_count,
+					snapshot_count, request_count);
+			}
 		}
 
 		cmdq_core_group_end_task(handle,
-			handle_count ? pmqos_handle_list : NULL,
-			handle_count);
+			snapshot_count ? pmqos_handle_list : NULL,
+			snapshot_count);
 
 		mutex_unlock(&cmdq_thread_mutex);
 	}
@@ -4900,9 +4963,10 @@ static s32 cmdq_pkt_flush_async_ex_impl(struct cmdqRecStruct *handle,
 {
 	s32 err;
 	struct cmdq_client *client = NULL;
-	struct cmdqRecStruct *pmqos_handle_list[CMDQ_MAX_TASK_IN_THREAD + 1];
+	struct cmdqRecStruct *pmqos_handle_list[CMDQ_MAX_TASK_IN_THREAD + 1] = { NULL };
 	struct ContextStruct *ctx;
-	u32 handle_count;
+	u32 handle_count, request_count, snapshot_count = 0;
+	s32 snapshot_status;
 
 	if (!handle->finalized) {
 		CMDQ_ERR("handle not finalized:0x%p scenario:%d\n",
@@ -4984,20 +5048,35 @@ static s32 cmdq_pkt_flush_async_ex_impl(struct cmdqRecStruct *handle,
 		mutex_lock(&cmdq_thread_mutex);
 		ctx = cmdq_core_get_context();
 		handle_count = ctx->thread[(u32)handle->thread].handle_count;
+		request_count = handle_count;
 
-		if (handle_count >= ARRAY_SIZE(pmqos_handle_list)) {
+		if (request_count >= ARRAY_SIZE(pmqos_handle_list)) {
 			CMDQ_ERR("PMQoS handle_count overflow:%u\n",
-				handle_count);
-			handle_count = ARRAY_SIZE(pmqos_handle_list) - 1;
+				request_count);
+			request_count = ARRAY_SIZE(pmqos_handle_list) - 1;
 		}
 
-		if (handle_count)
-			cmdq_core_get_pmqos_handle_list(handle,
-				pmqos_handle_list, handle_count);
+		if (request_count) {
+			snapshot_status = cmdq_core_get_pmqos_handle_list(handle,
+				pmqos_handle_list, request_count,
+				&snapshot_count);
+			if (snapshot_status < 0) {
+				CMDQ_ERR(
+					"PMQoS snapshot failed:%d thread:%d handle:0x%p\n",
+					snapshot_status, handle->thread, handle);
+				snapshot_count = 0;
+			}
+			if (snapshot_count != handle_count) {
+				CMDQ_LOG(
+					"PMQoS begin count mismatch thread:%d sw:%u snap:%u request:%u\n",
+					handle->thread, handle_count,
+					snapshot_count, request_count);
+			}
+		}
 
-		pmqos_handle_list[handle_count] = handle;
+		pmqos_handle_list[snapshot_count] = handle;
 		cmdq_core_group_begin_task(handle, pmqos_handle_list,
-			handle_count + 1);
+			snapshot_count + 1);
 
 		ctx->thread[(u32)handle->thread].handle_count++;
 		mutex_unlock(&cmdq_thread_mutex);

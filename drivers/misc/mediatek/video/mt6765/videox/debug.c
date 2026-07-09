@@ -1114,9 +1114,6 @@ static void process_dbg_opt(const char *opt)
 		}
 		enable_idlemgr(flg);
 	} else if (strncmp(opt, "fps:", 4) == 0) {
-		char *p = (char *)opt+4;
-		int fps = kstrtoul(p, 10, (unsigned long int *)&p);
-
 		DDPMSG("change fps\n");
 		return;
 	} else if (strncmp(opt, "disp_mode:", 10) == 0) {

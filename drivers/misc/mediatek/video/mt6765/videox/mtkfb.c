@@ -254,7 +254,7 @@ static int mtkfb1_blank(int blank_mode, struct fb_info *info)
 
 static int mtkfb_blank(int blank_mode, struct fb_info *info)
 {
-	enum mtkfb_power_mode prev_pm = primary_display_get_power_mode();
+	(void)primary_display_get_power_mode();
 
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
@@ -1053,8 +1053,7 @@ static int mtkfb_ioctl(struct fb_info *info, unsigned int cmd,
 	case MTKFB_SET_AOD_POWER_MODE:
 	{
 		enum mtkfb_aod_power_mode aod_pm = MTKFB_AOD_POWER_MODE_ERROR;
-		enum mtkfb_power_mode prev_pm =
-			primary_display_get_power_mode();
+		(void)primary_display_get_power_mode();
 
 		aod_pm = (enum mtkfb_aod_power_mode)arg;
 		DISPCHECK("AOD: ioctl: %s\n",

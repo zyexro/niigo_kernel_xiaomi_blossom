@@ -137,11 +137,13 @@ static struct task_struct *primary_display_idlemgr_task;
 static DECLARE_WAIT_QUEUE_HEAD(idlemgr_wait_queue);
 #endif
 
+#if 0
 static struct hrtimer cmd_mode_update_timer;
 #if 0 /* defined but not used */
 static ktime_t cmd_mode_update_timer_period;
 #endif
 static int is_fake_timer_inited;
+#endif
 
 #ifdef MTK_FB_ION_SUPPORT
 static struct task_struct *present_fence_release_worker_task;
@@ -1261,6 +1263,7 @@ static inline int _should_config_ovl_input(void)
 	return 1;
 }
 
+#if 0
 static long get_current_time_us(void)
 {
 	struct timeval t;
@@ -1268,6 +1271,7 @@ static long get_current_time_us(void)
 	do_gettimeofday(&t);
 	return (t.tv_sec & 0xFFF) * 1000000 + t.tv_usec;
 }
+#endif
 
 #if 0
 static enum hrtimer_restart _DISP_CmdModeTimer_handler(struct hrtimer *timer)
@@ -4123,6 +4127,7 @@ done:
 	return ret;
 }
 
+#if 0
 static void _primary_protect_mode_switch(void)
 {
 	int try_cnt = 50;
@@ -4134,8 +4139,11 @@ static void _primary_protect_mode_switch(void)
 	if (try_cnt <= 0)
 		DISPCHECK("display warning:switch mode when hwc config\n");
 }
+#endif
 
+#if 0
 static int request_lcm_refresh_rate_change(int fps);
+#endif
 #ifdef CONFIG_MTK_DISPLAY_120HZ_SUPPORT
 int primary_display_set_lcm_refresh_rate(int fps)
 {
@@ -4207,6 +4215,7 @@ static void _display_set_refresh_rate_post_proc(int fps)
 }
 #endif
 
+#if 0
 static int request_lcm_refresh_rate_change(int fps)
 {
 #ifdef CONFIG_MTK_DISPLAY_120HZ_SUPPORT
@@ -4254,6 +4263,7 @@ static int request_lcm_refresh_rate_change(int fps)
 #endif
 	return 0;
 }
+#endif
 
 int _display_set_lcm_refresh_rate(int fps)
 {

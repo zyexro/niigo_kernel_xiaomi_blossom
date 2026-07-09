@@ -193,8 +193,10 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 free_table:
 	kfree(table);
 free_pages:
-	list_for_each_entry_safe(page, tmp_page, &pages, lru)
+	list_for_each_entry_safe(page, tmp_page, &pages, lru) {
+		list_del(&page->lru);
 		free_buffer_page(sys_heap, buffer, page);
+	}
 	return -ENOMEM;
 }
 

@@ -76,6 +76,7 @@
 
 #define VDO_HW_WRITE(ptr, data)     mt_reg_sync_writel(data, ptr)
 #define VDO_HW_READ(ptr)            readl((void __iomem *)ptr)
+#define VCODEC_GCON_POLL_RETRY     1000
 
 #define VCODEC_DEVNAME     "Vcodec"
 #define VCODEC_DEVNAME2     "Vcodec2"
@@ -151,6 +152,28 @@ static unsigned int gLockTimeOutCount;
 static unsigned int gu4VdecLockThreadId;
 
 #define USE_WAKELOCK 0
+
+static int vcodec_gcon_write_poll(void *addr, unsigned int val,
+	const char *name)
+{
+	unsigned int read_val;
+	unsigned int retry;
+
+	for (retry = 0; retry < VCODEC_GCON_POLL_RETRY; retry++) {
+		VDO_HW_WRITE(addr, val);
+		read_val = VDO_HW_READ(addr);
+		if (read_val == val)
+			return 0;
+
+		udelay(1);
+	}
+
+	read_val = VDO_HW_READ(addr);
+	pr_notice("[VCODEC] %s timeout: want 0x%x got 0x%x addr=%p\n",
+		name, val, read_val, addr);
+
+	return -ETIMEDOUT;
+}
 
 #if USE_WAKELOCK == 1
 static struct wakeup_source v_wakeup_src;
@@ -442,9 +465,8 @@ void vdec_power_off(void)
 	} else {
 		vdec_polling_status();
 		/* VCODEC_SEL reset */
-		do {
-			VDO_HW_WRITE(KVA_VDEC_GCON_BASE + 0x20, 0);
-		} while (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x20) != 0);
+		vcodec_gcon_write_poll(KVA_VDEC_GCON_BASE + 0x20, 0,
+			"vdec power off VCODEC_SEL reset");
 
 		gu4VdecPWRCounter--;
 
@@ -535,9 +557,8 @@ void venc_power_on(void)
 void venc_power_off(void)
 {
 	mutex_lock(&VencPWRLock);
-	do {
-		VDO_HW_WRITE(KVA_VDEC_GCON_BASE + 0x20, 0);
-	} while (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x20) != 0);
+	vcodec_gcon_write_poll(KVA_VDEC_GCON_BASE + 0x20, 0,
+		"venc power off VCODEC_SEL reset");
 
 	if (gu4VencPWRCounter == 0) {
 		pr_debug("[VENC] gu4VencPWRCounter = 0\n");
@@ -1525,11 +1546,8 @@ static long vcodec_lockhw(unsigned long arg)
 	} else if (rHWLock.eDriverType == VAL_DRIVER_TYPE_H264_ENC) {
 		u4VcodecSel = 0x1;
 		if (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x24) == 0) {
-			do {
-				VDO_HW_WRITE(KVA_VDEC_GCON_BASE + 0x24,
-						u4DeBlocking);
-			} while (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x24)
-					!= u4DeBlocking);
+			vcodec_gcon_write_poll(KVA_VDEC_GCON_BASE + 0x24,
+				u4DeBlocking, "h264 enc deblocking select");
 		}
 	} else if (rHWLock.eDriverType == VAL_DRIVER_TYPE_JPEG_ENC) {
 		u4VcodecSel = 0x4;
@@ -1539,9 +1557,8 @@ static long vcodec_lockhw(unsigned long arg)
 	}
 
 	if (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x20) == 0) {
-		do {
-			VDO_HW_WRITE(KVA_VDEC_GCON_BASE + 0x20, u4VcodecSel);
-		} while (VDO_HW_READ(KVA_VDEC_GCON_BASE + 0x20) != u4VcodecSel);
+		vcodec_gcon_write_poll(KVA_VDEC_GCON_BASE + 0x20,
+			u4VcodecSel, "VCODEC_SEL set");
 	} else {
 		pr_info("[WARNING] VCODEC_SEL is not 0\n");
 	}

@@ -78,11 +78,12 @@ struct eem_det_ops eem_det_base_ops = {
 };
 
 #ifdef EEM_OFFSET
-#define EEM_VOLT_OFFSET_L		(-1)
-#define EEM_VOLT_OFFSET_2L		(-1)
+/* EEM voltage tables use 6.25 mV code steps; -6 is about -37.5 mV. */
+#define EEM_VOLT_OFFSET_L		(-6)
+#define EEM_VOLT_OFFSET_2L		(-6)
 #define EEM_VOLT_OFFSET_CCI		(-1)
-#define EEM_VOLT_OFFSET_L_HI		(-1)
-#define EEM_VOLT_OFFSET_2L_HI		(-1)
+#define EEM_VOLT_OFFSET_L_HI		(-6)
+#define EEM_VOLT_OFFSET_2L_HI		(-6)
 #endif
 
 struct eem_det eem_detectors[NR_EEM_DET] = {

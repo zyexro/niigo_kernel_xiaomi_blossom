@@ -54,7 +54,7 @@ void spm_set_sysclk_settle(void);
 void spm_dump_world_clk_cntcv(void);
 
 
-void spm_suspend_pre_process(struct pwr_ctrl *pwrctrl);
+int spm_suspend_pre_process(struct pwr_ctrl *pwrctrl);
 void spm_suspend_post_process(struct pwr_ctrl *pwrctrl);
 
 /**************************************

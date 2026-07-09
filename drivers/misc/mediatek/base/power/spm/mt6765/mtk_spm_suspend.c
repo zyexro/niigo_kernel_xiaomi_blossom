@@ -115,10 +115,11 @@ static void spm_trigger_wfi_for_sleep(struct pwr_ctrl *pwrctrl)
 #endif
 }
 
-static void spm_suspend_pcm_setup_before_wfi(u32 cpu,
+static int spm_suspend_pcm_setup_before_wfi(u32 cpu,
 		struct pwr_ctrl *pwrctrl)
 {
 	unsigned int resource_usage = 0;
+	int ret;
 
 #ifdef CONFIG_MTK_ICCS_SUPPORT
 	iccs_enter_low_power_state();
@@ -127,7 +128,9 @@ static void spm_suspend_pcm_setup_before_wfi(u32 cpu,
 	/* Only get resource usage from user SCP */
 	resource_usage = spm_get_resource_usage_by_user(SPM_RESOURCE_USER_SCP);
 
-	spm_suspend_pre_process(pwrctrl);
+	ret = spm_suspend_pre_process(pwrctrl);
+	if (ret < 0)
+		return ret;
 
 	spm_dump_world_clk_cntcv();
 	spm_set_sysclk_settle();
@@ -136,6 +139,8 @@ static void spm_suspend_pcm_setup_before_wfi(u32 cpu,
 
 	mt_secure_call(MTK_SIP_KERNEL_SPM_SUSPEND_ARGS, pwrctrl->pcm_flags,
 		pwrctrl->pcm_flags1, pwrctrl->timer_val, resource_usage);
+
+	return 0;
 }
 
 static void spm_suspend_pcm_setup_after_wfi(u32 cpu, struct pwr_ctrl *pwrctrl)
@@ -295,6 +300,7 @@ unsigned int spm_go_to_sleep(void)
 	u32 cpu = 0;
 	u32 spm_flags = suspend_pcm_flags;
 	u32 spm_flags1 = suspend_pcm_flags1;
+	int ret;
 
 	spm_suspend_footprint(SPM_SUSPEND_ENTER);
 
@@ -342,7 +348,13 @@ unsigned int spm_go_to_sleep(void)
 		  sec, pwrctrl->wake_src, is_cpu_pdn(pwrctrl->pcm_flags),
 		  is_infra_pdn(pwrctrl->pcm_flags));
 
-	spm_suspend_pcm_setup_before_wfi(cpu, pwrctrl);
+	ret = spm_suspend_pcm_setup_before_wfi(cpu, pwrctrl);
+	if (ret < 0) {
+		printk_deferred("[name:spm&][SPM] suspend pre-process failed ret=%d\n",
+			ret);
+		last_wr = WR_NONE;
+		goto RESTORE_LOCK;
+	}
 
 	spm_suspend_footprint(SPM_SUSPEND_ENTER_UART_SLEEP);
 
@@ -374,6 +386,7 @@ RESTORE_IRQ:
 
 	/* record last wakesta */
 	last_wr = spm_output_wake_reason(&spm_wakesta);
+RESTORE_LOCK:
 	mtk_spm_irq_restore();
 
 	lockdep_off();

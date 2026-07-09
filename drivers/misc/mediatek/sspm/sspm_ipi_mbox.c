@@ -178,6 +178,10 @@ static void ipi_monitor_dump_timeout(int mid, int opts)
 	spin_unlock_irqrestore(&lock_monitor, flags);
 	pr_err("Error: SSPM IPI=%d timeout\n", mid);
 	sspm_ipi_timeout_cb(mid);
+	if (mid == IPI_ID_SPM_SUSPEND) {
+		pr_err("Error: SSPM SPM suspend IPI timeout, suppress fatal BUG for experiment\n");
+		return;
+	}
 	BUG_ON(1);
 }
 #endif

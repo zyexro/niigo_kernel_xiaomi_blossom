@@ -54,7 +54,7 @@ void spm_set_sysclk_settle(void)
 #if !defined(CONFIG_FPGA_EARLY_PORTING)
 static int mt_power_gs_dump_suspend_count = 2;
 #endif
-void spm_suspend_pre_process(struct pwr_ctrl *pwrctrl)
+int spm_suspend_pre_process(struct pwr_ctrl *pwrctrl)
 {
 #ifdef CONFIG_MTK_TINYSYS_SSPM_SUPPORT
 	int ret;
@@ -77,6 +77,7 @@ void spm_suspend_pre_process(struct pwr_ctrl *pwrctrl)
 	ret = spm_to_sspm_command(SPM_SUSPEND, &spm_d);
 	if (ret < 0) {
 		pr_info("[SPM] ret %d", ret);
+		return ret;
 	}
 #endif
 
@@ -84,6 +85,8 @@ void spm_suspend_pre_process(struct pwr_ctrl *pwrctrl)
 	if (slp_dump_golden_setting || --mt_power_gs_dump_suspend_count >= 0)
 		mt_power_gs_dump_suspend(slp_dump_golden_setting_type);
 #endif
+
+	return 0;
 }
 
 void spm_suspend_post_process(struct pwr_ctrl *pwrctrl)
@@ -109,4 +112,3 @@ void spm_suspend_post_process(struct pwr_ctrl *pwrctrl)
 	}
 #endif /* CONFIG_MTK_TINYSYS_SSPM_SUPPORT */
 }
-

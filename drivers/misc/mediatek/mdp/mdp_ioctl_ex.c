@@ -128,7 +128,7 @@ struct mdp_job_mapping {
 };
 static DEFINE_MUTEX(mdp_job_mapping_list_mutex);
 
-#define SLOT_GROUP_NUM 64
+#define SLOT_GROUP_NUM 8
 #define MAX_RB_SLOT_NUM (SLOT_GROUP_NUM*64)
 #define MAX_COUNT_IN_RB_SLOT 0x1000 /* 4KB */
 #define SLOT_ID_SHIFT 16
@@ -823,7 +823,7 @@ s32 mdp_ioctl_alloc_readback_slots(void *fp, unsigned long param)
 
 	mutex_lock(&rb_slot_list_mutex);
 	free_slot_group = ffz(alloc_slot_group);
-	if (unlikely(alloc_slot_group == ~0UL)) {
+	if (unlikely(free_slot_group >= SLOT_GROUP_NUM)) {
 		CMDQ_ERR("%s no free slot:%#llx\n", __func__, alloc_slot_group);
 		cmdq_free_write_addr(paStart, CMDQ_CLT_MDP);
 		mutex_unlock(&rb_slot_list_mutex);

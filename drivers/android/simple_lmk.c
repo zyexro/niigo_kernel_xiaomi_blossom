@@ -36,7 +36,8 @@ struct victim_info {
 };
 
 static struct victim_info victims[MAX_VICTIMS] __cacheline_aligned_in_smp;
-static struct task_struct *task_bucket[SHRT_MAX + 1] __cacheline_aligned;
+static struct task_struct *task_bucket[OOM_SCORE_ADJ_MAX + 1]
+	__cacheline_aligned;
 static DECLARE_WAIT_QUEUE_HEAD(oom_waitq);
 static DECLARE_WAIT_QUEUE_HEAD(reaper_waitq);
 static DECLARE_COMPLETION(reclaim_done);
@@ -76,7 +77,7 @@ static unsigned long get_total_mm_pages(struct mm_struct *mm)
 
 static unsigned long find_victims(int *vindex)
 {
-	short i, min_adj = SHRT_MAX, max_adj = 0;
+	short i, min_adj = OOM_SCORE_ADJ_MAX, max_adj = 0;
 	unsigned long pages_found = 0;
 	struct task_struct *tsk;
 

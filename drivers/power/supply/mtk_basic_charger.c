@@ -60,6 +60,26 @@
 
 #include "mtk_charger.h"
 
+static void notify_charger_status(struct mtk_charger *info, int status)
+{
+	struct power_supply *psy;
+	union power_supply_propval val = { .intval = status };
+	int ret;
+
+	psy = power_supply_get_by_phandle(info->pdev->dev.of_node, "charger");
+	if (IS_ERR_OR_NULL(psy)) {
+		chr_err("%s: failed to get charger supply: %ld\n", __func__,
+			IS_ERR(psy) ? PTR_ERR(psy) : -ENODEV);
+		return;
+	}
+
+	ret = power_supply_set_property(psy, POWER_SUPPLY_PROP_STATUS, &val);
+	power_supply_put(psy);
+	if (ret < 0)
+		chr_err("%s: failed to publish status %d: %d\n", __func__,
+			status, ret);
+}
+
 static int _uA_to_mA(int uA)
 {
 	if (uA == -1)
@@ -360,6 +380,9 @@ static int do_algorithm(struct mtk_charger *info)
 			charger_dev_do_event(info->chg1_dev, EVENT_RECHARGE, 0);
 			chr_err("%s battery recharge\n", __func__);
 		}
+
+		notify_charger_status(info, chg_done ?
+			POWER_SUPPLY_STATUS_FULL : POWER_SUPPLY_STATUS_CHARGING);
 	}
 
 	chr_err("%s is_basic:%d\n", __func__, is_basic);
@@ -543,6 +566,3 @@ int mtk_basic_charger_init(struct mtk_charger *info)
 	//info->change_current_setting = mtk_basic_charging_current;
 	return 0;
 }
-
-
-

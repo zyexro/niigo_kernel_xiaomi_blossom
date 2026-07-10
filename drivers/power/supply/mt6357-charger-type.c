@@ -86,6 +86,7 @@ struct mtk_charger_type {
 	struct work_struct chr_work;
 
 	enum power_supply_usb_type type;
+	int status;
 
 	int first_connect;
 	int bc12_active;
@@ -102,6 +103,7 @@ struct tag_bootmode {
 
 static enum power_supply_property chr_type_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_TYPE,
 	POWER_SUPPLY_PROP_USB_TYPE,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
@@ -117,7 +119,7 @@ static enum power_supply_property mt_usb_properties[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 };
 
-static void bc11_set_register_value(struct regmap *map,
+void bc11_set_register_value(struct regmap *map,
 	unsigned int addr,
 	unsigned int mask,
 	unsigned int shift,
@@ -129,7 +131,7 @@ static void bc11_set_register_value(struct regmap *map,
 		val << shift);
 }
 
-static unsigned int bc11_get_register_value(struct regmap *map,
+unsigned int bc11_get_register_value(struct regmap *map,
 	unsigned int addr,
 	unsigned int mask,
 	unsigned int shift)
@@ -533,12 +535,14 @@ static int get_vbus_voltage(struct mtk_charger_type *info,
 }
 
 
-static void do_charger_detect(struct mtk_charger_type *info, bool en)
+void do_charger_detect(struct mtk_charger_type *info, bool en)
 {
-	union power_supply_propval prop_online = {0};
-	union power_supply_propval prop_type = {0};
-	union power_supply_propval prop_usb_type = {0};
-	int ret = 0;
+	union power_supply_propval prop, prop2, prop3;
+	enum power_supply_type old_psy_type = info->psy_desc.type;
+	enum power_supply_usb_type old_usb_type = info->type;
+	int old_status = info->status;
+	bool old_online = old_usb_type != POWER_SUPPLY_USB_TYPE_UNKNOWN;
+	bool online;
 
 #ifndef CONFIG_TCPC_CLASS
 	if (!mt_usb_is_device()) {
@@ -547,28 +551,35 @@ static void do_charger_detect(struct mtk_charger_type *info, bool en)
 	}
 #endif
 
-	prop_online.intval = en;
+	prop2.intval = old_psy_type;
+	prop3.intval = old_usb_type;
+	prop.intval = en;
 	if (en) {
-		ret = power_supply_set_property(info->psy,
-				POWER_SUPPLY_PROP_ONLINE, &prop_online);
-		if (ret < 0)
-			pr_notice("set online fail, ret=%d\n", ret);
-		ret = power_supply_get_property(info->psy,
-				POWER_SUPPLY_PROP_TYPE, &prop_type);
-		if (ret < 0)
-			pr_notice("get type fail, ret=%d\n", ret);
-		ret = power_supply_get_property(info->psy,
-				POWER_SUPPLY_PROP_USB_TYPE, &prop_usb_type);
-		if (ret < 0)
-			pr_notice("get usb type fail, ret=%d\n", ret);
-		pr_notice("type:%d usb_type:%d\n", prop_type.intval, prop_usb_type.intval);
+		if (power_supply_set_property(info->psy,
+				POWER_SUPPLY_PROP_ONLINE, &prop) < 0)
+			return;
+		power_supply_get_property(info->psy,
+				POWER_SUPPLY_PROP_TYPE, &prop2);
+		power_supply_get_property(info->psy,
+				POWER_SUPPLY_PROP_USB_TYPE, &prop3);
 	} else {
+		prop2.intval = POWER_SUPPLY_TYPE_UNKNOWN;
+		prop3.intval = POWER_SUPPLY_USB_TYPE_UNKNOWN;
 		info->psy_desc.type = POWER_SUPPLY_TYPE_UNKNOWN;
 		info->type = POWER_SUPPLY_USB_TYPE_UNKNOWN;
-		pr_notice("%s type:0 usb_type:0\n", __func__);
 	}
 
-	power_supply_changed(info->psy);
+	pr_notice("%s type:%d usb_type:%d\n", __func__, prop2.intval, prop3.intval);
+
+	online = info->type != POWER_SUPPLY_USB_TYPE_UNKNOWN;
+	if (!online)
+		info->status = POWER_SUPPLY_STATUS_DISCHARGING;
+	else if (!old_online || info->status == POWER_SUPPLY_STATUS_UNKNOWN)
+		info->status = POWER_SUPPLY_STATUS_CHARGING;
+
+	if (old_online != online || old_psy_type != info->psy_desc.type ||
+	    old_usb_type != info->type || old_status != info->status)
+		power_supply_changed(info->psy);
 }
 
 static void do_charger_detection_work(struct work_struct *data)
@@ -603,7 +614,7 @@ static void do_charger_detection_work(struct work_struct *data)
 }
 
 
-static irqreturn_t chrdet_int_handler(int irq, void *data)
+irqreturn_t chrdet_int_handler(int irq, void *data)
 {
 	struct mtk_charger_type *info = data;
 	unsigned int chrdet = 0;
@@ -640,15 +651,18 @@ static int psy_chr_type_get_property(struct power_supply *psy,
 	struct mtk_charger_type *info;
 	int vbus = 0;
 
-	pr_debug("%s: prop:%d\n", __func__, psp);
+	pr_notice("%s: prop:%d\n", __func__, psp);
 	info = (struct mtk_charger_type *)power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
-		if (info->type == POWER_SUPPLY_USB_TYPE_UNKNOWN || !info->bc12_active)
+		if (info->type == POWER_SUPPLY_USB_TYPE_UNKNOWN)
 			val->intval = 0;
 		else
 			val->intval = 1;
+		break;
+	case POWER_SUPPLY_PROP_STATUS:
+		val->intval = info->status;
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
 		 val->intval = info->psy_desc.type;
@@ -667,7 +681,7 @@ static int psy_chr_type_get_property(struct power_supply *psy,
 	return 0;
 }
 
-static int psy_chr_type_set_property(struct power_supply *psy,
+int psy_chr_type_set_property(struct power_supply *psy,
 			enum power_supply_property psp,
 			const union power_supply_propval *val)
 {
@@ -679,6 +693,23 @@ static int psy_chr_type_set_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		info->type = get_charger_type(info);
+		break;
+	case POWER_SUPPLY_PROP_STATUS:
+		switch (val->intval) {
+		case POWER_SUPPLY_STATUS_UNKNOWN:
+		case POWER_SUPPLY_STATUS_CHARGING:
+		case POWER_SUPPLY_STATUS_DISCHARGING:
+		case POWER_SUPPLY_STATUS_NOT_CHARGING:
+		case POWER_SUPPLY_STATUS_FULL:
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		if (info->status != val->intval) {
+			info->status = val->intval;
+			power_supply_changed(info->psy);
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -727,10 +758,7 @@ static int mt_usb_get_property(struct power_supply *psy,
 			val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-	        if (info->type == POWER_SUPPLY_USB_TYPE_SDP)
-			val->intval = 500000;
-		else
-			val->intval = 1500000;
+		val->intval = 500000;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
 		val->intval = 5000000;
@@ -786,7 +814,6 @@ static int check_boot_mode(struct mtk_charger_type *info, struct device *dev)
 			info->boottype = tag->boottype;
 		}
 	}
-	of_node_put(boot_node);
 	return 0;
 }
 
@@ -825,6 +852,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 
 	info->psy_desc.name = "mtk_charger_type";
 	info->psy_desc.type = POWER_SUPPLY_TYPE_UNKNOWN;
+	info->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	info->psy_desc.properties = chr_type_properties;
 	info->psy_desc.num_properties = ARRAY_SIZE(chr_type_properties);
 	info->psy_desc.get_property = psy_chr_type_get_property;
@@ -853,7 +881,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	info->usb_desc.get_property = mt_usb_get_property;
 	info->usb_cfg.drv_data = info;
 
-	info->psy = devm_power_supply_register(&pdev->dev, &info->psy_desc,
+	info->psy = power_supply_register(&pdev->dev, &info->psy_desc,
 			&info->psy_cfg);
 
 	if (IS_ERR(info->psy)) {
@@ -876,7 +904,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	pr_notice("%s: bc12_active:%d\n", __func__, info->bc12_active);
 
 	if (info->bc12_active) {
-		info->ac_psy = devm_power_supply_register(&pdev->dev,
+		info->ac_psy = power_supply_register(&pdev->dev,
 				&info->ac_desc, &info->ac_cfg);
 
 		if (IS_ERR(info->ac_psy)) {
@@ -885,7 +913,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 			return PTR_ERR(info->ac_psy);
 		}
 
-		info->usb_psy = devm_power_supply_register(&pdev->dev,
+		info->usb_psy = power_supply_register(&pdev->dev,
 				&info->usb_desc, &info->usb_cfg);
 
 		if (IS_ERR(info->usb_psy)) {
@@ -918,6 +946,10 @@ static const struct of_device_id mt6357_charger_type_of_match[] = {
 
 static int mt6357_charger_type_remove(struct platform_device *pdev)
 {
+	struct mtk_charger_type *info = platform_get_drvdata(pdev);
+
+	if (info)
+		devm_kfree(&pdev->dev, info);
 	return 0;
 }
 
@@ -948,4 +980,3 @@ module_exit(mt6357_charger_type_exit);
 MODULE_AUTHOR("wy.chuang <wy.chuang@mediatek.com>");
 MODULE_DESCRIPTION("MTK Charger Type Detection Driver");
 MODULE_LICENSE("GPL");
-

@@ -476,7 +476,7 @@ struct axDataRateMappingTable_t {
 } } } } }
 };
 
-struct PARAM_CUSTOM_KEY_CFG_STRUCT g_rEmCfgBk[WLAN_CFG_REC_ENTRY_NUM_MAX];
+static struct PARAM_CUSTOM_KEY_CFG_STRUCT *g_rEmCfgBk;
 
 
 struct PARAM_CUSTOM_KEY_CFG_STRUCT g_rDefaulteSetting[] = {
@@ -12296,6 +12296,9 @@ wlanResoreEmCfgSetting(IN struct ADAPTER *
 {
 	uint32_t i;
 
+	if (!g_rEmCfgBk)
+		return;
+
 	for (i = 0; i < WLAN_CFG_ENTRY_NUM_MAX; i++) {
 
 		if (g_rEmCfgBk[i].aucKey[0] == '\0')
@@ -12312,6 +12315,10 @@ wlanResoreEmCfgSetting(IN struct ADAPTER *
 
 	}
 
+	kalMemFree(g_rEmCfgBk, VIR_MEM_TYPE,
+		sizeof(*g_rEmCfgBk) * WLAN_CFG_REC_ENTRY_NUM_MAX);
+	g_rEmCfgBk = NULL;
+
 }
 
 /*wlan off*/
@@ -12321,8 +12328,24 @@ wlanBackupEmCfgSetting(IN struct ADAPTER *
 {
 	uint32_t i;
 	struct WLAN_CFG_ENTRY *prWlanCfgEntry = NULL;
+	size_t backup_size = sizeof(*g_rEmCfgBk) *
+		WLAN_CFG_REC_ENTRY_NUM_MAX;
 
-	kalMemZero(&g_rEmCfgBk, sizeof(g_rEmCfgBk));
+	prWlanCfgEntry = wlanCfgGetEntryByIndex(prAdapter, 0, WLAN_CFG_EM);
+	if (!prWlanCfgEntry || prWlanCfgEntry->aucKey[0] == '\0') {
+		kalMemFree(g_rEmCfgBk, VIR_MEM_TYPE, backup_size);
+		g_rEmCfgBk = NULL;
+		return;
+	}
+
+	if (!g_rEmCfgBk)
+		g_rEmCfgBk = kalMemAlloc(backup_size, VIR_MEM_TYPE);
+	if (!g_rEmCfgBk) {
+		DBGLOG(INIT, WARN, "No memory for EM config backup\n");
+		return;
+	}
+
+	kalMemZero(g_rEmCfgBk, backup_size);
 
 	for (i = 0; i < WLAN_CFG_ENTRY_NUM_MAX; i++) {
 		prWlanCfgEntry =

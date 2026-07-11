@@ -49,7 +49,11 @@
 
 #if 0
 /* debug */
+#if defined(CONFIG_MTK_ENABLE_GMO)
+#define NUM_DBG_LOG 1
+#else
 #define NUM_DBG_LOG 60
+#endif
 #define DBG_LOG_LENGTH 256
 
 struct usb_dbg_log {

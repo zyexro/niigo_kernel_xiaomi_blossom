@@ -34,6 +34,7 @@
 #endif
 #include "wmt_step.h"
 #include "wmt_alarm.h"
+#include <linux/vmalloc.h>
 #ifdef CONFIG_MTK_ENG_BUILD
 #include "wmt_step_test.h"
 #endif
@@ -62,7 +63,7 @@ struct wmt_dbg_work {
 
 static struct proc_dir_entry *gWmtDbgEntry;
 COEX_BUF gCoexBuf;
-static UINT8 gEmiBuf[WMT_EMI_DEBUG_BUF_SIZE];
+static UINT8 *gEmiBuf;
 PUINT8 buf_emi;
 static OSAL_SLEEPABLE_LOCK g_dbg_emi_lock;
 
@@ -601,6 +602,7 @@ INT32 wmt_dbg_wmt_assert_ctrl(INT32 par1, INT32 par2, INT32 par3)
 
 INT32 wmt_dbg_fwinfor_from_emi(INT32 par1, INT32 par2, INT32 par3)
 {
+	INT32 ret = 0;
 	UINT32 offset = 0;
 	UINT32 len = 0;
 	UINT32 *pAddr = NULL;
@@ -619,24 +621,31 @@ INT32 wmt_dbg_fwinfor_from_emi(INT32 par1, INT32 par2, INT32 par3)
 	buf_emi = kmalloc(sizeof(UINT8) * BUF_LEN_MAX, GFP_KERNEL);
 	if (!buf_emi) {
 		WMT_ERR_FUNC("buf kmalloc memory fail\n");
-		return 0;
+		ret = -ENOMEM;
+		goto unlock;
+	}
+	gEmiBuf = vzalloc(WMT_EMI_DEBUG_BUF_SIZE);
+	if (!gEmiBuf) {
+		WMT_ERR_FUNC("EMI buffer allocation failed\n");
+		ret = -ENOMEM;
+		goto free_line_buf;
 	}
 	osal_memset(buf_emi, 0, BUF_LEN_MAX);
-	osal_memset(&gEmiBuf[0], 0, WMT_EMI_DEBUG_BUF_SIZE);
-	wmt_lib_get_fwinfor_from_emi(0, offset, &gEmiBuf[0], 0x100);
+	wmt_lib_get_fwinfor_from_emi(0, offset, gEmiBuf, 0x100);
 
 	if (offset == 1) {
 		do {
 			pAddr = (PUINT32) wmt_plat_get_emi_virt_add(0x24);
 			if (pAddr == NULL) {
 				WMT_ERR_FUNC("get virtual emi address 0x24 fail!\n");
-				return -1;
+				ret = -EFAULT;
+				goto free_emi_buf;
 			}
 			cur_idx_pagedtrace = *pAddr;
 
 			if (cur_idx_pagedtrace > prev_idx_pagedtrace) {
 				len = cur_idx_pagedtrace - prev_idx_pagedtrace;
-				wmt_lib_get_fwinfor_from_emi(1, prev_idx_pagedtrace, &gEmiBuf[0], len);
+				wmt_lib_get_fwinfor_from_emi(1, prev_idx_pagedtrace, gEmiBuf, len);
 				wmt_dbg_fwinfor_print_buff(len);
 				prev_idx_pagedtrace = cur_idx_pagedtrace;
 			}
@@ -649,12 +658,12 @@ INT32 wmt_dbg_fwinfor_from_emi(INT32 par1, INT32 par2, INT32 par3)
 				}
 
 				len = 0x8000 - prev_idx_pagedtrace - 1;
-				wmt_lib_get_fwinfor_from_emi(1, prev_idx_pagedtrace, &gEmiBuf[0], len);
+				wmt_lib_get_fwinfor_from_emi(1, prev_idx_pagedtrace, gEmiBuf, len);
 				WMT_INFO_FUNC("\n\n -- CONNSYS paged trace ascii output (cont...) --\n\n");
 				wmt_dbg_fwinfor_print_buff(len);
 
 				len = cur_idx_pagedtrace;
-				wmt_lib_get_fwinfor_from_emi(1, 0x0, &gEmiBuf[0], len);
+				wmt_lib_get_fwinfor_from_emi(1, 0x0, gEmiBuf, len);
 				WMT_INFO_FUNC("\n\n -- CONNSYS paged trace ascii output (end) --\n\n");
 				wmt_dbg_fwinfor_print_buff(len);
 				prev_idx_pagedtrace = cur_idx_pagedtrace;
@@ -669,17 +678,23 @@ INT32 wmt_dbg_fwinfor_from_emi(INT32 par1, INT32 par2, INT32 par3)
 		len = 1024 * 4;
 
 	WMT_WARN_FUNC("get fw infor from emi at offset(0x%x),len(0x%x)\n", offset, len);
-	osal_memset(&gEmiBuf[0], 0, WMT_EMI_DEBUG_BUF_SIZE);
-	wmt_lib_get_fwinfor_from_emi(1, offset, &gEmiBuf[0], len);
+	osal_memset(gEmiBuf, 0, WMT_EMI_DEBUG_BUF_SIZE);
+	wmt_lib_get_fwinfor_from_emi(1, offset, gEmiBuf, len);
 
 	WMT_INFO_FUNC("\n\n -- paged trace hex output --\n\n");
 	wmt_dbg_fwinfor_print_buff(len);
 	WMT_INFO_FUNC("\n\n -- paged trace ascii output --\n\n");
 	wmt_dbg_fwinfor_print_buff(len);
+free_emi_buf:
+	vfree(gEmiBuf);
+	gEmiBuf = NULL;
+free_line_buf:
 	kfree(buf_emi);
+	buf_emi = NULL;
+unlock:
 	osal_unlock_sleepable_lock(&g_dbg_emi_lock);
 
-	return 0;
+	return ret;
 }
 
 INT32 wmt_dbg_stp_trigger_assert(INT32 par1, INT32 par2, INT32 par3)

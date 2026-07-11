@@ -81,8 +81,15 @@ struct ap_task_manage_t {
 
 struct ap_task_manage_t ap_task_manage;
 
+struct ccu_hw_info {
+	wait_queue_head_t WaitQueueHead;
+	spinlock_t SpinLockI2cPower;
+	unsigned int IsI2cPowerDisabling;
+	unsigned int IsI2cPoweredOn;
+	unsigned int IsCcuPoweredOn;
+};
 
-static struct CCU_INFO_STRUCT ccuInfo;
+static struct ccu_hw_info ccuInfo;
 static bool bWaitCond;
 static unsigned int g_LogBufIdx = 1;
 static struct ccu_cmd_s *_fast_cmd_ack;
@@ -465,7 +472,7 @@ static void ccu_ap_task_mgr_init(void)
 
 int ccu_init_hw(struct ccu_device_s *device)
 {
-	int ret = 0, n;
+	int ret = 0;
 
 #ifdef CONFIG_MTK_CHIP
 	init_check_sw_ver();
@@ -476,18 +483,6 @@ int ccu_init_hw(struct ccu_device_s *device)
 	/* init waitqueue */
 	init_waitqueue_head(&cmd_wait);
 	init_waitqueue_head(&ccuInfo.WaitQueueHead);
-	/* init atomic task counter */
-	/*ccuInfo.taskCount = ATOMIC_INIT(0);*/
-
-	/* Init spinlocks */
-	spin_lock_init(&(ccuInfo.SpinLockCcuRef));
-	spin_lock_init(&(ccuInfo.SpinLockCcu));
-	for (n = 0; n < CCU_IRQ_TYPE_AMOUNT; n++) {
-		spin_lock_init(&(ccuInfo.SpinLockIrq[n]));
-		spin_lock_init(&(ccuInfo.SpinLockIrqCnt[n]));
-	}
-	spin_lock_init(&(ccuInfo.SpinLockRTBC));
-	spin_lock_init(&(ccuInfo.SpinLockClock));
 	spin_lock_init(&(ccuInfo.SpinLockI2cPower));
 	ccuInfo.IsI2cPoweredOn = 0;
 	ccuInfo.IsI2cPowerDisabling = 0;

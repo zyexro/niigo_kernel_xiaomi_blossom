@@ -4,6 +4,8 @@
  */
 
 #include <linux/proc_fs.h>
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include "osal.h"
 #include "wmt_core.h"
 #include "wmt_lib.h"
@@ -13,8 +15,11 @@
 static struct proc_dir_entry *gWmtAeeEntry;
 #define WMT_AEE_PROCNAME "driver/wmt_aee"
 #define WMT_PROC_AEE_SIZE 3072
-static UINT32 g_buf_len;
-static PUINT8 pBuf;
+
+struct wmt_aee_file {
+	PUINT8 buf;
+	UINT32 len;
+};
 
 static OSAL_SLEEPABLE_LOCK g_aee_read_lock;
 #endif
@@ -172,62 +177,43 @@ INT32 wmt_dev_proc_for_dump_info_remove(VOID)
 #endif /* CFG_WMT_PROC_FOR_DUMP_INFO */
 
 #if CFG_WMT_PROC_FOR_AEE
+static int wmt_dev_proc_for_aee_open(struct inode *inode, struct file *filp)
+{
+	filp->private_data = kzalloc(sizeof(struct wmt_aee_file), GFP_KERNEL);
+	return filp->private_data ? 0 : -ENOMEM;
+}
+
+static int wmt_dev_proc_for_aee_release(struct inode *inode, struct file *filp)
+{
+	struct wmt_aee_file *aee = filp->private_data;
+
+	if (aee) {
+		vfree(aee->buf);
+		kfree(aee);
+	}
+	return 0;
+}
+
 static ssize_t wmt_dev_proc_for_aee_read(struct file *filp, char __user *buf, size_t count,
 		loff_t *f_pos)
 {
-	INT32 retval = 0;
-	UINT32 len = 0;
+	struct wmt_aee_file *aee = filp->private_data;
 
 	WMT_INFO_FUNC("%s: count %lu pos %lld\n", __func__, count, *f_pos);
 
-	if (osal_lock_sleepable_lock(&g_aee_read_lock)) {
-		WMT_ERR_FUNC("lock failed\n");
-		return 0;
-	}
-
-	if (*f_pos == 0) {
-		pBuf = wmt_lib_get_cpupcr_xml_format(&len);
-		g_buf_len = len;
-		WMT_INFO_FUNC("wmt_dev:wmt for aee buffer len(%d)\n", g_buf_len);
-	}
-
-	if (g_buf_len >= count) {
-		retval = copy_to_user(buf, pBuf, count);
-		if (retval) {
-			WMT_ERR_FUNC("copy to aee buffer failed, ret:%d\n", retval);
-			retval = -EFAULT;
-			goto err_exit;
+	if (!aee->buf) {
+		if (osal_lock_sleepable_lock(&g_aee_read_lock)) {
+			WMT_ERR_FUNC("lock failed\n");
+			return -EINTR;
 		}
-
-		*f_pos += count;
-		g_buf_len -= count;
-		pBuf += count;
-		WMT_INFO_FUNC("wmt_dev:after read,wmt for aee buffer len(%d)\n", g_buf_len);
-
-		retval = count;
-	} else if (g_buf_len != 0) {
-		retval = copy_to_user(buf, pBuf, g_buf_len);
-		if (retval) {
-			WMT_ERR_FUNC("copy to aee buffer failed, ret:%d\n", retval);
-			retval = -EFAULT;
-			goto err_exit;
-		}
-
-		*f_pos += g_buf_len;
-		len = g_buf_len;
-		g_buf_len = 0;
-		pBuf += len;
-		retval = len;
-		WMT_INFO_FUNC("wmt_dev:after read,wmt for aee buffer len(%d)\n", g_buf_len);
-	} else {
-		WMT_INFO_FUNC("wmt_dev: no data available for aee\n");
-		retval = 0;
+		aee->buf = wmt_lib_get_cpupcr_xml_format(&aee->len);
+		osal_unlock_sleepable_lock(&g_aee_read_lock);
+		if (!aee->buf)
+			return -ENOMEM;
+		WMT_INFO_FUNC("wmt_dev:wmt for aee buffer len(%d)\n", aee->len);
 	}
 
-err_exit:
-	osal_unlock_sleepable_lock(&g_aee_read_lock);
-
-	return retval;
+	return simple_read_from_buffer(buf, count, f_pos, aee->buf, aee->len);
 }
 
 static ssize_t wmt_dev_proc_for_aee_write(struct file *filp, const char __user *buf, size_t count,
@@ -241,8 +227,10 @@ INT32 wmt_dev_proc_for_aee_setup(VOID)
 {
 	static const struct file_operations wmt_aee_fops = {
 		.owner = THIS_MODULE,
+		.open = wmt_dev_proc_for_aee_open,
 		.read = wmt_dev_proc_for_aee_read,
 		.write = wmt_dev_proc_for_aee_write,
+		.release = wmt_dev_proc_for_aee_release,
 	};
 
 	osal_sleepable_lock_init(&g_aee_read_lock);
@@ -295,5 +283,4 @@ INT32 wmt_dev_proc_deinit(VOID)
 #endif
 	return ret;
 }
-
 

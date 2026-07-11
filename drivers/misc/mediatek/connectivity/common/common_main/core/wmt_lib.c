@@ -51,6 +51,7 @@
 #include "wmt_step.h"
 #include <linux/workqueue.h>
 #include <linux/rtc.h>
+#include <linux/vmalloc.h>
 
 /*******************************************************************************
 *                              C O N S T A N T S
@@ -90,7 +91,6 @@ static PF_WMT_SDIO_DEEP_SLEEP sdio_deep_sleep_flag_set;
 
 
 #define WMT_STP_CPUPCR_BUF_SIZE 73728
-static UINT8 g_cpupcr_buf[WMT_STP_CPUPCR_BUF_SIZE] = { 0 };
 static UINT32 g_quick_sleep_ctrl = 1;
 static UINT32 g_fw_patch_update_rst;
 static u64 fw_patch_rst_time;
@@ -2690,34 +2690,21 @@ INT32 wmt_lib_merge_if_flag_get(UINT32 enable)
 
 PUINT8 wmt_lib_get_cpupcr_xml_format(PUINT32 pLen)
 {
-	PUINT8 temp;
+	PUINT8 buf;
 
-	osal_memset(&g_cpupcr_buf[0], 0, WMT_STP_CPUPCR_BUF_SIZE);
-	temp = g_cpupcr_buf;
-	*pLen += stp_dbg_cpupcr_infor_format(temp, WMT_STP_CPUPCR_BUF_SIZE);
-	*pLen += mtk_stp_dbg_dmp_append(temp + *pLen, WMT_STP_CPUPCR_BUF_SIZE - *pLen);
+	buf = vzalloc(WMT_STP_CPUPCR_BUF_SIZE);
+	if (!buf)
+		return NULL;
+
+	*pLen += stp_dbg_cpupcr_infor_format(buf, WMT_STP_CPUPCR_BUF_SIZE);
+	*pLen += mtk_stp_dbg_dmp_append(buf + *pLen,
+					 WMT_STP_CPUPCR_BUF_SIZE - *pLen);
 
 	WMT_INFO_FUNC("print xml buffer,len(%d):\n\n", *pLen);
 
-	WMT_INFO_FUNC("%s", g_cpupcr_buf);
+	WMT_INFO_FUNC("%s", buf);
 
-	return &g_cpupcr_buf[0];
-}
-
-
-/**
- * called by wmt_dev wmt_dev_proc_for_dump_info_read
- */
-PUINT8 wmt_lib_get_cpupcr_reg_info(PUINT32 pLen, PUINT32 consys_reg)
-{
-	osal_memset(&g_cpupcr_buf[0], 0, WMT_STP_CPUPCR_BUF_SIZE);
-	if (consys_reg != NULL)
-		*pLen += stp_dbg_dump_cpupcr_reg_info(g_cpupcr_buf, consys_reg[1]);
-	else
-		*pLen += osal_sprintf(g_cpupcr_buf + *pLen, "0\n");
-	WMT_INFO_FUNC("print buffer,len(%d):\n\n", *pLen);
-	WMT_INFO_FUNC("%s", g_cpupcr_buf);
-	return &g_cpupcr_buf[0];
+	return buf;
 }
 
 INT32 wmt_lib_tm_temp_query(VOID)
@@ -3379,4 +3366,3 @@ INT32 wmt_lib_reg_readable_by_addr(SIZE_T addr)
 	}
 	return mtk_consys_check_reg_readable_by_addr(addr);
 }
-

@@ -949,7 +949,7 @@ struct ISP_INFO_STRUCT {
 	struct ISP_BUF_INFO_STRUCT			BufInfo;
 	struct ISP_TIME_LOG_STRUCT             TimeLog;
 	#if (TIMESTAMP_QUEUE_EN == 1)
-	struct ISP_TIMESTPQ_INFO_STRUCT        TstpQInfo[ISP_IRQ_TYPE_AMOUNT];
+	struct ISP_TIMESTPQ_INFO_STRUCT        TstpQInfo[CAM_AMOUNT];
 	#endif
 };
 
@@ -12269,6 +12269,9 @@ static int32_t ISP_PushBufTimestamp(unsigned int module, unsigned int dma_id,
 static int32_t ISP_PopBufTimestamp(unsigned int module, unsigned int dma_id,
 			struct S_START_T *pTstp)
 {
+	if (module > ISP_IRQ_TYPE_INT_CAM_B_ST)
+		return -EFAULT;
+
 	switch (module) {
 	case ISP_IRQ_TYPE_INT_CAM_A_ST:
 	case ISP_IRQ_TYPE_INT_CAM_B_ST:
@@ -12330,6 +12333,9 @@ static int32_t ISP_WaitTimestampReady(unsigned int module, unsigned int dma_id)
 {
 	unsigned int _timeout = 0;
 	unsigned int wait_cnt = 0;
+
+	if (module > ISP_IRQ_TYPE_INT_CAM_B_ST || dma_id >= _cam_max_)
+		return -EFAULT;
 
 	if (IspInfo.TstpQInfo[module].Dmao[dma_id].TotalWrCnt >
 	    IspInfo.TstpQInfo[module].Dmao[dma_id].TotalRdCnt)

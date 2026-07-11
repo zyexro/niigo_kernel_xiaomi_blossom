@@ -137,7 +137,7 @@ static const struct iw_priv_args rIwPrivTable[] = {
 	{IOCTL_GET_DRIVER, IW_PRIV_TYPE_CHAR | 2000, IW_PRIV_TYPE_CHAR |
 		2000, "driver"},
 
-#if CFG_SUPPORT_QA_AGENT
+#if CFG_SUPPORT_QA_TOOL
 	/* added for ATE iwpriv Command */
 	{IOCTL_IWPRIV_ATE, IW_PRIV_TYPE_CHAR | 2000, 0, ""},
 #endif
@@ -190,7 +190,7 @@ static const struct iw_priv_args rIwPrivTable[] = {
 	},
 #endif
 
-#if CFG_SUPPORT_QA_AGENT
+#if CFG_SUPPORT_QA_TOOL
 	{PRIV_QACMD_SET, IW_PRIV_TYPE_CHAR | 2000, 0, "set"},
 #endif
 
@@ -257,7 +257,7 @@ static const iw_handler rIwPrivHandler[] = {
 	[IOC_AP_SET_CFG - SIOCIWFIRSTPRIV] = priv_set_ap,
 	[IOC_AP_STA_DISASSOC - SIOCIWFIRSTPRIV] = priv_set_ap,
 	[IOC_AP_SET_NSS - SIOCIWFIRSTPRIV] = priv_set_ap,
-#if CFG_SUPPORT_QA_AGENT
+#if CFG_SUPPORT_QA_TOOL
 	[IOCTL_IWPRIV_ATE - SIOCIWFIRSTPRIV] = priv_ate_set,
 #endif
 #if CFG_SUPPORT_QA_AGENT

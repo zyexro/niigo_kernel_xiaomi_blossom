@@ -64,14 +64,7 @@
  */
 
 #include "precomp.h"
-
-#if CFG_SUPPORT_TX_BF
-union PFMU_PROFILE_TAG1 g_rPfmuTag1;
-union PFMU_PROFILE_TAG2 g_rPfmuTag2;
-union PFMU_DATA g_rPfmuData;
-#endif
-
-#if CFG_SUPPORT_QA_AGENT
+#if CFG_SUPPORT_QA_TOOL
 #include "gl_wext.h"
 #include "gl_cfg80211.h"
 #include "gl_ate_agent.h"
@@ -85,6 +78,12 @@ union PFMU_DATA g_rPfmuData;
  *					C O N S T A N T S
  *******************************************************************************
  */
+
+#if CFG_SUPPORT_TX_BF
+union PFMU_PROFILE_TAG1 g_rPfmuTag1;
+union PFMU_PROFILE_TAG2 g_rPfmuTag2;
+union PFMU_DATA g_rPfmuData;
+#endif
 
 struct ATE_PRIV_CMD {
 	uint8_t *name;
@@ -2686,4 +2685,4 @@ int AteCmdSetHandle(struct net_device *prNetDev,
 	}
 	return i4Status;
 }
-#endif /* CFG_SUPPORT_QA_AGENT */
+#endif /*CFG_SUPPORT_QA_TOOL */

@@ -47,7 +47,7 @@ ifeq ($(MTK_COMBO_CHIP),)
 MTK_COMBO_CHIP = MT6632
 endif
 
-MTK_WLAN_SERVICE=yes
+MTK_WLAN_SERVICE=no
 MTK_ANDROID_EMI=y
 MODULE_NAME=wlan_drv_gen4m
 
@@ -278,12 +278,8 @@ else
     ccflags-y += -DCFG_SUPPORT_AEE=0
 endif
 
-# Disable ASSERT() for user load, enable for others
-ifneq ($(TARGET_BUILD_VARIANT),user)
-    ccflags-y += -DBUILD_QA_DBG=1
-else
-    ccflags-y += -DBUILD_QA_DBG=0
-endif
+# Standalone kernel builds are production builds, not QA images.
+ccflags-y += -DBUILD_QA_DBG=0
 
 ifeq ($(CONFIG_MTK_COMBO_WIFI),y)
     ccflags-y += -DCFG_WPS_DISCONNECT=1

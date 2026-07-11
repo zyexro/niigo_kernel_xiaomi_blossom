@@ -258,10 +258,8 @@ static const iw_handler rIwPrivHandler[] = {
 	[IOC_AP_STA_DISASSOC - SIOCIWFIRSTPRIV] = priv_set_ap,
 	[IOC_AP_SET_NSS - SIOCIWFIRSTPRIV] = priv_set_ap,
 #if CFG_SUPPORT_QA_TOOL
-	[IOCTL_IWPRIV_ATE - SIOCIWFIRSTPRIV] = priv_ate_set,
-#endif
-#if CFG_SUPPORT_QA_AGENT
 	[IOCTL_QA_TOOL_DAEMON - SIOCIWFIRSTPRIV] = priv_qa_agent,
+	[IOCTL_IWPRIV_ATE - SIOCIWFIRSTPRIV] = priv_ate_set
 #endif
 };
 

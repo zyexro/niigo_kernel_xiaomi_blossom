@@ -232,9 +232,6 @@
 /* Enable QA Tool Support */
 #define CFG_SUPPORT_QA_TOOL	1
 
-/* Exclude the production-unneeded QA daemon command interface. */
-#define CFG_SUPPORT_QA_AGENT	0
-
 /* Enable TX BF Support */
 #define CFG_SUPPORT_TX_BF	1
 

@@ -4979,6 +4979,7 @@ static int32_t wlanProbe(void *pvData, void *pvDriverData)
 		case FAIL_BY_RESET:
 #if CFG_MET_PACKET_TRACE_SUPPORT
 		case FAIL_MET_INIT_PROCFS:
+#if (CFG_MET_PACKET_TRACE_SUPPORT == 1)
 			kalMetRemoveProcfs();
 #endif
 		case PROC_INIT_FAIL:

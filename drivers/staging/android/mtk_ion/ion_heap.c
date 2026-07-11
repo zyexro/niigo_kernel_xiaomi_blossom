@@ -349,7 +349,8 @@ void ion_heap_init_shrinker(struct ion_heap *heap)
 {
 	heap->shrinker.count_objects = ion_heap_shrink_count;
 	heap->shrinker.scan_objects = ion_heap_shrink_scan;
-	heap->shrinker.seeks = DEFAULT_SEEKS;
+	/* ION pools contain clean pages, so prefer them over mapped memory. */
+	heap->shrinker.seeks = 1;
 	heap->shrinker.batch = 0;
 	register_shrinker(&heap->shrinker);
 }

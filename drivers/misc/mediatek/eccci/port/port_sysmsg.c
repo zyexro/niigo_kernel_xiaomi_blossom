@@ -89,25 +89,49 @@ static inline int port_sys_echo_test_l1core(struct port_t *port, int data)
 }
 #endif
 /* for backward compatibility */
-struct ccci_sys_cb_func_info ccci_sys_cb_table_100[MAX_MD_NUM][MAX_KERN_API];
-struct ccci_sys_cb_func_info ccci_sys_cb_table_1000[MAX_MD_NUM][MAX_KERN_API];
+#ifdef CONFIG_MTK_ENABLE_GMO
+#define CCCI_SYS_CB_MD_NUM 2
+
+static int ccci_sys_cb_md_index(int md_id)
+{
+	if (md_id == MD_SYS1)
+		return 0;
+	if (md_id == MD_SYS3)
+		return 1;
+	return -EINVAL;
+}
+#else
+#define CCCI_SYS_CB_MD_NUM MAX_MD_NUM
+
+static int ccci_sys_cb_md_index(int md_id)
+{
+	return (md_id >= 0 && md_id < MAX_MD_NUM) ? md_id : -EINVAL;
+}
+#endif
+
+struct ccci_sys_cb_func_info
+	ccci_sys_cb_table_100[CCCI_SYS_CB_MD_NUM][MAX_KERN_API];
+struct ccci_sys_cb_func_info
+	ccci_sys_cb_table_1000[CCCI_SYS_CB_MD_NUM][MAX_KERN_API];
 
 int register_ccci_sys_call_back(int md_id, unsigned int id,
 	ccci_sys_cb_func_t func)
 {
 	int ret = 0;
+	int md_index;
 	struct ccci_sys_cb_func_info *info_ptr;
 
-	if (md_id >= MAX_MD_NUM) {
+	md_index = ccci_sys_cb_md_index(md_id);
+	if (md_index < 0) {
 		CCCI_ERROR_LOG(md_id, SYS,
 			"register_sys_call_back fail: invalid md id\n");
 		return -EINVAL;
 	}
 
 	if ((id >= 0x100) && ((id - 0x100) < MAX_KERN_API)) {
-		info_ptr = &(ccci_sys_cb_table_100[md_id][id - 0x100]);
+		info_ptr = &(ccci_sys_cb_table_100[md_index][id - 0x100]);
 	} else if ((id >= 0x1000) && ((id - 0x1000) < MAX_KERN_API)) {
-		info_ptr = &(ccci_sys_cb_table_1000[md_id][id - 0x1000]);
+		info_ptr = &(ccci_sys_cb_table_1000[md_index][id - 0x1000]);
 	} else {
 		CCCI_ERROR_LOG(md_id, SYS,
 			"register_sys_call_back fail: invalid func id(0x%x)\n",
@@ -131,9 +155,11 @@ void exec_ccci_sys_call_back(int md_id, int cb_id, int data)
 {
 	ccci_sys_cb_func_t func;
 	int id;
+	int md_index;
 	struct ccci_sys_cb_func_info *curr_table;
 
-	if (md_id >= MAX_MD_NUM) {
+	md_index = ccci_sys_cb_md_index(md_id);
+	if (md_index < 0) {
 		CCCI_ERROR_LOG(md_id, SYS,
 			"exec_sys_cb fail: invalid md id\n");
 		return;
@@ -147,9 +173,9 @@ void exec_ccci_sys_call_back(int md_id, int cb_id, int data)
 	}
 
 	if ((cb_id & (0x1000 | 0x100)) == 0x1000) {
-		curr_table = ccci_sys_cb_table_1000[md_id];
+		curr_table = ccci_sys_cb_table_1000[md_index];
 	} else if ((cb_id & (0x1000 | 0x100)) == 0x100) {
-		curr_table = ccci_sys_cb_table_100[md_id];
+		curr_table = ccci_sys_cb_table_100[md_index];
 	} else {
 		CCCI_ERROR_LOG(md_id, SYS,
 			"exec_sys_cb fail: invalid func id(0x%x)\n", cb_id);

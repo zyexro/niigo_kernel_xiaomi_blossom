@@ -8,6 +8,7 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/printk.h>
+#include <linux/slab.h>
 
 #include <mtk_mcdi_governor.h>
 #include <mtk_mcdi_util.h>
@@ -289,16 +290,20 @@ void mcdi_cpc_reflect(int cpu, int last_core_taken)
 }
 
 /* procfs */
-static char dbg_buf[4096] = { 0 };
 static char cmd_buf[512] = { 0 };
 
 static ssize_t mcdi_cpc_read(struct file *filp,
 		char __user *userbuf, size_t count, loff_t *f_pos)
 {
 	int i, j, len = 0;
+	ssize_t ret;
+	char *dbg_buf = kmalloc(MCDI_PROC_BUF_LEN, GFP_KERNEL);
 	char *p = dbg_buf;
 	struct mcdi_cpc_prof *prof;
 	struct mcdi_cpc_distribute *dist;
+
+	if (!dbg_buf)
+		return -ENOMEM;
 
 	cpc.sta.prof_pause = true;
 
@@ -361,7 +366,10 @@ static ssize_t mcdi_cpc_read(struct file *filp,
 
 	len = p - dbg_buf;
 
-	return simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	ret = simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	kfree(dbg_buf);
+
+	return ret;
 }
 
 static ssize_t mcdi_cpc_write(struct file *filp,
@@ -438,4 +446,3 @@ void mcdi_procfs_cpc_init(struct proc_dir_entry *mcdi_dir) {}
 void mcdi_cpc_init(void) {}
 
 #endif
-

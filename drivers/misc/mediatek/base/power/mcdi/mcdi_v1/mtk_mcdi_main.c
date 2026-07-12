@@ -17,6 +17,7 @@
 #include <linux/uaccess.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 
 #include <mtk_cpuidle.h>
 #include <mtk_idle.h>
@@ -211,7 +212,6 @@ static void mcdi_idle_state_setting(unsigned long idx, unsigned long enable)
 }
 
 /* debugfs */
-static char dbg_buf[4096] = { 0 };
 static char cmd_buf[512] = { 0 };
 
 /* mcdi_state */
@@ -220,11 +220,16 @@ static ssize_t mcdi_state_read(struct file *filp,
 {
 	int len = 0;
 	int i;
+	ssize_t ret;
+	char *dbg_buf = kmalloc(MCDI_PROC_BUF_LEN, GFP_KERNEL);
 	char *p = dbg_buf;
 	unsigned long ac_cpu_cond_info[NF_ANY_CORE_CPU_COND_INFO] = {0};
 	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
 
 	struct mcdi_feature_status feature_stat;
+
+	if (!dbg_buf)
+		return -ENOMEM;
 
 	get_mcdi_feature_status(&feature_stat);
 
@@ -271,7 +276,10 @@ static ssize_t mcdi_state_read(struct file *filp,
 
 	len = p - dbg_buf;
 
-	return simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	ret = simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	kfree(dbg_buf);
+
+	return ret;
 }
 
 static ssize_t mcdi_state_write(struct file *filp,
@@ -325,8 +333,13 @@ static ssize_t mcdi_info_read(struct file *filp,
 {
 	int len = 0;
 	int i, cpu;
+	ssize_t ret;
+	char *dbg_buf = kmalloc(MCDI_PROC_BUF_LEN, GFP_KERNEL);
 	char *p = dbg_buf;
 	struct cpuidle_driver *tbl = NULL;
+
+	if (!dbg_buf)
+		return -ENOMEM;
 
 	mcdi_log("mcdi stress test: %s (timer:%dus)",
 			mcdi_stress_en ? "Enalbe" : "Disable",
@@ -398,7 +411,10 @@ static ssize_t mcdi_info_read(struct file *filp,
 
 	len = p - dbg_buf;
 
-	return simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	ret = simple_read_from_buffer(userbuf, count, f_pos, dbg_buf, len);
+	kfree(dbg_buf);
+
+	return ret;
 }
 
 static ssize_t mcdi_info_write(struct file *filp,

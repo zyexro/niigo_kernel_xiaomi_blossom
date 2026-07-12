@@ -737,10 +737,19 @@ int pr_detect_count;
 #define _ion_keep_max_   (64)/*32*/
 #include "ion_drv.h" /*g_ion_device*/
 static struct ion_client *pIon_client;
+#ifdef CONFIG_MTK_ENABLE_GMO
+struct ISP_ION_CACHE {
+	signed int IonCt[_dma_max_wr_*_ion_keep_max_];
+	signed int IonFd[_dma_max_wr_*_ion_keep_max_];
+	struct ion_handle *IonHnd[_dma_max_wr_*_ion_keep_max_];
+};
+static struct ISP_ION_CACHE *G_WRDMA_IonCache[2];
+#else
 static signed int G_WRDMA_IonCt[2][_dma_max_wr_*_ion_keep_max_] = { {0}, {0} };
 static signed int G_WRDMA_IonFd[2][_dma_max_wr_*_ion_keep_max_] = { {0}, {0} };
 static struct ion_handle *G_WRDMA_IonHnd[2][_dma_max_wr_*_ion_keep_max_]
 			= { {NULL}, {NULL} };
+#endif
 /* protect G_WRDMA_IonHnd & G_WRDMA_IonFd */
 static spinlock_t SpinLock_IonHnd[2][_dma_max_wr_];
 
@@ -757,6 +766,12 @@ static struct T_ION_TBL gION_TBL[ISP_DEV_NODE_NUM] = {
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
+#ifdef CONFIG_MTK_ENABLE_GMO
+	{ISP_CAM_A_IDX, NULL, NULL, NULL,
+	 (spinlock_t *)SpinLock_IonHnd[0]},
+	{ISP_CAM_B_IDX, NULL, NULL, NULL,
+	 (spinlock_t *)SpinLock_IonHnd[1]},
+#else
 	{ISP_CAM_A_IDX, (signed int *)G_WRDMA_IonCt[0],
 	 (signed int *)G_WRDMA_IonFd[0],
 	 (struct ion_handle **)G_WRDMA_IonHnd[0],
@@ -765,6 +780,7 @@ static struct T_ION_TBL gION_TBL[ISP_DEV_NODE_NUM] = {
 	 (signed int *)G_WRDMA_IonFd[1],
 	 (struct ion_handle **)G_WRDMA_IonHnd[1],
 	 (spinlock_t *)SpinLock_IonHnd[1]},
+#endif
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
 	{ISP_DEV_NODE_NUM, NULL, NULL, NULL, NULL},
@@ -6923,13 +6939,71 @@ EXIT:
 /******************************************************************************
  *
  *****************************************************************************/
+#ifdef CONFIG_MTK_ENABLE_GMO
+static int ISP_ion_alloc_cache(void)
+{
+	int i;
+
+	if (G_WRDMA_IonCache[0])
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(G_WRDMA_IonCache); i++) {
+		G_WRDMA_IonCache[i] =
+			kvzalloc(sizeof(*G_WRDMA_IonCache[i]), GFP_KERNEL);
+		if (!G_WRDMA_IonCache[i])
+			goto err;
+	}
+
+	gION_TBL[ISP_CAM_A_IDX].pIonCt = G_WRDMA_IonCache[0]->IonCt;
+	gION_TBL[ISP_CAM_A_IDX].pIonFd = G_WRDMA_IonCache[0]->IonFd;
+	gION_TBL[ISP_CAM_A_IDX].pIonHnd = G_WRDMA_IonCache[0]->IonHnd;
+	gION_TBL[ISP_CAM_B_IDX].pIonCt = G_WRDMA_IonCache[1]->IonCt;
+	gION_TBL[ISP_CAM_B_IDX].pIonFd = G_WRDMA_IonCache[1]->IonFd;
+	gION_TBL[ISP_CAM_B_IDX].pIonHnd = G_WRDMA_IonCache[1]->IonHnd;
+	return 0;
+
+err:
+	while (--i >= 0) {
+		kvfree(G_WRDMA_IonCache[i]);
+		G_WRDMA_IonCache[i] = NULL;
+	}
+	return -ENOMEM;
+}
+
+static void ISP_ion_free_cache(void)
+{
+	int i;
+
+	gION_TBL[ISP_CAM_A_IDX].pIonCt = NULL;
+	gION_TBL[ISP_CAM_A_IDX].pIonFd = NULL;
+	gION_TBL[ISP_CAM_A_IDX].pIonHnd = NULL;
+	gION_TBL[ISP_CAM_B_IDX].pIonCt = NULL;
+	gION_TBL[ISP_CAM_B_IDX].pIonFd = NULL;
+	gION_TBL[ISP_CAM_B_IDX].pIonHnd = NULL;
+
+	for (i = 0; i < ARRAY_SIZE(G_WRDMA_IonCache); i++) {
+		kvfree(G_WRDMA_IonCache[i]);
+		G_WRDMA_IonCache[i] = NULL;
+	}
+}
+#endif
+
 static void ISP_ion_init(void)
 {
+#ifdef CONFIG_MTK_ENABLE_GMO
+	if (ISP_ion_alloc_cache()) {
+		pr_err("failed to allocate ion handle cache\n");
+		return;
+	}
+#endif
 	if (!pIon_client && g_ion_device)
 		pIon_client = ion_client_create(g_ion_device, "camera_isp");
 
 	if (!pIon_client) {
 		pr_err("invalid ion client!\n");
+#ifdef CONFIG_MTK_ENABLE_GMO
+		ISP_ion_free_cache();
+#endif
 		return;
 	}
 
@@ -6944,6 +7018,9 @@ static void ISP_ion_uninit(void)
 {
 	if (!pIon_client) {
 		pr_err("invalid ion client!\n");
+#ifdef CONFIG_MTK_ENABLE_GMO
+		ISP_ion_free_cache();
+#endif
 		return;
 	}
 
@@ -6953,6 +7030,9 @@ static void ISP_ion_uninit(void)
 	ion_client_destroy(pIon_client);
 
 	pIon_client = NULL;
+#ifdef CONFIG_MTK_ENABLE_GMO
+	ISP_ion_free_cache();
+#endif
 }
 
 /******************************************************************************
@@ -7013,6 +7093,9 @@ static void ISP_ion_free_handle_by_module(unsigned int module)
 	signed int nFd;
 	struct ion_handle *p_IonHnd;
 	struct T_ION_TBL *ptbl = &gION_TBL[module];
+
+	if (!ptbl->pIonFd)
+		return;
 
 	if (IspInfo.DebugMask & ISP_DBG_ION_CTRL)
 		pr_info("[ion_free_hd_by_module]%d\n", module);

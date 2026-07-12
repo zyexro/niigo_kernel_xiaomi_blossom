@@ -223,7 +223,7 @@ imgsensor_sensor_open(struct IMGSENSOR_SENSOR *psensor)
 			psensor_inst->state = IMGSENSOR_STATE_OPEN;
 #ifdef CONFIG_MTK_CCU
 			ccuSensorInfo.slave_addr =
-			    (psensor_inst->i2c_cfg.pinst->msg->addr << 1);
+			    (psensor_inst->i2c_cfg.pinst->i2c_addr << 1);
 
 			ccuSensorInfo.sensor_name_string =
 			    (char *)(psensor_inst->psensor_name);

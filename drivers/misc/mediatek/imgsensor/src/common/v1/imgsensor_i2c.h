@@ -39,8 +39,11 @@ struct IMGSENSOR_I2C_STATUS {
 
 struct IMGSENSOR_I2C_INST {
 	struct IMGSENSOR_I2C_STATUS status;
+	u16                 i2c_addr;
 	struct i2c_client   *pi2c_client;
+#ifndef CONFIG_EXTREME_LOW_RAM
 	struct i2c_msg       msg[IMGSENSOR_I2C_CMD_LENGTH_MAX];
+#endif
 };
 
 struct IMGSENSOR_I2C_CFG {
@@ -83,4 +86,3 @@ void imgsensor_i2c_set_device(struct IMGSENSOR_I2C_CFG *pi2c_cfg);
 #endif
 
 #endif
-

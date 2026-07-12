@@ -6,6 +6,9 @@
 
 #include "imgsensor_common.h"
 #include "imgsensor_i2c.h"
+#ifdef CONFIG_EXTREME_LOW_RAM
+#include <linux/slab.h>
+#endif
 
 struct IMGSENSOR_I2C gi2c;
 
@@ -192,22 +195,28 @@ enum IMGSENSOR_RETURN imgsensor_i2c_read(
 {
 	struct IMGSENSOR_I2C_INST *pinst = pi2c_cfg->pinst;
 	enum   IMGSENSOR_RETURN    ret   = IMGSENSOR_RETURN_SUCCESS;
+#ifdef CONFIG_EXTREME_LOW_RAM
+	struct i2c_msg msg[IMGSENSOR_I2C_MSG_SIZE_READ];
+#else
+	struct i2c_msg *msg = pinst->msg;
+#endif
 
 	mutex_lock(&pi2c_cfg->i2c_mutex);
+	pinst->i2c_addr = id >> 1;
 
-	pinst->msg[0].addr  = id >> 1;
-	pinst->msg[0].flags = 0;
-	pinst->msg[0].len   = write_length;
-	pinst->msg[0].buf   = pwrite_data;
+	msg[0].addr  = pinst->i2c_addr;
+	msg[0].flags = 0;
+	msg[0].len   = write_length;
+	msg[0].buf   = pwrite_data;
 
-	pinst->msg[1].addr  = id >> 1;
-	pinst->msg[1].flags = I2C_M_RD;
-	pinst->msg[1].len   = read_length;
-	pinst->msg[1].buf   = pread_data;
+	msg[1].addr  = id >> 1;
+	msg[1].flags = I2C_M_RD;
+	msg[1].len   = read_length;
+	msg[1].buf   = pread_data;
 
 	if (mtk_i2c_transfer(
 	    pinst->pi2c_client->adapter,
-	    pinst->msg,
+	    msg,
 	    IMGSENSOR_I2C_MSG_SIZE_READ,
 	    (pi2c_cfg->pinst->status.filter_msg) ? I2C_A_FILTER_MSG : 0,
 	    ((speed > 0) && (speed <= 1000))
@@ -231,15 +240,38 @@ enum IMGSENSOR_RETURN imgsensor_i2c_write(
 {
 	struct IMGSENSOR_I2C_INST *pinst = pi2c_cfg->pinst;
 	enum   IMGSENSOR_RETURN    ret   = IMGSENSOR_RETURN_SUCCESS;
-	struct i2c_msg     *pmsg  = pinst->msg;
+#ifdef CONFIG_EXTREME_LOW_RAM
+	struct i2c_msg      local_msg;
+	struct i2c_msg     *msgs = &local_msg;
+	unsigned int        msg_count;
+#else
+	struct i2c_msg     *msgs = pinst->msg;
+#endif
+	struct i2c_msg     *pmsg;
 	u8                 *pdata = pwrite_data;
 	u8                 *pend  = pwrite_data + write_length;
 	int i   = 0;
 
+#ifdef CONFIG_EXTREME_LOW_RAM
+	if (!write_per_cycle)
+		return IMGSENSOR_RETURN_ERROR;
+
+	msg_count = DIV_ROUND_UP(write_length, write_per_cycle);
+	msg_count = min_t(unsigned int, msg_count,
+			  IMGSENSOR_I2C_CMD_LENGTH_MAX);
+	if (msg_count > 1) {
+		msgs = kmalloc_array(msg_count, sizeof(*msgs), GFP_KERNEL);
+		if (!msgs)
+			return IMGSENSOR_RETURN_ERROR;
+	}
+#endif
+	pmsg = msgs;
+
 	mutex_lock(&pi2c_cfg->i2c_mutex);
+	pinst->i2c_addr = id >> 1;
 
 	while (pdata < pend && i < IMGSENSOR_I2C_CMD_LENGTH_MAX) {
-		pmsg->addr  = id >> 1;
+		pmsg->addr  = pinst->i2c_addr;
 		pmsg->flags = 0;
 		pmsg->len   = write_per_cycle;
 		pmsg->buf   = pdata;
@@ -251,7 +283,7 @@ enum IMGSENSOR_RETURN imgsensor_i2c_write(
 
 	if (mtk_i2c_transfer(
 	    pinst->pi2c_client->adapter,
-	    pinst->msg,
+	    msgs,
 	    i,
 	    (pi2c_cfg->pinst->status.filter_msg) ? I2C_A_FILTER_MSG : 0,
 	    ((speed > 0) && (speed <= 1000))
@@ -261,6 +293,10 @@ enum IMGSENSOR_RETURN imgsensor_i2c_write(
 	}
 
 	mutex_unlock(&pi2c_cfg->i2c_mutex);
+#ifdef CONFIG_EXTREME_LOW_RAM
+	if (msgs != &local_msg)
+		kfree(msgs);
+#endif
 
 	return ret;
 }

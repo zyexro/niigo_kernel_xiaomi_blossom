@@ -9,6 +9,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include <disp_drv_platform.h>
 #if defined(CONFIG_MACH_MT6755) || defined(CONFIG_MACH_MT6797) || \
 	defined(CONFIG_MACH_MT6757) || defined(CONFIG_MACH_KIBOPLUS) || \
@@ -1072,7 +1073,11 @@ static unsigned int g_color_dbg_en;
 
 static ddp_module_notify g_color_cb;
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+static struct DISPLAY_TDSHP_T *g_TDSHP_Index;
+#else
 static struct DISPLAY_TDSHP_T g_TDSHP_Index;
+#endif
 
 static unsigned int g_split_en;
 static unsigned int g_split_window_x_start;
@@ -1278,7 +1283,26 @@ struct DISPLAY_PQ_T *get_Color_index(void)
 
 struct DISPLAY_TDSHP_T *get_TDSHP_index(void)
 {
+#ifdef CONFIG_MTK_ENABLE_GMO
+	struct DISPLAY_TDSHP_T *tdshp_index;
+
+	tdshp_index = READ_ONCE(g_TDSHP_Index);
+	if (!tdshp_index) {
+		struct DISPLAY_TDSHP_T *new_index;
+
+		new_index = kzalloc(sizeof(*new_index), GFP_KERNEL);
+		if (!new_index)
+			return NULL;
+		tdshp_index = cmpxchg(&g_TDSHP_Index, NULL, new_index);
+		if (tdshp_index)
+			kfree(new_index);
+		else
+			tdshp_index = new_index;
+	}
+	return tdshp_index;
+#else
 	return &g_TDSHP_Index;
+#endif
 }
 
 static void _color_reg_set(void *__cmdq, unsigned long addr,
@@ -3399,6 +3423,8 @@ int disp_color_ioctl(enum DISP_MODULE_ENUM module, unsigned int msg,
 		COLOR_DBG("DISP_IOCTL_SET_TDSHPINDEX!");
 
 		tdshp_index = get_TDSHP_index();
+		if (!tdshp_index)
+			return -ENOMEM;
 		if (copy_from_user(tdshp_index, (void *)arg,
 			sizeof(struct DISPLAY_TDSHP_T))) {
 			COLOR_ERR
@@ -3416,6 +3442,8 @@ int disp_color_ioctl(enum DISP_MODULE_ENUM module, unsigned int msg,
 			return -EFAULT;
 		}
 		tdshp_index = get_TDSHP_index();
+		if (!tdshp_index)
+			return -ENOMEM;
 		if (copy_to_user((void *)arg, tdshp_index,
 			sizeof(struct DISPLAY_TDSHP_T))) {
 			COLOR_ERR

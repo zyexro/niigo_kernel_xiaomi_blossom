@@ -290,8 +290,6 @@ void mcdi_cpc_reflect(int cpu, int last_core_taken)
 }
 
 /* procfs */
-static char cmd_buf[512] = { 0 };
-
 static ssize_t mcdi_cpc_read(struct file *filp,
 		char __user *userbuf, size_t count, loff_t *f_pos)
 {
@@ -377,6 +375,7 @@ static ssize_t mcdi_cpc_write(struct file *filp,
 {
 	int ret = 0;
 	unsigned long param = 0;
+	char cmd_buf[512];
 	char *cmd_ptr = cmd_buf;
 	char *cmd_str = NULL;
 	char *param_str = NULL;

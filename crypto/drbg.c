@@ -2035,7 +2035,7 @@ static inline int __init drbg_healthcheck_sanity(void)
 	return rc;
 }
 
-static struct rng_alg drbg_algs[22];
+static struct rng_alg drbg_algs[ARRAY_SIZE(drbg_cores) * 2];
 
 /*
  * Fill the array drbg_algs used to register the different DRBGs

@@ -282,7 +282,12 @@ struct DVE_CONFIG_STRUCT {
 };
 
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+static struct DVE_REQUEST_RING_STRUCT *g_DVE_RequestRingPtr;
+#define g_DVE_RequestRing (*g_DVE_RequestRingPtr)
+#else
 static struct DVE_REQUEST_RING_STRUCT g_DVE_RequestRing;
+#endif
 static struct DVE_CONFIG_STRUCT g_DveEnqueReq_Struct;
 static struct DVE_CONFIG_STRUCT g_DveDequeReq_Struct;
 
@@ -314,9 +319,43 @@ struct WMFE_CONFIG_STRUCT {
 		WmfeFrameConfig[_SUPPORT_MAX_DPE_FRAME_REQUEST_];
 };
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+static struct WMFE_REQUEST_RING_STRUCT *g_WMFE_ReqRingPtr;
+#define g_WMFE_ReqRing (*g_WMFE_ReqRingPtr)
+#else
 static struct WMFE_REQUEST_RING_STRUCT g_WMFE_ReqRing;
+#endif
 static struct WMFE_CONFIG_STRUCT g_WmfeEnqueReq_Struct;
 static struct WMFE_CONFIG_STRUCT g_WmfeDequeReq_Struct;
+
+#ifdef CONFIG_MTK_ENABLE_GMO
+static DEFINE_MUTEX(DPEOpenMutex);
+
+static int DPE_AllocRequestRings(void)
+{
+	g_DVE_RequestRingPtr =
+		kvzalloc(sizeof(*g_DVE_RequestRingPtr), GFP_KERNEL);
+	if (!g_DVE_RequestRingPtr)
+		return -ENOMEM;
+
+	g_WMFE_ReqRingPtr = kvzalloc(sizeof(*g_WMFE_ReqRingPtr), GFP_KERNEL);
+	if (!g_WMFE_ReqRingPtr) {
+		kvfree(g_DVE_RequestRingPtr);
+		g_DVE_RequestRingPtr = NULL;
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static void DPE_FreeRequestRings(void)
+{
+	kvfree(g_DVE_RequestRingPtr);
+	kvfree(g_WMFE_ReqRingPtr);
+	g_DVE_RequestRingPtr = NULL;
+	g_WMFE_ReqRingPtr = NULL;
+}
+#endif
 
 
 static signed int gDveCnt;
@@ -3687,6 +3726,9 @@ static signed int DPE_open(struct inode *pInode, struct file *pFile)
 
 	log_dbg("- E. UserCount: %d.", DPEInfo.UserCount);
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+	mutex_lock(&DPEOpenMutex);
+#endif
 
 	/*  */
 	spin_lock(&(DPEInfo.SpinLockDPERef));
@@ -3698,6 +3740,8 @@ static signed int DPE_open(struct inode *pInode, struct file *pFile)
 		log_dbg("ERR: kmalloc failed,(process, pid, tgid)=(%s, %d, %d)",
 			current->comm, current->pid, current->tgid);
 		Ret = -ENOMEM;
+		spin_unlock(&(DPEInfo.SpinLockDPERef));
+		goto EXIT;
 	} else {
 		pUserInfo = (struct DPE_USER_INFO_STRUCT *) pFile->private_data;
 		pUserInfo->Pid = current->pid;
@@ -3722,6 +3766,18 @@ static signed int DPE_open(struct inode *pInode, struct file *pFile)
 			current->pid,
 			current->tgid);
 	}
+
+#ifdef CONFIG_MTK_ENABLE_GMO
+	Ret = DPE_AllocRequestRings();
+	if (Ret) {
+		spin_lock(&(DPEInfo.SpinLockDPERef));
+		DPEInfo.UserCount--;
+		spin_unlock(&(DPEInfo.SpinLockDPERef));
+		kfree(pFile->private_data);
+		pFile->private_data = NULL;
+		goto EXIT;
+	}
+#endif
 
 	/* do wait queue head init when re-enter in camera */
 	/*  */
@@ -3796,7 +3852,9 @@ static signed int DPE_open(struct inode *pInode, struct file *pFile)
 	/*  */
 EXIT:
 
-
+#ifdef CONFIG_MTK_ENABLE_GMO
+	mutex_unlock(&DPEOpenMutex);
+#endif
 
 
 	log_dbg("- X. Ret: %d. UserCount: %d.", Ret, DPEInfo.UserCount);
@@ -3808,9 +3866,14 @@ static signed int DPE_release(
 	struct inode *pInode, struct file *pFile)
 {
 	struct DPE_USER_INFO_STRUCT *pUserInfo;
+	int i;
 	/*unsigned int Reg;*/
 
 	log_dbg("- E. UserCount: %d.", DPEInfo.UserCount);
+
+#ifdef CONFIG_MTK_ENABLE_GMO
+	mutex_lock(&DPEOpenMutex);
+#endif
 
 	/*  */
 	if (pFile->private_data != NULL) {
@@ -3846,10 +3909,20 @@ log_dbg("Curr UserCount(%d),(process, pid, tgid)=(%s, %d, %d), last user",
 #endif
 	LOG_INF("DPE release g_u4EnableClockCount: %d", g_u4EnableClockCount);
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+	for (i = 0; i < DPE_IRQ_TYPE_AMOUNT; i++)
+		tasklet_kill(DPE_tasklet[i].pDPE_tkt);
+	cancel_work_sync(&DPEInfo.ScheduleDveWork);
+	cancel_work_sync(&DPEInfo.ScheduleWmfeWork);
+	DPE_FreeRequestRings();
+#endif
+
 	/*  */
 EXIT:
 
-
+#ifdef CONFIG_MTK_ENABLE_GMO
+	mutex_unlock(&DPEOpenMutex);
+#endif
 	log_dbg("- X. UserCount: %d.", DPEInfo.UserCount);
 	return 0;
 }

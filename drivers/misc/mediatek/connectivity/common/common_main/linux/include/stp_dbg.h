@@ -26,7 +26,11 @@
 #define STP_DMP_SZ 2048
 #define STP_PKT_NO 2048
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+#define STP_DBG_LOG_ENTRY_NUM	28
+#else
 #define STP_DBG_LOG_ENTRY_NUM	1024
+#endif
 #define STP_DBG_LOG_ENTRY_SZ	96
 
 #else

@@ -49,6 +49,7 @@ enum CAMERA_DUAL_CAMERA_SENSOR_ENUM senDevId, MUINT8 *valid, MUINT32 *temp)
  * please adjust corresponding proc macro FOPS and PROC_FOPS_RW in this file
  */
 #define RESERVED_TZS (8)
+#define IMGSENSOR_TZS (IMGSENSOR_SENSOR_IDX_MAX_NUM + 1)
 #define MTK_IMGS_TEMP_CRIT 120000	/* 120.000 degree Celsius */
 
 #define mtk_imgs_dprintk(fmt, args...)   \
@@ -85,7 +86,7 @@ struct thz_data {
 	int isTimerCancelled;
 };
 
-static struct thz_data g_tsData[RESERVED_TZS];
+static struct thz_data g_tsData[IMGSENSOR_TZS];
 
 /* 0: disable debug logs, Not 0: enable debug logs */
 static int mtk_imgs_debug_log;
@@ -96,7 +97,7 @@ struct cooler_data {
 	unsigned int sysrst_state;
 };
 
-static struct cooler_data g_clData[RESERVED_TZS];
+static struct cooler_data g_clData[IMGSENSOR_TZS];
 static int g_img_max; /* Number of image sensors in this platform */
 
 /**
@@ -129,8 +130,8 @@ static int mtk_imgs_get_num_imgs(int *num)
 
 	*num = i;
 
-	if (i > RESERVED_TZS) {
-		*num = RESERVED_TZS;
+	if (i > IMGSENSOR_TZS) {
+		*num = IMGSENSOR_TZS;
 		return -1;
 	}
 

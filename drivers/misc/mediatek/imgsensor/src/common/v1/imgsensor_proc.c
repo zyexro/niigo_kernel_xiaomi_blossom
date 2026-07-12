@@ -14,7 +14,7 @@
 #include "imgsensor_proc.h"
 
 char mtk_ccm_name[camera_info_size] = { 0 };
-char mtk_i2c_dump[camera_info_size] = { 0 };
+char mtk_i2c_dump[128] = { 0 };
 
 
 

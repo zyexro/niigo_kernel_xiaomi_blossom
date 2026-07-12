@@ -13,7 +13,7 @@
 #include "imgsensor_proc.h"
 
 char mtk_ccm_name[camera_info_size] = { 0 };
-char mtk_i2c_dump[camera_info_size] = { 0 };
+char mtk_i2c_dump[128] = { 0 };
 
 static int pdaf_type_info_read(struct seq_file *m, void *v)
 {

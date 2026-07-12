@@ -41,7 +41,7 @@ struct thz_data {
 	int isTimerCancelled;
 };
 
-static struct thz_data g_tsData[RESERVED_TZS];
+static struct thz_data g_tsData[TS_ENUM_MAX];
 
 #if AUTO_GEN_COOLERS
 static int tztsAll_polling_interval = 1000; /* mseconds, 0 : no auto polling */
@@ -55,7 +55,7 @@ struct cooler_data {
  * so we have to create the same amount of coolers and bind
  * them together.
  */
-static struct cooler_data g_coolerData[RESERVED_TZS];
+static struct cooler_data g_coolerData[TS_ENUM_MAX];
 #endif
 
 static int tsallts_debug_log = 0;
@@ -660,7 +660,7 @@ static int __init tsallts_init(void)
 		return -1;
 	}
 
-	for (i = 0; i < RESERVED_TZS; i++) {
+	for (i = 0; i < TS_ENUM_MAX; i++) {
 		g_tsData[i].thz_dev = NULL;
 		g_tsData[i].thz_name[0] = '\0';
 		for (j = 0; j < 10; j++) {

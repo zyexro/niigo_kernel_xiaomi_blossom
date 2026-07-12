@@ -50,6 +50,13 @@ static struct mutex scp_excep_mutex;
 static struct mutex scp_A_excep_dump_mutex;
 int scp_ee_enable;
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+static void scp_alloc_detail_buffer(void)
+{
+	if (!scp_A_detail_buffer)
+		scp_A_detail_buffer = vmalloc(SCP_AED_STR_LEN);
+}
+#endif
 
 /* An ELF note in memory */
 struct memelfnote {
@@ -452,6 +459,9 @@ static void scp_prepare_aed(char *aed_str, struct scp_aed_cfg *aed)
 	pr_debug("[SCP] %s begins\n", __func__);
 
 	aed->detail = NULL;
+#ifdef CONFIG_MTK_ENABLE_GMO
+	scp_alloc_detail_buffer();
+#endif
 	detail = scp_A_detail_buffer;
 	if (!detail)
 		return;
@@ -493,6 +503,9 @@ static void scp_prepare_aed_dump(char *aed_str,
 	int ret = 0;
 
 	u32 memory_dump_size;
+#ifdef CONFIG_MTK_ENABLE_GMO
+	int dram_size;
+#endif
 	struct MemoryDump *pMemoryDump = NULL;
 
 	char *scp_A_log = NULL;
@@ -504,6 +517,9 @@ static void scp_prepare_aed_dump(char *aed_str,
 
 
 	/* prepare scp aee detail information */
+#ifdef CONFIG_MTK_ENABLE_GMO
+	scp_alloc_detail_buffer();
+#endif
 	scp_detail = scp_A_detail_buffer;
 
 	if (!scp_detail) {
@@ -529,7 +545,19 @@ static void scp_prepare_aed_dump(char *aed_str,
 
 	/*prepare scp A db file*/
 	memory_dump_size = 0;
+#ifdef CONFIG_MTK_ENABLE_GMO
+	/* Allocate crash storage only when an SCP exception actually occurs. */
+	dram_size = 0;
+	mutex_lock(&scp_A_excep_dump_mutex);
+	if ((int)scp_region_info->ap_dram_size > 0)
+		dram_size = scp_region_info->ap_dram_size;
+	scp_dump_ptr = scp_A_dump_buffer;
+	if (!scp_dump_ptr)
+		scp_dump_ptr = vmalloc(sizeof(struct MemoryDump) +
+			roundup(dram_size, 4));
+#else
 	scp_dump_ptr = scp_A_dump_buffer_last;
+#endif
 	if (!scp_dump_ptr) {
 		pr_err("[SCP AEE]MemoryDump buf is null, size=0x%x\n",
 			memory_dump_size);
@@ -541,9 +569,14 @@ static void scp_prepare_aed_dump(char *aed_str,
 		memory_dump_size = scp_crash_dump(pMemoryDump, SCP_A_ID);
 	}
 	/* scp_dump_buffer_set */
+#ifdef CONFIG_MTK_ENABLE_GMO
+	scp_A_dump_buffer_last = scp_dump_ptr;
+	scp_A_dump_buffer = scp_dump_ptr;
+#else
 	mutex_lock(&scp_A_excep_dump_mutex);
 	scp_A_dump_buffer_last = scp_A_dump_buffer;
 	scp_A_dump_buffer = scp_dump_ptr;
+#endif
 	scp_A_dump_length = memory_dump_size;
 	mutex_unlock(&scp_A_excep_dump_mutex);
 
@@ -724,7 +757,9 @@ struct bin_attribute bin_attr_scp_dump = {
  */
 int scp_excep_init(void)
 {
+#ifndef CONFIG_MTK_ENABLE_GMO
 	int dram_size = 0;
+#endif
 
 	mutex_init(&scp_excep_mutex);
 	mutex_init(&scp_A_excep_dump_mutex);
@@ -732,6 +767,7 @@ int scp_excep_init(void)
 	INIT_WORK(&scp_aed_work.work, scp_aed_reset_ws);
 
 
+#ifndef CONFIG_MTK_ENABLE_GMO
 #if SCP_RECOVERY_SUPPORT
 	/* support L1C or not? */
 	if ((int)(scp_region_info->ap_dram_size) > 0)
@@ -754,6 +790,11 @@ int scp_excep_init(void)
 		roundup(dram_size, 4));
 	if (!scp_A_dump_buffer_last)
 		goto _err1;
+#else
+	scp_A_detail_buffer = NULL;
+	scp_A_dump_buffer = NULL;
+	scp_A_dump_buffer_last = NULL;
+#endif
 
 	/* init global values */
 	scp_A_dump_length = 0;
@@ -768,6 +809,7 @@ _err:
 	vfree(scp_A_detail_buffer);
 
 	return -1;
+#endif
 }
 
 

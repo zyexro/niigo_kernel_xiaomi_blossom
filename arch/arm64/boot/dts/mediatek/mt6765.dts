@@ -508,7 +508,11 @@ firmware_class.path=/vendor/firmware";
 		reserve-memory-scp_share {
 			compatible = "mediatek,reserve-memory-scp_share";
 			no-map;
+		#ifdef CONFIG_MTK_ENABLE_GMO
+			size = <0 0x00100000>;
+		#else
 			size = <0 0x00300000>;
+		#endif
 			alignment = <0 0x1000000>;
 			alloc-ranges = <0 0x40000000 0 0x50000000>;
 		};
@@ -967,8 +971,11 @@ firmware_class.path=/vendor/firmware";
 				  <9 10>;   /* vow dump */
 
 		scp_mem_key = "mediatek,reserve-memory-scp_share";
-		scp_mem_tbl = <1 0x100000>, /* sensor */
-			      <4 0x200000>; /* logger */
+		scp_mem_tbl = <1 0x100000> /* sensor */
+		#ifndef CONFIG_MTK_ENABLE_GMO
+			      , <4 0x200000> /* logger */
+		#endif
+			      ;
 	};
 
 	scp_dvfs {

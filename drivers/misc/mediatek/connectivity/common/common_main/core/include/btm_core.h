@@ -35,7 +35,11 @@
 #define STP_BTM_OPERATION_FAIL    (-1)
 #define STP_BTM_OPERATION_SUCCESS (0)
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+#define STP_BTM_OP_BUF_SIZE (32)
+#else
 #define STP_BTM_OP_BUF_SIZE (64)
+#endif
 
 #define BTM_THREAD_NAME "mtk_stp_btm"
 #define STP_PAGED_DUMP_TIME_LIMIT 3500

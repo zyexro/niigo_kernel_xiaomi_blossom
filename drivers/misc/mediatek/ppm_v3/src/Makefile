@@ -52,7 +52,6 @@ obj-y += mtk_ppm_policy_hard_user_limit.o
 obj-y += mtk_ppm_policy_user_limit.o
 obj-y += mtk_ppm_policy_force_limit.o
 # for test purpose
-obj-y += mtk_ppm_policy_ut.o
 
 # platform dependent files
 obj-y += mach/

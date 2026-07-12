@@ -13,6 +13,9 @@
 
 #include "stp_dbg.h"
 #include "stp_dbg_combo.h"
+#include <linux/slab.h>
+
+#define STP_DBG_COMBO_BUF_SIZE 2048
 
 static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_aee(VOID);
 static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_nl(VOID);
@@ -53,15 +56,21 @@ INT32 const combo_legacy_task_id_adapter[STP_DBG_TASK_ID_MAX] = {
 
 static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_aee(VOID)
 {
-	static UINT8 buf[2048];
-	static UINT8 tmp[2048];
-
+	UINT8 *scratch;
+	UINT8 *buf;
+	UINT8 *tmp;
 	UINT32 buf_len;
 	STP_PACKET_T *pkt = NULL;
 	STP_DBG_HDR_T *hdr = NULL;
 	INT32 remain = 0;
 	INT32 retry = 0;
 	INT32 ret = 0;
+
+	scratch = kmalloc(2 * STP_DBG_COMBO_BUF_SIZE, GFP_KERNEL);
+	if (!scratch)
+		return -ENOMEM;
+	buf = scratch;
+	tmp = scratch + STP_DBG_COMBO_BUF_SIZE;
 
 	do {
 		remain = stp_dbg_dmp_out_ex(&buf[0], &buf_len);
@@ -90,6 +99,7 @@ static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_aee(VOID)
 		}
 	} while ((remain > 0) || (retry < 10));
 
+	kfree(scratch);
 	return ret;
 }
 
@@ -97,9 +107,9 @@ static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_nl(VOID)
 {
 #define NUM_FETCH_ENTRY 8
 
-	static UINT8 buf[2048];
-	static UINT8 tmp[2048];
-
+	UINT8 *scratch;
+	UINT8 *buf;
+	UINT8 *tmp;
 	UINT32 buf_len;
 	STP_PACKET_T *pkt = NULL;
 	STP_DBG_HDR_T *hdr = NULL;
@@ -108,6 +118,12 @@ static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_nl(VOID)
 	INT32 retry = 0;
 	INT32 ret = 0;
 	INT32 len;
+
+	scratch = kmalloc(2 * STP_DBG_COMBO_BUF_SIZE, GFP_KERNEL);
+	if (!scratch)
+		return -ENOMEM;
+	buf = scratch;
+	tmp = scratch + STP_DBG_COMBO_BUF_SIZE;
 
 	index = 0;
 	tmp[index++] = '[';
@@ -148,6 +164,7 @@ static _osal_inline_ INT32 stp_dbg_combo_put_dump_to_nl(VOID)
 		}
 	} while ((remain > 0) || (retry < 2));
 
+	kfree(scratch);
 	return ret;
 }
 

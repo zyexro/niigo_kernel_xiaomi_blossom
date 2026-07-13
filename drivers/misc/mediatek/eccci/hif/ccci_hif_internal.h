@@ -20,16 +20,22 @@
 //#define MAX_RXQ_NUM 8
 //#endif
 
+#ifdef CONFIG_MTK_ENABLE_GMO
+#define PACKET_HISTORY_DEPTH 0
+#else
 #define PACKET_HISTORY_DEPTH 16	/* must be power of 2 */
+#endif
 
 extern void *ccci_hif[CCCI_HIF_NUM];
 extern struct ccci_hif_ops *ccci_hif_op[CCCI_HIF_NUM];
 
+#if PACKET_HISTORY_DEPTH
 struct ccci_log {
 	struct ccci_header msg;
 	u64 tv;
 	int droped;
 };
+#endif
 
 struct ccci_hif_traffic {
 #if PACKET_HISTORY_DEPTH
@@ -105,12 +111,26 @@ enum RX_COLLECT_RESULT {
 	ERROR_STOP,
 };
 
+#if PACKET_HISTORY_DEPTH
 void ccci_md_dump_log_history(unsigned char md_id,
 		struct ccci_hif_traffic *tinfo, int dump_multi_rec,
 		int tx_queue_num, int rx_queue_num);
 void ccci_md_add_log_history(struct ccci_hif_traffic *tinfo,
 		enum DIRECTION dir, int queue_index,
 		struct ccci_header *msg, int is_droped);
+#else
+static inline void ccci_md_dump_log_history(unsigned char md_id,
+	struct ccci_hif_traffic *tinfo, int dump_multi_rec,
+	int tx_queue_num, int rx_queue_num)
+{
+}
+
+static inline void ccci_md_add_log_history(struct ccci_hif_traffic *tinfo,
+	enum DIRECTION dir, int queue_index,
+	struct ccci_header *msg, int is_droped)
+{
+}
+#endif
 
 #ifndef CCCI_KMODULE_ENABLE
 static inline void *ccci_hif_get_by_id(unsigned char hif_id)

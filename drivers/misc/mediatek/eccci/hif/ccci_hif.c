@@ -272,6 +272,7 @@ static inline int ccci_hif_napi_poll(unsigned char md_id, int rx_qno,
 	return 0;
 }
 
+#if PACKET_HISTORY_DEPTH
 static void ccci_md_dump_log_rec(unsigned char md_id, struct ccci_log *log)
 {
 	u64 ts_nsec = log->tv;
@@ -299,7 +300,6 @@ void ccci_md_add_log_history(struct ccci_hif_traffic *tinfo,
 	enum DIRECTION dir,
 	int queue_index, struct ccci_header *msg, int is_droped)
 {
-#ifdef PACKET_HISTORY_DEPTH
 	if (queue_index < 0 || queue_index >= MAX_TXQ_NUM
 		|| tinfo->rx_history_ptr[queue_index] < 0
 		|| tinfo->rx_history_ptr[queue_index] >= PACKET_HISTORY_DEPTH
@@ -335,7 +335,6 @@ void ccci_md_add_log_history(struct ccci_hif_traffic *tinfo,
 		tinfo->rx_history_ptr[queue_index]
 		&= (PACKET_HISTORY_DEPTH - 1);
 	}
-#endif
 }
 EXPORT_SYMBOL(ccci_md_add_log_history);
 
@@ -343,7 +342,6 @@ void ccci_md_dump_log_history(unsigned char md_id,
 	struct ccci_hif_traffic *tinfo, int dump_multi_rec,
 	int tx_queue_num, int rx_queue_num)
 {
-#ifdef PACKET_HISTORY_DEPTH
 	int i_tx, i_rx, j;
 	int tx_qno, rx_qno;
 
@@ -383,9 +381,9 @@ void ccci_md_dump_log_history(unsigned char md_id,
 				ccci_md_dump_log_rec(md_id,
 				&tinfo->tx_history[i_tx][j]);
 		}
-#endif
 }
 EXPORT_SYMBOL(ccci_md_dump_log_history);
+#endif
 
 void ccci_hif_md_exception(unsigned int hif_flag, unsigned char stage)
 {

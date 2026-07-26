@@ -803,6 +803,7 @@ int scp_excep_init(void)
 
 	return 0;
 
+#ifndef CONFIG_MTK_ENABLE_GMO
 _err1:
 	vfree(scp_A_dump_buffer);
 _err:

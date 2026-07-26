@@ -150,54 +150,6 @@ static int toprgu_register_reset_controller(struct platform_device *pdev,
 	return ret;
 }
 
-static bool mtk_wdt_cmd_matches(const char *cmd, const char *mode)
-{
-	size_t len;
-
-	if (!cmd)
-		return false;
-
-	len = strlen(mode);
-
-	return !strcmp(cmd, mode) ||
-	       (!strncmp(cmd, mode, len) && cmd[len] == ',') ||
-	       (!strncmp(cmd, "reboot,", 7) &&
-		!strncmp(cmd + 7, mode, len) &&
-		(cmd[7 + len] == '\0' || cmd[7 + len] == ','));
-}
-
-static void mtk_wdt_set_restart_mode(struct mtk_wdt_dev *mtk_wdt,
-				     const char *cmd)
-{
-	void __iomem *wdt_base;
-	u32 magic = 0;
-	u32 reg;
-
-	if (!mtk_wdt || !cmd)
-		return;
-
-	if (mtk_wdt_cmd_matches(cmd, "recovery") ||
-	    !strcmp(cmd, "recovery-update") ||
-	    !strcmp(cmd, "reboot,recovery-update"))
-		magic = BOOT_RECOVERY;
-	else if (mtk_wdt_cmd_matches(cmd, "bootloader") ||
-		 mtk_wdt_cmd_matches(cmd, "fastboot"))
-		magic = BOOT_BOOTLOADER;
-
-	if (!magic)
-		return;
-
-	wdt_base = mtk_wdt->wdt_base;
-	if (!wdt_base)
-		return;
-
-	reg = readl(wdt_base + WDT_NONRST2);
-	reg &= ~RGU_REBOOT_MASK;
-	reg |= magic & RGU_REBOOT_MASK;
-	writel(reg, wdt_base + WDT_NONRST2);
-	readl(wdt_base + WDT_NONRST2);
-}
-
 static void mtk_wdt_parse_dt(struct device_node *np,
 				struct watchdog_device *wdt_dev)
 {
@@ -255,35 +207,6 @@ static int mtk_wdt_restart(struct watchdog_device *wdt_dev,
 	reg = readl(wdt_base + WDT_MODE);
 	reg &= ~WDT_MODE_IRQ_EN;
 	writel(reg | WDT_MODE_KEY, wdt_base + WDT_MODE);
-
-	while (1) {
-		writel(WDT_SWRST_KEY, wdt_base + WDT_SWRST);
-		mdelay(5);
-	}
-
-	return 0;
-}
-
-static int mtk_wdt_restart(struct watchdog_device *wdt_dev,
-			   unsigned long action, void *data)
-{
-	struct mtk_wdt_dev *mtk_wdt = watchdog_get_drvdata(wdt_dev);
-	void __iomem *wdt_base = mtk_wdt->wdt_base;
-	u32 mode;
-
-	/*
-	 * device_shutdown() can stop the watchdog before machine_restart()
-	 * reaches us, so re-enable TOPRGU reset generation here. Leaving dual
-	 * mode or the interrupt path enabled can turn a reboot request into a
-	 * watchdog interrupt followed by a delayed timeout reset.
-	 */
-	mode = readl(wdt_base + WDT_MODE);
-	mode &= ~(WDT_MODE_DUAL_EN | WDT_MODE_IRQ_EN);
-	mode |= WDT_MODE_EN | WDT_MODE_EXRST_EN | WDT_BYPASS_PWR_KEY;
-	writel(WDT_MODE_KEY | mode, wdt_base + WDT_MODE);
-	readl(wdt_base + WDT_MODE);
-
-	mtk_wdt_set_restart_mode(mtk_wdt, data);
 
 	while (1) {
 		writel(WDT_SWRST_KEY, wdt_base + WDT_SWRST);

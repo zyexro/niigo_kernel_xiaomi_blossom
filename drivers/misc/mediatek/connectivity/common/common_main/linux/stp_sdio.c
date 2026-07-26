@@ -1950,8 +1950,10 @@ static VOID stp_sdio_tx_wkr(struct work_struct *work)
 	UINT32 idx;
 	MTK_WCN_STP_SDIO_PKT_BUF *pb;
 	struct timeval now;
+#if STP_SDIO_DBG_SUPPORT && STP_SDIO_TXDBG
 	UINT64 ts;
 	ULONG nsec;
+#endif
 
 	p_info = container_of(work, MTK_WCN_STP_SDIO_HIF_INFO, tx_work);
 	ret = HIF_SDIO_ERR_SUCCESS;

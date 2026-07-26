@@ -603,7 +603,6 @@ int dynamic_debug_msg_print(unsigned int mva, int w, int h, int pitch,
 			       DAL_COLOR_RED);
 		if (ret != MFC_STATUS_OK)
 			goto err1;
-		screen_logger_print(mfc_handle);
 		MFC_Close(mfc_handle);
 err1:
 		m4u_mva_unmap_kernel(real_mva, real_size, kva);
@@ -623,22 +622,18 @@ static int primary_show_basic_debug_info(struct disp_frame_cfg_t *cfg)
 		&fps);
 	snprintf(disp_tmp, sizeof(disp_tmp), ",rdma_fps:%lld.%02lld,",
 		fps.fps, fps.fps_low);
-	screen_logger_add_message("rdma_fps", MESSAGE_REPLACE, disp_tmp);
 
 	dprec_logger_get_result_value(DPREC_LOGGER_OVL_FRAME_COMPLETE_1SECOND,
 		&fps);
 	snprintf(disp_tmp, sizeof(disp_tmp), "ovl_fps:%lld.%02lld,",
 		fps.fps, fps.fps_low);
-	screen_logger_add_message("ovl_fps", MESSAGE_REPLACE, disp_tmp);
 
 	dprec_logger_get_result_value(DPREC_LOGGER_PQ_TRIGGER_1SECOND, &fps);
 	snprintf(disp_tmp, sizeof(disp_tmp), "PQ_trigger:%lld.%02lld,",
 		fps.fps, fps.fps_low);
-	screen_logger_add_message("PQ trigger", MESSAGE_REPLACE, disp_tmp);
 
 	snprintf(disp_tmp, sizeof(disp_tmp),
 		primary_display_is_video_mode() ? "vdo," : "cmd,");
-	screen_logger_add_message("mode", MESSAGE_REPLACE, disp_tmp);
 
 	for (i = 0; i < cfg->input_layer_num; i++) {
 		if (cfg->input_cfg[i].tgt_offset_y == 0 &&
@@ -2050,8 +2045,6 @@ static int _DL_switch_to_DC_fast(int block)
 	ret = dpmgr_path_config(pgc->dpmgr_handle, data_config_dl,
 		pgc->cmdq_handle_config);
 
-	screen_logger_add_message("sess_mode", MESSAGE_REPLACE,
-		(char *)session_mode_spy(DISP_SESSION_DECOUPLE_MODE));
 	dynamic_debug_msg_print(mva, rdma_config.width, rdma_config.height,
 		rdma_config.pitch, UFMT_GET_Bpp(rdma_config.inputFormat));
 
@@ -6348,7 +6341,6 @@ static int _config_ovl_input(struct disp_frame_cfg_t *cfg,
 		char msg[10];
 
 		snprintf(msg, sizeof(msg), "HRT=%d,", hrt_level);
-		screen_logger_add_message("HRT", MESSAGE_REPLACE, msg);
 	}
 #endif
 
@@ -6461,7 +6453,6 @@ static int _config_ovl_input(struct disp_frame_cfg_t *cfg,
 		char msg[10];
 
 		snprintf(msg, sizeof(msg), "HRT=%d,", hrt_level);
-		screen_logger_add_message("HRT", MESSAGE_REPLACE, msg);
 	}
 #endif
 
@@ -7170,8 +7161,6 @@ done:
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_switch_mode,
 			 MMPROFILE_FLAG_PULSE, pgc->session_mode, sess_mode);
 
-	screen_logger_add_message("sess_mode", MESSAGE_REPLACE,
-		(char *)session_mode_spy(sess_mode));
 err:
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_switch_mode,
 			 MMPROFILE_FLAG_END, pgc->session_mode, sess_mode);

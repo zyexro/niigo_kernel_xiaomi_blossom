@@ -880,6 +880,42 @@ static ssize_t BatteryNotify_store(struct device *dev,
 
 static DEVICE_ATTR_RW(BatteryNotify);
 
+/* charging_enabled sysfs node */
+static ssize_t charging_enabled_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct mtk_charger *pinfo = dev->driver_data;
+	int enabled = pinfo->cmd_discharging ? 0 : 1;
+	return sprintf(buf, "%d\n", enabled);
+}
+
+static ssize_t charging_enabled_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct mtk_charger *pinfo = dev->driver_data;
+	long temp;
+
+	if (kstrtol(buf, 10, &temp) == 0) {
+		if (temp == 0) {
+			pinfo->cmd_discharging = true;
+			if (pinfo->chg1_dev) {
+				charger_dev_enable(pinfo->chg1_dev, false);
+				charger_dev_do_event(pinfo->chg1_dev, EVENT_DISCHARGE, 0);
+			}
+		} else {
+			pinfo->cmd_discharging = false;
+			if (pinfo->chg1_dev) {
+				charger_dev_enable(pinfo->chg1_dev, true);
+				charger_dev_do_event(pinfo->chg1_dev, EVENT_RECHARGE, 0);
+			}
+		}
+		_wake_up_charger(pinfo);
+	}
+	return size;
+}
+static DEVICE_ATTR_RW(charging_enabled);
+
 /* procfs */
 static int mtk_chg_current_cmd_show(struct seq_file *m, void *data)
 {
@@ -1714,6 +1750,10 @@ static int mtk_charger_setup_files(struct platform_device *pdev)
 
 	/* Battery warning */
 	ret = device_create_file(&(pdev->dev), &dev_attr_BatteryNotify);
+	if (ret)
+		goto _out;
+
+	ret = device_create_file(&(pdev->dev), &dev_attr_charging_enabled);
 	if (ret)
 		goto _out;
 

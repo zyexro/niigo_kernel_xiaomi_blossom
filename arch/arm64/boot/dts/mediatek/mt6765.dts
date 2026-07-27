@@ -27,7 +27,7 @@
 	/* chosen */
 	chosen: chosen {
 		bootargs = "vmalloc=400M \
-page_owner=on \
+page_owner=on quiet \
 swiotlb=noforce androidboot.hardware=mt6765 \
 maxcpus=8 \
 pstore.update_ms=1000 \

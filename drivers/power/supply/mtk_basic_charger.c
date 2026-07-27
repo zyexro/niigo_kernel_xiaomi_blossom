@@ -368,6 +368,12 @@ static int do_algorithm(struct mtk_charger *info)
 	int ret;
 	int val = 0;
 
+	if (info->cmd_discharging) {
+		chr_err("%s: Force discharging active, skipping algorithm\n", __func__);
+		charger_dev_enable(info->chg1_dev, false);
+		return 0;
+	}
+
 	pdata = &info->chg_data[CHG1_SETTING];
 	charger_dev_is_charging_done(info->chg1_dev, &chg_done);
 	is_basic = select_charging_current_limit(info, &info->setting);
@@ -494,6 +500,11 @@ static int enable_charging(struct mtk_charger *info,
 
 
 	chr_err("%s %d\n", __func__, en);
+
+	if (info->cmd_discharging) {
+		chr_err("%s: Force discharging active, skipping enable charger\n", __func__);
+		en = false;
+	}
 
 	if (en == false) {
 		for (i = 0; i < MAX_ALG_NO; i++) {

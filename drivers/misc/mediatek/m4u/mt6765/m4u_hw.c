@@ -65,7 +65,9 @@ m4u_invalid_tlb(int m4u_id, int L2_en, int isInvAll,
 		mva_end = round_up(mva_end, SZ_4K);
 	}
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	M4U_WriteReg32(m4u_base, REG_INVLID_SEL, reg);
 
 	if (isInvAll)
@@ -80,7 +82,7 @@ m4u_invalid_tlb(int m4u_id, int L2_en, int isInvAll,
 		M4U_WriteReg32(m4u_base, REG_MMU_CPE_DONE, 0);
 	}
 
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 
@@ -406,9 +408,11 @@ int m4u_enable_prog_dist_by_id(int port, int id)
 {
 	unsigned long m4u_base = gM4UBaseAddr[m4u_port_2_m4u_id(port)];
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	m4uHw_set_field_by_mask(m4u_base, REG_MMU_PROG_DIST(id), F_PF_EN(1), 1);
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 }
@@ -417,9 +421,11 @@ int m4u_disable_prog_dist_by_id(int port, int id)
 {
 	unsigned long m4u_base = gM4UBaseAddr[m4u_port_2_m4u_id(port)];
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	m4uHw_set_field_by_mask(m4u_base, REG_MMU_PROG_DIST(id), F_PF_EN(1), 0);
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 }
@@ -468,7 +474,9 @@ m4u_config_prog_dist(M4U_PORT_ID port, int dir,
 	pProgPfh[free_id].sel = sel;
 	mutex_unlock(&gM4u_prog_pfh_mutex);
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 
 	m4uHw_set_field_by_mask(m4u_base,
 				REG_MMU_PROG_DIST(free_id), F_PF_ID_COMP_SEL(1),
@@ -488,7 +496,7 @@ m4u_config_prog_dist(M4U_PORT_ID port, int dir,
 	m4uHw_set_field_by_mask(m4u_base, REG_MMU_PROG_DIST(free_id),
 				F_PF_EN(1), F_PF_EN(!!(en)));
 
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return free_id;
 }
@@ -514,10 +522,12 @@ int m4u_invalid_prog_dist_by_id(int port)
 	if (i == M4U_PROG_PFH_NUM(m4u_index))
 		return -1;
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	/* set to default value */
 	M4U_WriteReg32(m4u_base, REG_MMU_PROG_DIST(i), 0x800);
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 }
@@ -574,12 +584,14 @@ int m4u_insert_seq_range(M4U_PORT_ID port,
 	/* align mva end to 1M */
 	MVAEnd |= ~F_SQ_VA_MASK;
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	M4U_WriteReg32(gM4UBaseAddr[m4u_index],
 		REG_MMU_SQ_START(m4u_slave_id, free_id), MVAStart);
 	M4U_WriteReg32(gM4UBaseAddr[m4u_index],
 		REG_MMU_SQ_END(m4u_slave_id, free_id), MVAEnd);
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return free_id;
 }
@@ -596,10 +608,12 @@ int m4u_invalid_seq_range_by_id(int port, int seq_id)
 	pSeq[seq_id].Enabled = 0;
 	mutex_unlock(&gM4u_seq_mutex);
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 	M4U_WriteReg32(m4u_base, REG_MMU_SQ_START(m4u_slave_id, seq_id), 0);
 	M4U_WriteReg32(m4u_base, REG_MMU_SQ_END(m4u_slave_id, seq_id), 0);
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 }
@@ -618,7 +632,9 @@ static int _m4u_config_port(int port, int virt, int sec, int dis, int dir)
 	if (virt == 0)
 		m4u_invalid_prog_dist_by_id(port);
 
-	spin_lock(&gM4u_reg_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&gM4u_reg_lock, flags);
 
 	if (m4u_index == 0) {
 		larb = m4u_port_2_larb_id(port);
@@ -642,7 +658,7 @@ static int _m4u_config_port(int port, int virt, int sec, int dis, int dir)
 				F_PERI_MMU_EN(larb_port, !!(virt)));
 	}
 
-	spin_unlock(&gM4u_reg_lock);
+	spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 
 	return 0;
 }
@@ -733,13 +749,15 @@ int m4u_config_port_array(struct m4u_port_array *port_array)
 						SMI_LARB_NON_SEC_CONx(larb_port),
 						F_SMI_NON_SEC_MMU_EN(1));
 				if (orig_value != regNew[larb][larb_port]) {
-					spin_lock(&gM4u_reg_lock);
+					unsigned long flags;
+
+					spin_lock_irqsave(&gM4u_reg_lock, flags);
 					m4uHw_set_field_by_mask(gLarbBaseAddr[larb],
 						SMI_LARB_NON_SEC_CONx(larb_port),
 						F_SMI_MMU_EN,
 						F_SMI_NON_SEC_MMU_EN(
 						!!(regNew[larb][larb_port])));
-					spin_unlock(&gM4u_reg_lock);
+					spin_unlock_irqrestore(&gM4u_reg_lock, flags);
 				}
 			}
 		}

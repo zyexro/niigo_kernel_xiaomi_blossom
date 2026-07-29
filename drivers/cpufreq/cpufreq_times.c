@@ -308,29 +308,25 @@ static int concurrent_policy_time_seq_show(struct seq_file *m, void *v)
 
 void cpufreq_task_times_init(struct task_struct *p)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&task_time_in_state_lock, flags);
 	p->time_in_state = NULL;
-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
 	p->max_state = 0;
 }
 
 void cpufreq_task_times_alloc(struct task_struct *p)
 {
 	void *temp;
-	unsigned long flags;
 	unsigned int max_state = READ_ONCE(next_offset);
+
+	if (!max_state)
+		return;
 
 	/* We use one array to avoid multiple allocs per task */
 	temp = kcalloc(max_state, sizeof(p->time_in_state[0]), GFP_ATOMIC);
 	if (!temp)
 		return;
 
-	spin_lock_irqsave(&task_time_in_state_lock, flags);
-	p->time_in_state = temp;
-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
-	p->max_state = max_state;
+	smp_store_release(&p->time_in_state, temp);
+	smp_store_release(&p->max_state, max_state);
 }
 
 /* Caller must hold task_time_in_state_lock */
@@ -412,11 +408,17 @@ void cpufreq_acct_update_power(struct task_struct *p, u64 cputime)
 
 	state = freqs->offset + READ_ONCE(freqs->last_index);
 
-	spin_lock_irqsave(&task_time_in_state_lock, flags);
-	if ((state < p->max_state || !cpufreq_task_times_realloc_locked(p)) &&
-	    p->time_in_state)
-		p->time_in_state[state] += cputime;
-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+	if (likely(state < READ_ONCE(p->max_state))) {
+		u64 *time_in_state = READ_ONCE(p->time_in_state);
+		if (likely(time_in_state))
+			time_in_state[state] += cputime;
+	} else {
+		spin_lock_irqsave(&task_time_in_state_lock, flags);
+		if ((state < p->max_state || !cpufreq_task_times_realloc_locked(p)) &&
+		    p->time_in_state)
+			p->time_in_state[state] += cputime;
+		spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+	}
 
 	spin_lock_irqsave(&uid_lock, flags);
 	uid_entry = find_or_register_uid_locked(uid);

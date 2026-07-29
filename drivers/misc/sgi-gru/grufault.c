@@ -82,14 +82,14 @@ static struct gru_thread_state *gru_find_lock_gts(unsigned long vaddr)
 	struct vm_area_struct *vma;
 	struct gru_thread_state *gts = NULL;
 
-	down_read(&mm->mmap_sem);
+	mmap_read_lock(mm);
 	vma = gru_find_vma(vaddr);
 	if (vma)
 		gts = gru_find_thread_state(vma, TSID(vaddr, vma));
 	if (gts)
 		mutex_lock(&gts->ts_ctxlock);
 	else
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 	return gts;
 }
 
@@ -99,7 +99,7 @@ static struct gru_thread_state *gru_alloc_locked_gts(unsigned long vaddr)
 	struct vm_area_struct *vma;
 	struct gru_thread_state *gts = ERR_PTR(-EINVAL);
 
-	down_write(&mm->mmap_sem);
+	mmap_write_lock(mm);
 	vma = gru_find_vma(vaddr);
 	if (!vma)
 		goto err;
@@ -112,7 +112,7 @@ static struct gru_thread_state *gru_alloc_locked_gts(unsigned long vaddr)
 	return gts;
 
 err:
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 	return gts;
 }
 

@@ -278,7 +278,7 @@ __bad_area(struct pt_regs *regs, unsigned long error_code,
 	 * Something tried to access memory that isn't in our memory map..
 	 * Fix it, but check if it's kernel or user first..
 	 */
-	up_read(&mm->mmap_sem);
+	mmap_read_unlock(mm);
 
 	__bad_area_nosemaphore(regs, error_code, address, si_code);
 }
@@ -302,7 +302,7 @@ do_sigbus(struct pt_regs *regs, unsigned long error_code, unsigned long address)
 	struct task_struct *tsk = current;
 	struct mm_struct *mm = tsk->mm;
 
-	up_read(&mm->mmap_sem);
+	mmap_read_unlock(mm);
 
 	/* Kernel mode? Handle exceptions or die: */
 	if (!user_mode(regs))
@@ -441,7 +441,7 @@ asmlinkage void __kprobes do_page_fault(struct pt_regs *regs,
 	}
 
 retry:
-	down_read(&mm->mmap_sem);
+	mmap_read_lock(mm);
 
 	vma = find_vma(mm, address);
 	if (unlikely(!vma)) {
@@ -510,5 +510,5 @@ good_area:
 		}
 	}
 
-	up_read(&mm->mmap_sem);
+	mmap_read_unlock(mm);
 }

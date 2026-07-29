@@ -810,7 +810,7 @@ EXPORT_SYMBOL(hmm_vma_range_done);
  *
  * Expected use pattern:
  * retry:
- *   down_read(&mm->mmap_sem);
+ *   mmap_read_lock(mm);
  *   // Find vma and address device wants to fault, initialize hmm_pfn_t
  *   // array accordingly
  *   ret = hmm_vma_fault(range, write, block);

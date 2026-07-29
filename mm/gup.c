@@ -919,7 +919,7 @@ retry:
 	}
 
 	if (ret & VM_FAULT_RETRY) {
-		down_read(&mm->mmap_sem);
+		mmap_read_lock(mm);
 		*unlocked = true;
 		fault_flags |= FAULT_FLAG_TRIED;
 		goto retry;
@@ -1067,19 +1067,19 @@ retry:
  *
  * get_user_pages_locked() is suitable to replace the form:
  *
- *      down_read(&mm->mmap_sem);
+ *      mmap_read_lock(mm);
  *      do_something()
  *      get_user_pages(tsk, mm, ..., pages, NULL);
- *      up_read(&mm->mmap_sem);
+ *      mmap_read_unlock(mm);
  *
  *  to:
  *
  *      int locked = 1;
- *      down_read(&mm->mmap_sem);
+ *      mmap_read_lock(mm);
  *      do_something()
  *      get_user_pages_locked(tsk, mm, ..., pages, &locked);
  *      if (locked)
- *          up_read(&mm->mmap_sem);
+ *          mmap_read_unlock(mm);
  */
 long get_user_pages_locked(unsigned long start, unsigned long nr_pages,
 			   unsigned int gup_flags, struct page **pages,
@@ -1103,9 +1103,9 @@ EXPORT_SYMBOL(get_user_pages_locked);
 /*
  * get_user_pages_unlocked() is suitable to replace the form:
  *
- *      down_read(&mm->mmap_sem);
+ *      mmap_read_lock(mm);
  *      get_user_pages(tsk, mm, ..., pages, NULL);
- *      up_read(&mm->mmap_sem);
+ *      mmap_read_unlock(mm);
  *
  *  with:
  *
@@ -1131,11 +1131,11 @@ long get_user_pages_unlocked(unsigned long start, unsigned long nr_pages,
 	if (WARN_ON_ONCE(gup_flags & FOLL_LONGTERM))
 		return -EINVAL;
 
-	down_read(&mm->mmap_sem);
+	mmap_read_lock(mm);
 	ret = __get_user_pages_locked(current, mm, start, nr_pages, pages, NULL,
 				      &locked, gup_flags | FOLL_TOUCH);
 	if (locked)
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 	return ret;
 }
 EXPORT_SYMBOL(get_user_pages_unlocked);
@@ -1545,7 +1545,7 @@ int __mm_populate(unsigned long start, unsigned long len, int ignore_errors)
 		 */
 		if (!locked) {
 			locked = 1;
-			down_read(&mm->mmap_sem);
+			mmap_read_lock(mm);
 			vma = find_vma(mm, nstart);
 		} else if (nstart >= vma->vm_end)
 			vma = vma->vm_next;
@@ -1577,7 +1577,7 @@ int __mm_populate(unsigned long start, unsigned long len, int ignore_errors)
 		ret = 0;
 	}
 	if (locked)
-		up_read(&mm->mmap_sem);
+		mmap_read_unlock(mm);
 	return ret;	/* 0 or negative error code */
 }
 

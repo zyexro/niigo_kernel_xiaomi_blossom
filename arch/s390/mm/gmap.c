@@ -2542,12 +2542,12 @@ int s390_enable_sie(void)
 	/* Fail if the page tables are 2K */
 	if (!mm_alloc_pgste(mm))
 		return -EINVAL;
-	down_write(&mm->mmap_sem);
+	mmap_write_lock(mm);
 	mm->context.has_pgste = 1;
 	/* split thp mappings and disable thp for future mappings */
 	thp_split_mm(mm);
 	zap_zero_pages(mm);
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(s390_enable_sie);
@@ -2599,7 +2599,7 @@ int s390_enable_skey(void)
 	struct vm_area_struct *vma;
 	int rc = 0;
 
-	down_write(&mm->mmap_sem);
+	mmap_write_lock(mm);
 	if (mm_uses_skeys(mm))
 		goto out_up;
 
@@ -2618,7 +2618,7 @@ int s390_enable_skey(void)
 	walk_page_range(0, TASK_SIZE, &walk);
 
 out_up:
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 	return rc;
 }
 EXPORT_SYMBOL_GPL(s390_enable_skey);
@@ -2637,9 +2637,9 @@ void s390_reset_cmma(struct mm_struct *mm)
 {
 	struct mm_walk walk = { .pte_entry = __s390_reset_cmma };
 
-	down_write(&mm->mmap_sem);
+	mmap_write_lock(mm);
 	walk.mm = mm;
 	walk_page_range(0, TASK_SIZE, &walk);
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 }
 EXPORT_SYMBOL_GPL(s390_reset_cmma);

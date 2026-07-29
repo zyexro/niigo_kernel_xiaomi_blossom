@@ -460,7 +460,7 @@ void usnic_uiom_reg_release(struct usnic_uiom_reg *uiomr,
 	 * we defer the vm_locked accounting to the system workqueue.
 	 */
 	if (ucontext->closing) {
-		if (!down_write_trylock(&mm->mmap_sem)) {
+		if (!mmap_write_trylock(mm)) {
 			INIT_WORK(&uiomr->work, usnic_uiom_reg_account);
 			uiomr->mm = mm;
 			uiomr->diff = diff;
@@ -469,10 +469,10 @@ void usnic_uiom_reg_release(struct usnic_uiom_reg *uiomr,
 			return;
 		}
 	} else
-		down_write(&mm->mmap_sem);
+		mmap_write_lock(mm);
 
 	mm->pinned_vm -= diff;
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 	mmput(mm);
 out:
 	kfree(uiomr);

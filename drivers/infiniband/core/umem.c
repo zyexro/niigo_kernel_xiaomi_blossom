@@ -279,7 +279,7 @@ void ib_umem_release(struct ib_umem *umem)
 	 * we defer the vm_locked accounting to the system workqueue.
 	 */
 	if (context->closing) {
-		if (!down_write_trylock(&mm->mmap_sem)) {
+		if (!mmap_write_trylock(mm)) {
 			INIT_WORK(&umem->work, ib_umem_account);
 			umem->mm   = mm;
 			umem->diff = diff;
@@ -288,10 +288,10 @@ void ib_umem_release(struct ib_umem *umem)
 			return;
 		}
 	} else
-		down_write(&mm->mmap_sem);
+		mmap_write_lock(mm);
 
 	mm->pinned_vm -= diff;
-	up_write(&mm->mmap_sem);
+	mmap_write_unlock(mm);
 	mmput(mm);
 out:
 	kfree(umem);

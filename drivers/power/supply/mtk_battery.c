@@ -121,6 +121,7 @@ struct mtk_battery *get_mtk_battery(void)
 	}
 
 	gauge = (struct mtk_gauge *)power_supply_get_drvdata(psy);
+	power_supply_put(psy);
 	if (gauge == NULL) {
 		bm_err("[%s]mtk_gauge is not rdy\n", __func__);
 		return NULL;
@@ -183,7 +184,10 @@ bool is_recovery_mode(void)
 	struct mtk_battery *gm;
 
 	gm = get_mtk_battery();
-	bm_debug("%s, bootmdoe = %d\n", gm->bootmode);
+	if (!gm)
+		return false;
+
+	bm_debug("%s: bootmode = %d\n", __func__, gm->bootmode);
 
 	/* RECOVERY_BOOT */
 	if (gm->bootmode == 2)
@@ -197,7 +201,10 @@ bool is_kernel_power_off_charging(void)
 	struct mtk_battery *gm;
 
 	gm = get_mtk_battery();
-	bm_debug("%s, bootmdoe = %d\n", gm->bootmode);
+	if (!gm)
+		return false;
+
+	bm_debug("%s: bootmode = %d\n", __func__, gm->bootmode);
 
 	/* KERNEL_POWER_OFF_CHARGING_BOOT */
 	if (gm->bootmode == 8)
@@ -773,6 +780,9 @@ int gauge_get_property(enum gauge_property gp,
 		return -ENODEV;
 
 	gauge = (struct mtk_gauge *)power_supply_get_drvdata(psy);
+	power_supply_put(psy);
+	if (gauge == NULL)
+		return -ENODEV;
 	attr = gauge->attr;
 
 	if (attr == NULL) {
@@ -811,6 +821,9 @@ int gauge_set_property(enum gauge_property gp,
 		return -ENODEV;
 
 	gauge = (struct mtk_gauge *)power_supply_get_drvdata(psy);
+	power_supply_put(psy);
+	if (gauge == NULL)
+		return -ENODEV;
 	attr = gauge->attr;
 
 	if (attr == NULL) {

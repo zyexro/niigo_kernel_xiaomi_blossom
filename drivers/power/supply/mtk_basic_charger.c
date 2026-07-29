@@ -539,10 +539,12 @@ static int charger_dev_event(struct notifier_block *nb, unsigned long event,
 	case CHARGER_DEV_NOTIFY_EOC:
 		notify.evt = EVT_FULL;
 		notify.value = 0;
-	for (i = 0; i < 10; i++) {
-		alg = info->alg[i];
-		chg_alg_notifier_call(alg, &notify);
-	}
+		for (i = 0; i < MAX_ALG_NO; i++) {
+			alg = info->alg[i];
+			if (alg == NULL)
+				continue;
+			chg_alg_notifier_call(alg, &notify);
+		}
 
 		break;
 	case CHARGER_DEV_NOTIFY_RECHG:

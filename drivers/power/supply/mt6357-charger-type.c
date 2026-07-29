@@ -523,7 +523,7 @@ static int get_vbus_voltage(struct mtk_charger_type *info,
 		if (ret < 0)
 			pr_notice("[%s]read fail,ret=%d\n", __func__, ret);
 	} else {
-		pr_notice("[%s]chan error %d\n", __func__, info->chan_vbus);
+		pr_notice("[%s]chan error %ld\n", __func__, PTR_ERR(info->chan_vbus));
 		ret = -ENOTSUPP;
 	}
 
@@ -830,8 +830,8 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	chan_vbus = devm_iio_channel_get(
 		&pdev->dev, "pmic_vbus");
 	if (IS_ERR(chan_vbus)) {
-		pr_notice("mt6357 charger type requests probe deferral ret:%d\n",
-			chan_vbus);
+		pr_notice("mt6357 charger type requests probe deferral ret:%ld\n",
+			PTR_ERR(chan_vbus));
 		return -EPROBE_DEFER;
 	}
 
@@ -859,8 +859,8 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	info->psy_desc.set_property = psy_chr_type_set_property;
 	info->psy_desc.property_is_writeable =
 			psy_charger_type_property_is_writeable;
-	info->psy_desc.usb_types = mt6357_charger_usb_types,
-	info->psy_desc.num_usb_types = ARRAY_SIZE(mt6357_charger_usb_types),
+	info->psy_desc.usb_types = mt6357_charger_usb_types;
+	info->psy_desc.num_usb_types = ARRAY_SIZE(mt6357_charger_usb_types);
 	info->psy_cfg.drv_data = info;
 
 	info->psy_cfg.of_node = np;
@@ -894,7 +894,7 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	info->chan_vbus = devm_iio_channel_get(
 		&pdev->dev, "pmic_vbus");
 	if (IS_ERR(info->chan_vbus)) {
-		pr_notice("chan_vbus auxadc get fail, ret=%d\n",
+		pr_notice("chan_vbus auxadc get fail, ret=%ld\n",
 			PTR_ERR(info->chan_vbus));
 	}
 
@@ -910,7 +910,8 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 		if (IS_ERR(info->ac_psy)) {
 			pr_notice("%s Failed to register power supply: %ld\n",
 				__func__, PTR_ERR(info->ac_psy));
-			return PTR_ERR(info->ac_psy);
+			ret = PTR_ERR(info->ac_psy);
+			goto err_ac_psy;
 		}
 
 		info->usb_psy = power_supply_register(&pdev->dev,
@@ -919,7 +920,8 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 		if (IS_ERR(info->usb_psy)) {
 			pr_notice("%s Failed to register power supply: %ld\n",
 				__func__, PTR_ERR(info->usb_psy));
-			return PTR_ERR(info->usb_psy);
+			ret = PTR_ERR(info->usb_psy);
+			goto err_usb_psy;
 		}
 
 		INIT_WORK(&info->chr_work, do_charger_detection_work);
@@ -937,6 +939,14 @@ static int mt6357_charger_type_probe(struct platform_device *pdev)
 	pr_notice("%s: done\n", __func__);
 
 	return 0;
+
+err_usb_psy:
+	if (!IS_ERR_OR_NULL(info->ac_psy))
+		power_supply_unregister(info->ac_psy);
+err_ac_psy:
+	if (!IS_ERR_OR_NULL(info->psy))
+		power_supply_unregister(info->psy);
+	return ret;
 }
 
 static const struct of_device_id mt6357_charger_type_of_match[] = {
@@ -948,8 +958,16 @@ static int mt6357_charger_type_remove(struct platform_device *pdev)
 {
 	struct mtk_charger_type *info = platform_get_drvdata(pdev);
 
-	if (info)
-		devm_kfree(&pdev->dev, info);
+	if (info) {
+		if (info->bc12_active)
+			cancel_work_sync(&info->chr_work);
+		if (!IS_ERR_OR_NULL(info->usb_psy))
+			power_supply_unregister(info->usb_psy);
+		if (!IS_ERR_OR_NULL(info->ac_psy))
+			power_supply_unregister(info->ac_psy);
+		if (!IS_ERR_OR_NULL(info->psy))
+			power_supply_unregister(info->psy);
+	}
 	return 0;
 }
 

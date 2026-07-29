@@ -492,7 +492,7 @@ static int sgm41513_set_acovp_threshold(struct sgm41513 *sgm, int volt)
         val = REG06_OVP_14P0V;
     else if (volt >= VAC_OVP_10500 && volt < VAC_OVP_14000)
         val = REG06_OVP_10P5V;
-    else if (volt >= VAC_OVP_6500 && volt < REG06_OVP_10P5V)
+    else if (volt >= VAC_OVP_6500 && volt < VAC_OVP_10500)
         val = REG06_OVP_6P5V;
     else
         val = REG06_OVP_5P5V;
@@ -1013,6 +1013,8 @@ static int sgm41513_register_interrupt(struct sgm41513 *sgm)
         return -ENODEV;
     }
 
+    sgm->irq = sgm->client->irq;
+
     ret = devm_request_threaded_irq(sgm->dev, sgm->client->irq, NULL,
                     sgm41513_irq_handler,
                     IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
@@ -1322,7 +1324,7 @@ static int sgm41513_set_ichg(struct charger_device *chg_dev, u32 curr)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("charge curr = %d\n", curr);
+    pr_debug("charge curr = %d\n", curr);
 
     return sgm41513_set_chargecurrent(sgm, curr / 1000);
 }
@@ -1361,7 +1363,7 @@ static int sgm41513_set_iterm(struct charger_device *chg_dev, u32 uA)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("termination curr = %d\n", uA);
+    pr_debug("termination curr = %d\n", uA);
 
     return sgm41513_set_term_current(sgm, uA / 1000);
 }
@@ -1383,7 +1385,7 @@ static int sgm41513_set_vchg(struct charger_device *chg_dev, u32 volt)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("charge volt = %d\n", volt);
+    pr_debug("charge volt = %d\n", volt);
 
     return sgm41513_set_chargevolt(sgm, volt / 1000);
 }
@@ -1418,7 +1420,7 @@ static int sgm41513_get_ivl_state(struct charger_device *chg_dev, bool *in_loop)
 
     ret = sgm41513_read_byte(sgm, SGM41513_REG_0A, &reg_val);
     if (!ret)
-        *in_loop = (ret & REG0A_VINDPM_STAT_MASK) >> REG0A_VINDPM_STAT_SHIFT;
+        *in_loop = !!((reg_val & REG0A_VINDPM_STAT_MASK) >> REG0A_VINDPM_STAT_SHIFT);
 
     return ret;
 }
@@ -1444,7 +1446,7 @@ static int sgm41513_set_ivl(struct charger_device *chg_dev, u32 volt)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("vindpm volt = %d\n", volt);
+    pr_debug("vindpm volt = %d\n", volt);
 
     return sgm41513_set_input_volt_limit(sgm, volt / 1000);
 
@@ -1454,7 +1456,7 @@ static int sgm41513_set_icl(struct charger_device *chg_dev, u32 curr)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("indpm curr = %d\n", curr);
+    pr_debug("indpm curr = %d\n", curr);
 
     return sgm41513_set_input_current_limit(sgm, curr / 1000);
 }
@@ -1491,7 +1493,7 @@ static int sgm41513_enable_te(struct charger_device *chg_dev, bool en)
 {
     struct sgm41513 *sgm = dev_get_drvdata(&chg_dev->dev);
 
-    pr_err("enable_term = %d\n", en);
+    pr_debug("enable_term = %d\n", en);
 
     return sgm41513_enable_term(sgm, en);
 }
@@ -1513,7 +1515,7 @@ static int sgm41513_set_otg(struct charger_device *chg_dev, bool en)
     else
         ret = sgm41513_disable_otg(sgm);
 
-    pr_err("%s OTG %s\n", en ? "enable" : "disable",
+    pr_debug("%s OTG %s\n", en ? "enable" : "disable",
             !ret ? "successfully" : "failed");
 
     return ret;
@@ -1589,10 +1591,11 @@ static int sgm41513_get_hiz_mode(struct charger_device *chg_dev)
 {
     int ret;
     struct sgm41513 *bq = dev_get_drvdata(&chg_dev->dev);
-    u8 val;
+    u8 val = 0;
     ret = sgm41513_read_byte(bq, SGM41513_REG_00, &val);
-    if (ret == 0){
-        pr_err("Reg[%.2x] = 0x%.2x\n", SGM41513_REG_00, val);
+    if (ret < 0) {
+        pr_err("%s: read reg fail! ret=%d\n", __func__, ret);
+        return ret;
     }
 
     ret = (val & REG00_ENHIZ_MASK) >> REG00_ENHIZ_SHIFT;
@@ -1744,7 +1747,6 @@ static int sgm41513_charger_probe(struct i2c_client *client,
         pr_info("SGM41513 part number match success\n");
     } else {
         pr_err("SGM41513 part number match fail, part_no=0x%02x\n", sgm->part_no);
-        sgm41513_charger_remove(client);
         return -EINVAL;
     }
 
@@ -1785,7 +1787,7 @@ static int sgm41513_charger_probe(struct i2c_client *client,
         cancel_delayed_work_sync(&sgm->prob_dwork);
         cancel_delayed_work_sync(&sgm->psy_dwork);
         /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 end */
-        ret = PTR_ERR(sgm->chg_dev);
+        ret = sgm->chg_dev ? PTR_ERR(sgm->chg_dev) : -ENODEV;
         return ret;
     }
 
@@ -1815,17 +1817,22 @@ static int sgm41513_charger_remove(struct i2c_client *client)
 {
     struct sgm41513 *sgm = i2c_get_clientdata(client);
 
-    mutex_destroy(&sgm->i2c_rw_lock);
+    if (sgm) {
+        if (sgm->chg_dev)
+            charger_device_unregister(sgm->chg_dev);
 
-    sysfs_remove_group(&sgm->dev->kobj, &sgm41513_attr_group);
+        mutex_destroy(&sgm->i2c_rw_lock);
 
-    /* hs14 code for AL6528A-1033 by gaozhengwei at 2022/12/09 start */
-    cancel_delayed_work_sync(&sgm->charge_detect_delayed_work);
-    /* hs14 code for AL6528A-1033 by gaozhengwei at 2022/12/09 end */
-    /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 start */
-    cancel_delayed_work_sync(&sgm->prob_dwork);
-    cancel_delayed_work_sync(&sgm->psy_dwork);
-    /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 end */
+        sysfs_remove_group(&sgm->dev->kobj, &sgm41513_attr_group);
+
+        /* hs14 code for AL6528A-1033 by gaozhengwei at 2022/12/09 start */
+        cancel_delayed_work_sync(&sgm->charge_detect_delayed_work);
+        /* hs14 code for AL6528A-1033 by gaozhengwei at 2022/12/09 end */
+        /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 start */
+        cancel_delayed_work_sync(&sgm->prob_dwork);
+        cancel_delayed_work_sync(&sgm->psy_dwork);
+        /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 end */
+    }
 
     return 0;
 }

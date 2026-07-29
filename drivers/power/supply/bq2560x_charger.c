@@ -726,7 +726,7 @@ static int bq2560x_set_ichg(struct charger_device *chg_dev, u32 curr)
 		ichg_bef = ichg_bef * REG02_ICHG_LSB + REG02_ICHG_BASE;
 		if ((ichg_bef <= curr / 1000) &&
 			(ichg_bef + REG02_ICHG_LSB > curr / 1000)) {
-			pr_info("[%s] current has set!\n", __func__, curr);
+			pr_info("[%s] current %d has set!\n", __func__, curr);
 			return ret;
 		}
 	}
@@ -979,14 +979,14 @@ static int bq2560x_charger_probe(struct i2c_client *client,
 			&bq2560x_chg_ops,
 			&bq2560x_chg_props);
 	if (IS_ERR_OR_NULL(bq->chg_dev)) {
-		ret = PTR_ERR(bq->chg_dev);
+		ret = bq->chg_dev ? PTR_ERR(bq->chg_dev) : -ENODEV;
 		goto err_0;
 	}
 
 	ret = bq2560x_init_device(bq);
 	if (ret < 0) {
 		pr_err("Failed to init device\n");
-		return ret;
+		goto err_1;
 	}
 
 	ret = sysfs_create_group(&bq->dev->kobj, &bq2560x_attr_group);
@@ -998,6 +998,8 @@ static int bq2560x_charger_probe(struct i2c_client *client,
 
 	return 0;
 
+err_1:
+	charger_device_unregister(bq->chg_dev);
 err_0:
 	return ret;
 }

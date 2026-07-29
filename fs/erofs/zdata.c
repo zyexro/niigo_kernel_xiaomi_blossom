@@ -1202,6 +1202,7 @@ out:
 
 	/* all cl locks SHOULD be released right now */
 	clear_bit(Z_EROFS_COLLECTION_DECOMP_BIT, &cl->flags);
+	smp_mb__after_atomic();
 	wake_up_bit(&cl->flags, Z_EROFS_COLLECTION_DECOMP_BIT);
 	z_erofs_collection_unlock(cl);
 

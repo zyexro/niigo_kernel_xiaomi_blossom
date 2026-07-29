@@ -31,10 +31,16 @@ static const struct scmi_handle *handle;
 static unsigned int scmi_cpufreq_get_rate(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
-	struct scmi_perf_ops *perf_ops = handle->perf_ops;
-	struct scmi_data *priv = policy->driver_data;
+	struct scmi_perf_ops *perf_ops;
+	struct scmi_data *priv;
 	unsigned long rate;
 	int ret;
+
+	if (!policy || !policy->driver_data || !handle || !handle->perf_ops)
+		return 0;
+
+	perf_ops = handle->perf_ops;
+	priv = policy->driver_data;
 
 	ret = perf_ops->freq_get(handle, priv->domain_id, &rate, false);
 	if (ret)

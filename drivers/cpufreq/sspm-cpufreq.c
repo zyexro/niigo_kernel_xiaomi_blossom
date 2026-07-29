@@ -191,6 +191,8 @@ out_free_resources:
 
 static void mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
 {
+	if (info->csram_base)
+		iounmap(info->csram_base);
 	if (!IS_ERR(info->proc_reg))
 		regulator_put(info->proc_reg);
 	if (!IS_ERR(info->sram_reg))
@@ -300,8 +302,11 @@ static int mtk_cpufreq_probe(struct platform_device *pdev)
 		}
 
 		ret = mtk_cpu_dvfs_info_init(info, cpu);
-		if (ret)
+		if (ret) {
+			if (info->csram_base)
+				iounmap(info->csram_base);
 			goto release_dvfs_info_list;
+		}
 
 		list_add(&info->list_head, &dvfs_info_list);
 	}

@@ -59,6 +59,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/capability.h>
 #include <linux/freezer.h>
 #include <linux/uaccess.h>
+#include <linux/bit_spinlock.h>
 
 #include "img_types.h"
 #include "img_defs.h"
@@ -77,9 +78,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // #define LINUX_EVENT_OBJECT_STATS
 
 
+#define PVRSRV_EVENT_LIST_LOCK_BIT 0
+
 typedef struct PVRSRV_LINUX_EVENT_OBJECT_LIST_TAG
 {
-	rwlock_t sLock;
+	unsigned long flags;
 	/* Counts how many times event object was signalled i.e. how many times
 	 * LinuxEventObjectSignal() was called on a given event object.
 	 * Used for detecting pending signals.
@@ -136,7 +139,7 @@ PVRSRV_ERROR LinuxEventObjectListCreate(IMG_HANDLE *phEventObjectList)
 
 	INIT_LIST_HEAD(&psEvenObjectList->sList);
 
-	rwlock_init(&psEvenObjectList->sLock);
+	psEvenObjectList->flags = 0;
 	atomic_set(&psEvenObjectList->sEventSignalCount, 0);
 
 	*phEventObjectList = (IMG_HANDLE *) psEvenObjectList;
@@ -197,9 +200,11 @@ PVRSRV_ERROR LinuxEventObjectDelete(IMG_HANDLE hOSEventObject)
 		PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject = (PVRSRV_LINUX_EVENT_OBJECT *)hOSEventObject;
 		PVRSRV_LINUX_EVENT_OBJECT_LIST *psLinuxEventObjectList = psLinuxEventObject->psLinuxEventObjectList;
 
-		write_lock_bh(&psLinuxEventObjectList->sLock);
+		local_bh_disable();
+		bit_spin_lock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
 		list_del(&psLinuxEventObject->sList);
-		write_unlock_bh(&psLinuxEventObjectList->sLock);
+		bit_spin_unlock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
+		local_bh_enable();
 
 #ifdef LINUX_EVENT_OBJECT_STATS
 		OSLockDestroy(psLinuxEventObject->hLock);
@@ -266,9 +271,11 @@ PVRSRV_ERROR LinuxEventObjectAdd(IMG_HANDLE hOSEventObjectList, IMG_HANDLE *phOS
 
 	psLinuxEventObject->psLinuxEventObjectList = psLinuxEventObjectList;
 
-	write_lock_bh(&psLinuxEventObjectList->sLock);
+	local_bh_disable();
+	bit_spin_lock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
 	list_add(&psLinuxEventObject->sList, &psLinuxEventObjectList->sList);
-	write_unlock_bh(&psLinuxEventObjectList->sLock);
+	bit_spin_unlock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
+	local_bh_enable();
 
 	*phOSEventObject = psLinuxEventObject;
 
@@ -301,14 +308,17 @@ PVRSRV_ERROR LinuxEventObjectSignal(IMG_HANDLE hOSEventObjectList)
 	 * setting/incrementing of timestamp reduces the window where a concurrent
 	 * "Wait" call might block while "this" Signal call is being processed */
 	atomic_inc(&psLinuxEventObjectList->sEventSignalCount);
+	smp_mb__after_atomic();
 
-	read_lock_bh(&psLinuxEventObjectList->sLock);
+	local_bh_disable();
+	bit_spin_lock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
 	list_for_each_safe(psListEntry, psListEntryTemp, psList)
 	{
 		psLinuxEventObject = (PVRSRV_LINUX_EVENT_OBJECT *)list_entry(psListEntry, PVRSRV_LINUX_EVENT_OBJECT, sList);
 		wake_up_interruptible_sync(&psLinuxEventObject->sWait);
 	}
-	read_unlock_bh(&psLinuxEventObjectList->sLock);
+	bit_spin_unlock(PVRSRV_EVENT_LIST_LOCK_BIT, &psLinuxEventObjectList->flags);
+	local_bh_enable();
 
 	return PVRSRV_OK;
 }

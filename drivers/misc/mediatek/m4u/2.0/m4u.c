@@ -2053,6 +2053,11 @@ static int m4u_probe(struct platform_device *pdev)
 		of_property_read_u32(node, "cell-index", &pdev->id);
 	}
 
+	if (pdev->id < 0 || pdev->id >= TOTAL_M4U_NUM) {
+		m4u_err("invalid m4u pdev->id %d\n", pdev->id);
+		return -EINVAL;
+	}
+
 	gM4uDev->pDev[pdev->id] = &pdev->dev;
 	gM4uDev->m4u_base[pdev->id] = (unsigned long)of_iomap(node, 0);
 	gM4uDev->irq_num[pdev->id] = irq_of_parse_and_map(node, 0);
@@ -2244,7 +2249,9 @@ static int __init MTK_M4U_Init(void)
 				      &m4u_fops);
 	if (!(gM4uDev->m4u_dev_proc_entry)) {
 		m4u_err("m4u:failed to register m4u in proc/m4u_device.\n");
-		return ret;
+		kmem_cache_destroy(m4u_buf_cache);
+		kfree(gM4uDev);
+		return -ENOMEM;
 	}
 #endif
 
@@ -2254,6 +2261,14 @@ static int __init MTK_M4U_Init(void)
 
 	if (platform_driver_register(&m4uDrv)) {
 		m4u_err("failed to register M4U driver");
+#ifdef __M4U_USE_PROC_NODE
+		if (gM4uDev->m4u_dev_proc_entry)
+			proc_remove(gM4uDev->m4u_dev_proc_entry);
+#else
+		misc_deregister(&(gM4uDev->dev));
+#endif
+		kmem_cache_destroy(m4u_buf_cache);
+		kfree(gM4uDev);
 		return -ENODEV;
 	}
 	m4u_info("M4U platform_driver_register finsish\n");

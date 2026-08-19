@@ -64,13 +64,6 @@
 #define FTS_I2C_VTG_MAX_UV                  1800000
 #endif
 
-//enable 'check touch vendor' feature
-#define CHECK_TOUCH_VENDOR
-
-#ifdef CHECK_TOUCH_VENDOR
-extern char mtkfb_lcm_name[256];
-#endif
-
 #if LCT_TP_USB_PLUGIN
 static void fts_ts_usb_plugin_work_func(struct work_struct *work);
 DECLARE_WORK(fts_usb_plugin_work, fts_ts_usb_plugin_work_func);

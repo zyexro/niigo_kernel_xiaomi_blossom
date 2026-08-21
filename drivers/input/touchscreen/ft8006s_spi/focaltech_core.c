@@ -664,6 +664,7 @@ static irqreturn_t fts_irq_handler(int irq, void *data)
 {
 
     int ret = 0;
+#ifdef CONFIG_PM
     if (fts_data->dev_pm_suspend && fts_data->gesture_mode) {
         ret = wait_for_completion_timeout(&fts_data->dev_pm_suspend_completion, msecs_to_jiffies(700));
         if (!ret) {
@@ -671,6 +672,7 @@ static irqreturn_t fts_irq_handler(int irq, void *data)
             return IRQ_HANDLED;
         }
     }
+#endif
 
     fts_irq_read_report();
     return IRQ_HANDLED;
@@ -1672,7 +1674,9 @@ static int fts_ts_probe(struct spi_device *spi)
     ts_data->dev_pm_suspend = false;
     init_completion(&ts_data->dev_pm_suspend_completion);
 #endif
+#ifdef CONFIG_PM
     pm_runtime_enable(ts_data->dev);
+#endif
 
     FTS_INFO("Touch Screen(SPI BUS) driver prboe successfully");
     return 0;

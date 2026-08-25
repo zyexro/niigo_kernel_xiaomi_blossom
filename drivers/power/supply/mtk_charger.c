@@ -59,6 +59,9 @@
 
 #include "mtk_charger.h"
 
+bool g_charging_disabled = false;
+EXPORT_SYMBOL(g_charging_disabled);
+
 #if CONFIG_TOUCHSCREEN_COMMON
 typedef struct touchscreen_usb_piugin_data {
 	bool valid;
@@ -899,6 +902,7 @@ static ssize_t charging_enabled_store(struct device *dev,
 	if (kstrtol(buf, 10, &temp) == 0) {
 		if (temp == 0) {
 			pinfo->cmd_discharging = true;
+			g_charging_disabled = true;
 			if (pinfo->chg1_dev) {
 				charger_dev_enable(pinfo->chg1_dev, false);
 				charger_dev_set_charging_current(pinfo->chg1_dev, 0);
@@ -907,6 +911,7 @@ static ssize_t charging_enabled_store(struct device *dev,
 			}
 		} else {
 			pinfo->cmd_discharging = false;
+			g_charging_disabled = false;
 			if (pinfo->chg1_dev) {
 				charger_dev_enable(pinfo->chg1_dev, true);
 				charger_dev_do_event(pinfo->chg1_dev, EVENT_RECHARGE, 0);

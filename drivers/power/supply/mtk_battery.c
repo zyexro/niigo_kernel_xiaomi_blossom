@@ -30,6 +30,8 @@
 #include "mtk_battery.h"
 #include "mtk_battery_table.h"
 
+extern bool g_charging_disabled;
+
 
 struct tag_bootmode {
 	u32 size;
@@ -266,7 +268,10 @@ static int battery_psy_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		val->intval = bs_data->bat_status;
+		if (g_charging_disabled)
+			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		else
+			val->intval = bs_data->bat_status;
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = bs_data->bat_health;

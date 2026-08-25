@@ -916,7 +916,7 @@ static ssize_t charging_enabled_store(struct device *dev,
 	}
 	return size;
 }
-static DEVICE_ATTR_RW(charging_enabled);
+static DEVICE_ATTR(charging_enabled, 0664, charging_enabled_show, charging_enabled_store);
 
 /* procfs */
 static int mtk_chg_current_cmd_show(struct seq_file *m, void *data)

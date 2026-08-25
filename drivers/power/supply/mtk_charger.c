@@ -901,6 +901,8 @@ static ssize_t charging_enabled_store(struct device *dev,
 			pinfo->cmd_discharging = true;
 			if (pinfo->chg1_dev) {
 				charger_dev_enable(pinfo->chg1_dev, false);
+				charger_dev_set_charging_current(pinfo->chg1_dev, 0);
+				charger_dev_set_input_current(pinfo->chg1_dev, 0);
 				charger_dev_do_event(pinfo->chg1_dev, EVENT_DISCHARGE, 0);
 			}
 		} else {

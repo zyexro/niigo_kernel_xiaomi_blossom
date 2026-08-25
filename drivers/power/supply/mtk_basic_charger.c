@@ -370,7 +370,11 @@ static int do_algorithm(struct mtk_charger *info)
 
 	if (info->cmd_discharging) {
 		chr_err("%s: Force discharging active, skipping algorithm\n", __func__);
-		charger_dev_enable(info->chg1_dev, false);
+		if (info->chg1_dev) {
+			charger_dev_enable(info->chg1_dev, false);
+			charger_dev_set_charging_current(info->chg1_dev, 0);
+			charger_dev_set_input_current(info->chg1_dev, 0);
+		}
 		return 0;
 	}
 

@@ -494,6 +494,7 @@ firmware_class.path=/vendor/firmware";
 			console-size = <0x00100000>;
 			pmsg-size = <0x00100000>;
 			unbuffered;
+			no-map;
 		};
 
 		reserve-memory-sspm_share {

@@ -800,11 +800,6 @@ noinline int slow_avc_audit(struct selinux_state *state,
 	struct common_audit_data stack_data;
 	struct selinux_audit_data sad;
 
-#if defined(CONFIG_KSU) && !defined(CONFIG_KPROBES)
-	extern void ksu_slow_avc_audit(u32 *);
-	ksu_slow_avc_audit(&tsid);
-#endif
-
 	/* Only log permissive=1 messages for SECURITY_SELINUX_DEVELOP */
 	if (denied && !result)
 		return 0;
